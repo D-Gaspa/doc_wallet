@@ -83,3 +83,7 @@ Our app solves this by offering a centralized platform where users can store dig
 | Model performance    | The information being retrieved from the uploaded documents is inaccurate, affecting the settings of alarms. | - Refining the existing ML model or exploring alternative models.                                                                                                                 |
 | Compatibility Issues | The app may not work properly on all devices or OS versions.                                                 | - Perform cross-platform testing with React Native testing tools (Appium, Detox) and optimize for both iOS and Android.<br>- Ensure backward compatibility for older OS versions. |
 | App store rejections | The app could be rejected due to policy violations or security concerns.                                     | - Review the problematic sections of the app, make corrections and re-try the submission.                                                                                         |
+### Presentation 
+https://www.canva.com/design/DAGdmn20U_w/91MxIGI3pKgqPLqchkpK4g/edit?utm_content=DAGdmn20U_w&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+
+
