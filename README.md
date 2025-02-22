@@ -15,7 +15,7 @@ Development of an application that allows users to securely store, organize, and
 
 ## Problem to Solve
 
-> [!IMPORTANT] 
+> [!IMPORTANT]
 > Many people struggle with managing personal documents due to missed expiration dates, unclear requirements, and complex bureaucratic processes. This often leads to extra costs, wasted time, and stress.
 
 Recent studies reveal the magnitude of this challenge, with 46% of professionals regularly struggling to find necessary information and approximately 83% recreating existing documents because they can't locate originals \[1]. The problem extends beyond simple organization - users face document retrieval complexity, high processing cycle times, and significant security concerns \[5].
@@ -110,7 +110,7 @@ DocWallet differentiates itself by addressing key limitations of existing soluti
 | Compatibility Issues | The app may not work properly on all devices or OS versions.                                                 | - Perform cross-platform testing with React Native testing tools (Appium, Detox) and optimize for both iOS and Android.<br>- Ensure backward compatibility for older OS versions. |
 | App store rejections | The app could be rejected due to policy violations or security concerns.                                     | - Review the problematic sections of the app, make corrections and re-try the submission.                                                                                         |
 
-### Presentation 
+### Presentation
 
 https://www.canva.com/design/DAGdmn20U_w/91MxIGI3pKgqPLqchkpK4g/edit?utm_content=DAGdmn20U_w&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 

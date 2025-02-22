@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  validate:
+    name: Validate and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code formatting
+        run: npx prettier --check "**/*.{js,jsx,ts,tsx}"
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run tests with coverage
+        run: npm test -- --coverage # No threshold enforced yet (will be added in the future)
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+      - name: Security audit
+        run: npm audit --audit-level=moderate
+
+  # Future Addition: Android Build Job
+  #  android:
+  #    name: Android Build
+  #    needs: validate
+  #    runs-on: ubuntu-latest
+  #
+  #    steps:
+  #      - name: Checkout code
+  #        uses: actions/checkout@v4
+  #
+  #      - name: Setup Node.js
+  #        uses: actions/setup-node@v4
+  #        with:
+  #          node-version: ${{ env.NODE_VERSION }}
+  #          cache: 'npm'
+  #
+  #      - name: Install dependencies
+  #        run: npm ci
+  #
+  #      - name: Set up JDK
+  #        uses: actions/setup-java@v4
+  #        with:
+  #          distribution: 'zulu'
+  #          java-version: '17'
+  #
+  #      - name: Build Android Debug
+  #        run: cd android && ./gradlew assembleDebug
+  #
+  #      - name: Upload Android Artifact
+  #        uses: actions/upload-artifact@v4
+  #        with:
+  #          name: android-debug-apk
+  #          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  # Future Addition: iOS Build Job
+  #  ios:
+  #    name: iOS Build
+  #    needs: validate
+  #    runs-on: macos-latest
+  #
+  #    steps:
+  #      - name: Checkout code
+  #        uses: actions/checkout@v4
+  #
+  #      - name: Setup Node.js
+  #        uses: actions/setup-node@v4
+  #        with:
+  #          node-version: ${{ env.NODE_VERSION }}
+  #          cache: 'npm'
+  #
+  #      - name: Install dependencies
+  #        run: npm ci
+  #
+  #      - name: Install iOS dependencies
+  #        run: cd ios && pod install
+  #
+  #      - name: Build iOS
+  #        run: |
+  #          xcodebuild -workspace ios/doc_wallet.xcworkspace -scheme doc_wallet -configuration Debug -sdk iphonesimulator
+  #        env:
+  #          SCHEME: doc_wallet
+  #
+  #      - name: Upload iOS Artifact
+  #        uses: actions/upload-artifact@v4
+  #        with:
+  #          name: ios-debug-app
+  #          path: ios/build/doc_wallet.app

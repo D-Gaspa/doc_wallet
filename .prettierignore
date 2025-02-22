@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# iOS & Android files
+ios/
+android/
+
+# Coverage reports
+coverage/
+
+# Specific file types
+*.md
+*.json
+*.yaml
+*.yml

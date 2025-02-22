@@ -1,0 +1,5 @@
+# Run tests with coverage (no threshold yet, just reporting)
+npm test -- --coverage
+
+# Run tests with coverage and threshold (for later)
+# npm test -- --coverage --coverageThreshold='{"global":{"branches":80,"functions":80,"lines":80,"statements":80}}'

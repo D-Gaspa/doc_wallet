@@ -1,0 +1,5 @@
+# Lint staged files only
+npx lint-staged
+
+# Quick test run without coverage
+npm test
