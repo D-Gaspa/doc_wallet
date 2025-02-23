@@ -1,5 +1,7 @@
 # DocWallet
 
+[![CI](https://github.com/D-Gaspa/doc_wallet/actions/workflows/ci.yml/badge.svg)](https://github.com/D-Gaspa/doc_wallet/actions/workflows/ci.yml)
+
 > [!NOTE]
 > DocWallet is a secure document management application designed to help users store, organize, and manage their personal documents with automated reminders and government platform integration.
 
