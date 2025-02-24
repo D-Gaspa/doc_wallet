@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { IDocState, IDocument } from "./types"
+import type { IDocState, IDocument } from "../types/document"
 
 export const useDocStore = create<IDocState>((set, get) => ({
     documents: [],

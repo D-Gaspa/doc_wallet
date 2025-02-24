@@ -1,5 +1,6 @@
 import { create } from "zustand"
-import type { IAuthState, IUser } from "./types"
+import type { IAuthState } from "../types/auth"
+import type { IUser } from "../types/user"
 
 export const useAuthStore = create<IAuthState>((set) => ({
     user: null,

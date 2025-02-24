@@ -2,4 +2,3 @@
 
 export * from "./useAuthStore"
 export * from "./useDocStore"
-export * from "./types"
