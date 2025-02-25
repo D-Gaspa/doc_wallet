@@ -24,6 +24,9 @@ import {
     ReloadInstructions,
 } from "react-native/Libraries/NewAppScreen"
 
+import dotenv from "dotenv"
+dotenv.config()
+
 type SectionProps = PropsWithChildren<{
     title: string
 }>
