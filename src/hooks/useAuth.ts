@@ -15,7 +15,6 @@ export const useAuth = () => {
 
     const loginWithGoogle = async () => {
         try {
-            // We're using the same login function but ignoring the parameters
             // This keeps our interface consistent but allows Google Auth
             await login()
             return true
