@@ -9,9 +9,10 @@ import { TokenService } from "./token"
 import { jwtDecode } from "jwt-decode"
 import { IGoogleUser } from "../../types/user.ts"
 import { IGoogleAuthResponse, IJwtPayload } from "../../types/auth.ts"
+import Config from "react-native-config"
 
-const clientIdIOS = process.env.GOOGLE_CLIENT_ID_IOS
-const clientIdAndroid = process.env.GOOGLE_CLIENT_ID_ANDROID
+const clientIdIOS = Config.GOOGLE_CLIENT_ID_IOS
+const clientIdAndroid = Config.GOOGLE_CLIENT_ID_ANDROID
 
 export const googleConfig = {
     issuer: "https://accounts.google.com",
@@ -19,7 +20,8 @@ export const googleConfig = {
     redirectUrl:
         Platform.OS === "ios"
             ? "not set"
-            : "com.doc_wallet:/oauth2redirect/google",
+            : Config.GOOGLE_REDIRECT_URL ||
+              `com.${Config.APP_NAME}:/oauth2redirect/google`,
     scopes: ["openid", "profile", "email"],
     serviceConfiguration: {
         authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -31,6 +33,10 @@ export const googleConfig = {
 export const GoogleAuthService = {
     preloadConfig: async () => {
         try {
+            if (!googleConfig.clientId) {
+                throw new Error(`Missing Google client ID for ${Platform.OS}`)
+            }
+
             await prefetchConfiguration({
                 warmAndPrefetchChrome: true,
                 ...googleConfig,
@@ -64,19 +70,16 @@ export const GoogleAuthService = {
             // Get user info from ID token
             const user = GoogleAuthService.getUserFromIdToken(result.idToken)
 
-            // Calculate expiry time
             const expiresAt = new Date(
                 result.accessTokenExpirationDate
             ).getTime()
 
-            // Store tokens securely
             await TokenService.storeTokens({
                 accessToken: result.accessToken,
                 refreshToken: result.refreshToken || "", // May be empty if not requesting offline access
                 expiresAt,
             })
 
-            // Return user data and tokens
             return {
                 user,
                 tokens: {
@@ -96,14 +99,12 @@ export const GoogleAuthService = {
             const tokens = await TokenService.getTokens()
 
             if (tokens) {
-                // Revoke access token
                 await revoke(googleConfig, {
                     tokenToRevoke: tokens.accessToken,
                     includeBasicAuth: true,
                 })
             }
 
-            // Clear stored tokens
             await TokenService.clearTokens()
         } catch (error) {
             console.error("Sign out error:", error)
@@ -141,9 +142,6 @@ export const GoogleAuthService = {
         }
     },
 
-    /**
-     * Check if user is authenticated with valid tokens
-     */
     isAuthenticated: async (): Promise<boolean> => {
         try {
             return await TokenService.isTokenValid()
