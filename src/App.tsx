@@ -1,12 +1,5 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
 import type { PropsWithChildren } from "react"
-import React from "react"
+import React, { useEffect } from "react"
 import {
     ScrollView,
     StatusBar,
@@ -14,6 +7,9 @@ import {
     Text,
     useColorScheme,
     View,
+    Button,
+    SafeAreaView,
+    Alert,
 } from "react-native"
 
 import {
@@ -24,8 +20,8 @@ import {
     ReloadInstructions,
 } from "react-native/Libraries/NewAppScreen"
 
-import dotenv from "dotenv"
-dotenv.config()
+import { useAuth } from "./hooks/useAuth.ts"
+import { ENV, isDevelopment } from "./config/env.ts"
 
 type SectionProps = PropsWithChildren<{
     title: string
@@ -66,60 +62,115 @@ function App(): React.JSX.Element {
         backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
     }
 
-    /*
-     * To keep the template simple and small, we're adding padding to prevent view
-     * from rendering under the System UI.
-     * For bigger apps the recommendation is to use `react-native-safe-area-context`:
-     * https://github.com/AppAndFlow/react-native-safe-area-context
-     *
-     * You can read more about it here:
-     * https://github.com/react-native-community/discussions-and-proposals/discussions/827
-     */
-    const safePadding = "5%"
+    const { isLoading, loginWithGoogle, user, logout } = useAuth()
+
+    useEffect(() => {
+        if (isDevelopment) {
+            console.log("App running in environment:", ENV.ENV_NAME)
+
+            // Check if required config is available
+            if (!ENV.GOOGLE_CLIENT_ID_IOS) {
+                console.warn(
+                    "Missing Google client IDs for IOS in environment configuration"
+                )
+            }
+            if (!ENV.GOOGLE_CLIENT_ID_ANDROID) {
+                console.warn(
+                    "Missing Google client IDs for Android in environment configuration"
+                )
+            }
+        }
+    }, [])
 
     return (
-        <View style={backgroundStyle}>
+        <SafeAreaView style={[backgroundStyle, styles.safeArea]}>
             <StatusBar
                 barStyle={isDarkMode ? "light-content" : "dark-content"}
                 backgroundColor={backgroundStyle.backgroundColor}
             />
-            <ScrollView style={backgroundStyle}>
-                <View style={{ paddingRight: safePadding }}>
-                    <Header />
-                </View>
+            <ScrollView
+                style={backgroundStyle}
+                contentInsetAdjustmentBehavior="automatic"
+            >
+                <Header />
                 <View
                     style={{
                         backgroundColor: isDarkMode
                             ? Colors.black
                             : Colors.white,
-                        paddingHorizontal: safePadding,
-                        paddingBottom: safePadding,
                     }}
                 >
-                    <Section title="Step One">
-                        <Text>
-                            Edit <Text style={styles.highlight}>App.tsx</Text>{" "}
-                            to change this screen and then come back to see your
-                            edits.
+                    <Text style={styles.appName}>{ENV.APP_NAME}</Text>
+                    {isDevelopment && (
+                        <Text style={styles.envLabel}>
+                            Environment: {ENV.ENV_NAME}
                         </Text>
+                    )}
+
+                    <Section title="Authentication">
+                        {user ? (
+                            <View>
+                                <Text style={styles.welcomeText}>
+                                    Welcome, {user.name || user.email}!
+                                </Text>
+                                <Button
+                                    title="Logout"
+                                    onPress={logout}
+                                    disabled={isLoading}
+                                />
+                            </View>
+                        ) : (
+                            <View>
+                                <Text>Sign in to manage your documents</Text>
+                                <Button
+                                    title={
+                                        isLoading
+                                            ? "Logging in..."
+                                            : "Login with Google"
+                                    }
+                                    onPress={async () => {
+                                        try {
+                                            await loginWithGoogle()
+                                        } catch {
+                                            Alert.alert(
+                                                "Login Failed",
+                                                "Could not sign in with Google. Please try again."
+                                            )
+                                        }
+                                    }}
+                                    disabled={isLoading}
+                                />
+                            </View>
+                        )}
                     </Section>
-                    <Section title="See Your Changes">
-                        <ReloadInstructions />
-                    </Section>
-                    <Section title="Debug">
-                        <DebugInstructions />
-                    </Section>
-                    <Section title="Learn More">
-                        <Text>Read the docs to discover what to do next:</Text>
-                    </Section>
-                    <LearnMoreLinks />
+
+                    {/* Only show these sections in development mode */}
+                    {isDevelopment && (
+                        <>
+                            <Section title="See Your Changes">
+                                <ReloadInstructions />
+                            </Section>
+                            <Section title="Debug">
+                                <DebugInstructions />
+                            </Section>
+                            <Section title="Learn More">
+                                <Text>
+                                    Read the docs to discover what to do next:
+                                </Text>
+                            </Section>
+                            <LearnMoreLinks />
+                        </>
+                    )}
                 </View>
             </ScrollView>
-        </View>
+        </SafeAreaView>
     )
 }
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+    },
     sectionContainer: {
         marginTop: 32,
         paddingHorizontal: 24,
@@ -133,8 +184,21 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "400",
     },
-    highlight: {
-        fontWeight: "700",
+    appName: {
+        fontSize: 28,
+        fontWeight: "bold",
+        textAlign: "center",
+        marginVertical: 20,
+    },
+    envLabel: {
+        fontSize: 14,
+        textAlign: "center",
+        marginBottom: 20,
+        opacity: 0.7,
+    },
+    welcomeText: {
+        fontSize: 16,
+        marginBottom: 10,
     },
 })
 
