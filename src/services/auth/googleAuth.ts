@@ -34,7 +34,8 @@ export const GoogleAuthService = {
     preloadConfig: async () => {
         try {
             if (!googleConfig.clientId) {
-                throw new Error(`Missing Google client ID for ${Platform.OS}`)
+                console.error(`Missing Google client ID for ${Platform.OS}`)
+                return
             }
 
             await prefetchConfiguration({
