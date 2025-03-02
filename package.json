@@ -3,16 +3,21 @@
     "version": "0.0.1",
     "private": true,
     "scripts": {
-        "android": "react-native run-android",
-        "ios": "react-native run-ios",
+        "android:dev": "ENVFILE=.env.development react-native run-android",
+        "ios:dev": "ENVFILE=.env.development react-native run-ios",
         "lint": "eslint .",
+        "start:dev": "ENVFILE=.env.development react-native start",
         "start": "react-native start",
         "test": "jest",
         "prepare": "husky"
     },
     "dependencies": {
+        "jwt-decode": "^4.0.0",
         "react": "19.0.0",
         "react-native": "0.78.0",
+        "react-native-app-auth": "^8.0.1",
+        "react-native-config": "^1.5.5",
+        "react-native-keychain": "^9.2.3",
         "zustand": "^5.0.3"
     },
     "devDependencies": {
