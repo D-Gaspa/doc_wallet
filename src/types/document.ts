@@ -16,6 +16,7 @@ export interface IDocState {
     // Selectors
     getDocumentById: (id: string) => IDocument | undefined
     getFilteredDocuments: (filterFn: (doc: IDocument) => boolean) => IDocument[]
+    getDecryptedContent: (id: string) => Promise<string | null>
 
     // Actions
     fetchDocuments: () => Promise<void>

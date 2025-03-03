@@ -1,10 +1,11 @@
 export default {
+    preset: "react-native",
     transform: {
         "^.+\\.[tj]sx?$": "babel-jest",
     },
     transformIgnorePatterns: [
-        "node_modules/(?!(react-native|@react-native|react-native-app-auth|react-native-base64|react-native-config)/)",
+        "node_modules/(?!(expo|expo-modules-core|expo-local-authentication|react-native|@react-native|@react-navigation|react-native-app-auth|react-native-keychain|react-native-base64|react-native-config)/)",
     ],
-    preset: "react-native",
     setupFiles: ["./jest.setup.js"],
+    moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
 }
