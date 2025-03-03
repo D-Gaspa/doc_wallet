@@ -1,15 +1,15 @@
 import type { PropsWithChildren } from "react"
 import React, { useEffect } from "react"
 import {
+    Alert,
+    Button,
+    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
     Text,
     useColorScheme,
     View,
-    Button,
-    SafeAreaView,
-    Alert,
 } from "react-native"
 
 import {

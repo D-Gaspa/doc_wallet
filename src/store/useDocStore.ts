@@ -2,6 +2,9 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { asyncStorageMiddleware } from "./middleware/persist"
 import type { IDocState, IDocument } from "../types/document"
+import { DocumentEncryptionService } from "../services/security/documentEncryption"
+
+const docEncryption = new DocumentEncryptionService()
 
 export const useDocStore = create<IDocState>()(
     persist(
@@ -13,7 +16,25 @@ export const useDocStore = create<IDocState>()(
 
             // Selectors
             getDocumentById: (id) => {
-                return get().documents.find((doc) => doc.id === id)
+                const document = get().documents.find((doc) => doc.id === id)
+
+                // If a document has encrypted content, we'll handle that
+                if (document && document.content?.startsWith("encrypted:")) {
+                    // Return a promise that resolves to the document with decrypted content
+                    return {
+                        ...document,
+                        // This is a placeholder for the actual decryption
+                        // We need to check if content is encrypted and decrypt if needed
+                        _getDecryptedContent: async () => {
+                            const encryptedId = document.content.split(":")[1]
+                            return await docEncryption.decryptDocument(
+                                encryptedId
+                            )
+                        },
+                    }
+                }
+
+                return document
             },
 
             getFilteredDocuments: (filterFn) => {
@@ -25,7 +46,6 @@ export const useDocStore = create<IDocState>()(
                 try {
                     set({ isLoading: true, error: null })
                     // Fetch implementation will go here
-
                     // For now, this is just a placeholder
                     set({ isLoading: false })
                 } catch (error) {
@@ -44,11 +64,30 @@ export const useDocStore = create<IDocState>()(
                 try {
                     set({ isLoading: true, error: null })
 
+                    const id = Date.now().toString()
                     const newDocument: IDocument = {
                         ...documentData,
-                        id: Date.now().toString(),
+                        id,
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
+                    }
+
+                    // Encrypt the document content if it exists
+                    if (documentData.content) {
+                        const encryptionSuccess =
+                            await docEncryption.encryptDocument(
+                                id,
+                                documentData.content
+                            )
+
+                        if (encryptionSuccess) {
+                            // Store a reference to the encrypted content, not the actual content
+                            newDocument.content = `encrypted:${id}`
+                        } else {
+                            throw new Error(
+                                "Failed to encrypt document content"
+                            )
+                        }
                     }
 
                     set((state) => ({
@@ -75,12 +114,28 @@ export const useDocStore = create<IDocState>()(
                 try {
                     set({ isLoading: true, error: null })
 
+                    const processedUpdates = { ...updates }
+                    if (updates.content) {
+                        const encryptionSuccess =
+                            await docEncryption.encryptDocument(
+                                id,
+                                updates.content
+                            )
+
+                        if (encryptionSuccess) {
+                            // Replace it with reference to encrypted content
+                            processedUpdates.content = `encrypted:${id}`
+                        } else {
+                            throw new Error("Failed to encrypt updated content")
+                        }
+                    }
+
                     set((state) => ({
                         documents: state.documents.map((doc) =>
                             doc.id === id
                                 ? {
                                       ...doc,
-                                      ...updates,
+                                      ...processedUpdates,
                                       updatedAt: new Date().toISOString(),
                                   }
                                 : doc
@@ -89,7 +144,7 @@ export const useDocStore = create<IDocState>()(
                             state.selectedDocument?.id === id
                                 ? {
                                       ...state.selectedDocument,
-                                      ...updates,
+                                      ...processedUpdates,
                                       updatedAt: new Date().toISOString(),
                                   }
                                 : state.selectedDocument,
@@ -115,6 +170,12 @@ export const useDocStore = create<IDocState>()(
                 try {
                     set({ isLoading: true, error: null })
 
+                    // First find the document to check if it has encrypted content
+                    const document = get().documents.find(
+                        (doc) => doc.id === id
+                    )
+
+                    // Delete the document from the store
                     set((state) => ({
                         documents: state.documents.filter(
                             (doc) => doc.id !== id
@@ -124,6 +185,14 @@ export const useDocStore = create<IDocState>()(
                                 ? null
                                 : state.selectedDocument,
                     }))
+
+                    // If document had encrypted content, delete it from secure storage
+                    if (
+                        document &&
+                        document.content?.startsWith("encrypted:")
+                    ) {
+                        await docEncryption.deleteEncryptedDocument(id)
+                    }
                 } catch (error) {
                     set({
                         error:
@@ -148,6 +217,19 @@ export const useDocStore = create<IDocState>()(
                 const document =
                     get().documents.find((doc) => doc.id === id) || null
                 set({ selectedDocument: document })
+            },
+
+            getDecryptedContent: async (id: string) => {
+                const document = get().documents.find((doc) => doc.id === id)
+                if (!document) return null
+
+                // Check if content is encrypted
+                if (document.content?.startsWith("encrypted:")) {
+                    return await docEncryption.decryptDocument(id)
+                }
+
+                // If not encrypted, return the content directly
+                return document.content
             },
 
             clearError: () => set({ error: null }),

@@ -1,29 +1,50 @@
 import { create } from "zustand"
-import type { IAuthState } from "../types/auth"
+import { AuthMethod, IAuthState } from "../types/auth"
 import type { IUser } from "../types/user"
 import { GoogleAuthService } from "../services/auth/googleAuth.ts"
+import { AuthService } from "../services/auth/authService"
+import { TokenService } from "../services/auth/token"
+
+const authService = new AuthService()
 
 export const useAuthStore = create<IAuthState>((set) => ({
     user: null,
     isAuthenticated: false,
     isLoading: false,
+    preferredAuthMethod: AuthMethod.PIN,
 
-    login: async () => {
+    login: async (pin?: string) => {
         try {
             set({ isLoading: true })
-            const authResponse = await GoogleAuthService.signIn()
 
-            const user: IUser = {
-                id: authResponse.user.id,
-                name: authResponse.user.name || "User",
-                email: authResponse.user.email,
+            const preferredMethod = await authService.getPreferredAuthMethod()
+            let user: IUser | null = null
+
+            if (preferredMethod === AuthMethod.BIOMETRIC) {
+                user = await authService.authenticate(AuthMethod.BIOMETRIC)
+                if (!user && pin) {
+                    user = await authService.authenticate(AuthMethod.PIN, {
+                        pin,
+                    })
+                }
+            } else if (preferredMethod === AuthMethod.PIN) {
+                if (!pin) {
+                    throw new Error("PIN required")
+                }
+                user = await authService.authenticate(AuthMethod.PIN, { pin })
+            } else {
+                user = await authService.authenticate(AuthMethod.GOOGLE)
             }
 
-            // Update store with authenticated user
+            if (!user) {
+                throw new Error("Authentication failed")
+            }
+
             set({
                 user,
                 isAuthenticated: true,
                 isLoading: false,
+                preferredAuthMethod: preferredMethod,
             })
         } catch (error) {
             console.error("Login failed:", error)
@@ -32,18 +53,17 @@ export const useAuthStore = create<IAuthState>((set) => ({
                 isAuthenticated: false,
                 isLoading: false,
             })
-            throw error // It is going to be re-throw to let UI handle error display
+            throw error
         }
     },
-    // TODO: Implement logout logic
+
     logout: async () => {
         try {
             set({ isLoading: true })
 
-            // Sign out from Google and revoke tokens
             await GoogleAuthService.signOut()
+            await TokenService.clearUserData?.()
 
-            // Update store
             set({
                 user: null,
                 isAuthenticated: false,
@@ -61,10 +81,13 @@ export const useAuthStore = create<IAuthState>((set) => ({
 
     checkAuthStatus: async () => {
         try {
-            // TODO: Check for other types of authentication than google
-            const isAuthenticated = await GoogleAuthService.isAuthenticated()
+            // First check for stored user data (for PIN/biometric auth)
+            const userData = await TokenService.getUserData?.()
 
-            if (isAuthenticated) {
+            // Then check Google auth status
+            const isGoogleAuthenticated =
+                await GoogleAuthService.isAuthenticated()
+            if (isGoogleAuthenticated) {
                 const googleUser = await GoogleAuthService.getCurrentUser()
 
                 if (googleUser) {
@@ -74,17 +97,37 @@ export const useAuthStore = create<IAuthState>((set) => ({
                         email: googleUser.email,
                     }
 
-                    // Set authenticated state
+                    // Store user data for PIN/biometric auth
+                    await TokenService.storeUserData?.(user)
+
                     set({
                         user,
                         isAuthenticated: true,
                         isLoading: false,
+                        preferredAuthMethod: AuthMethod.GOOGLE,
                     })
                     return
                 }
+            } else if (userData) {
+                const isPinSet = await authService.isPinSet()
+                const isBiometricAvailable =
+                    await authService.isBiometricAvailable()
+
+                const preferredMethod = isBiometricAvailable
+                    ? AuthMethod.BIOMETRIC
+                    : isPinSet
+                    ? AuthMethod.PIN
+                    : AuthMethod.GOOGLE
+
+                set({
+                    user: userData,
+                    isAuthenticated: true,
+                    isLoading: false,
+                    preferredAuthMethod: preferredMethod,
+                })
+                return
             }
 
-            // If any check fails, set not authenticated
             set({
                 user: null,
                 isAuthenticated: false,
@@ -93,6 +136,22 @@ export const useAuthStore = create<IAuthState>((set) => ({
         } catch (error) {
             console.error("Auth check failed:", error)
             set({ user: null, isAuthenticated: false })
+        } finally {
+            set({ isLoading: false })
+        }
+    },
+
+    setupPin: async (pin: string) => {
+        try {
+            set({ isLoading: true })
+            const success = await authService.setupPin(pin)
+            if (success) {
+                set({ preferredAuthMethod: AuthMethod.PIN })
+            }
+            return success
+        } catch (error) {
+            console.error("PIN setup failed:", error)
+            return false
         } finally {
             set({ isLoading: false })
         }

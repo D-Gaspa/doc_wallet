@@ -1,12 +1,20 @@
 import { IGoogleUser, IUser } from "./user.ts"
 
+export enum AuthMethod {
+    BIOMETRIC = "biometric",
+    PIN = "pin",
+    GOOGLE = "google",
+}
+
 export interface IAuthState {
     user: IUser | null
     isAuthenticated: boolean
     isLoading: boolean
-    login: () => Promise<void>
-    logout: () => void
+    preferredAuthMethod?: AuthMethod
+    login: (pin?: string) => Promise<void>
+    logout: () => Promise<void>
     checkAuthStatus: () => Promise<void>
+    setupPin: (pin: string) => Promise<boolean>
 }
 
 export interface ITokens {
