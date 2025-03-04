@@ -1,6 +1,6 @@
 import React from "react"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
-import { MainTabParamList } from "./types"
+import { MainTabParamList } from "../types/navigation.ts"
 import { TAB_ROUTES } from "./routes"
 import { DocumentNavigator } from "./DocumentNavigator"
 import { ProfileNavigator } from "./ProfileNavigator"

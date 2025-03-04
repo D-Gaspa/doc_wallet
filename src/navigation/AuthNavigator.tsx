@@ -1,6 +1,6 @@
 import React from "react"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
-import { AuthStackParamList } from "./types"
+import { AuthStackParamList } from "../types/navigation.ts"
 import { AUTH_ROUTES } from "./routes"
 import { Text } from "react-native"
 

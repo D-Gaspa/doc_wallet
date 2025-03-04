@@ -7,13 +7,13 @@ export { MainNavigator } from "./MainNavigator"
 
 export * from "./routes"
 
-export * from "./types"
+export * from "../types/navigation.ts"
 
 export { linking } from "./linking"
 
 // Export a convenience function to navigate outside of components
 import { createNavigationContainerRef } from "@react-navigation/native"
-import { RootStackParamList } from "./types"
+import { RootStackParamList } from "../types/navigation.ts"
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>()
 

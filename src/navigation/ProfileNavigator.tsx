@@ -1,6 +1,6 @@
 import React from "react"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
-import { ProfileStackParamList } from "./types"
+import { ProfileStackParamList } from "../types/navigation.ts"
 import { PROFILE_ROUTES } from "./routes"
 
 // Import screen placeholders - these will be implemented later

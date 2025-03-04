@@ -1,6 +1,6 @@
 import React from "react"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
-import { DocumentStackParamList } from "./types"
+import { DocumentStackParamList } from "../types/navigation.ts"
 import { DOCUMENT_ROUTES } from "./routes"
 import { Text } from "react-native"
 

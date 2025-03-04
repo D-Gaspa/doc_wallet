@@ -1,5 +1,5 @@
 import { LinkingOptions } from "@react-navigation/native"
-import { RootStackParamList } from "./types"
+import { RootStackParamList } from "../types/navigation.ts"
 import {
     AUTH_ROUTES,
     DOCUMENT_ROUTES,

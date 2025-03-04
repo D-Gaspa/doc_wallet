@@ -7,7 +7,7 @@ import {
     ROOT_ROUTES,
     SETTINGS_ROUTES,
     TAB_ROUTES,
-} from "./routes"
+} from "../navigation"
 import "@react-navigation/native"
 
 // Authentication Navigator Param List
