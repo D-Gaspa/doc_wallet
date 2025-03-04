@@ -6,6 +6,18 @@ export const LogConfig: ILoggingConfig = {
     enableConsoleOutput: isDevelopment,
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const formatError = (err: any): any => {
+    if (err instanceof Error) {
+        return {
+            name: err.name,
+            message: err.message,
+            // Omit stack trace
+        }
+    }
+    return err
+}
+
 export class LoggingService {
     static debug(message: string, ...optionalParams: ILogParams[]): void {
         LoggingService.log(LogLevel.DEBUG, message, ...optionalParams)
@@ -46,20 +58,25 @@ export class LoggingService {
         const timestamp = new Date().toISOString()
         const prefix = `[${timestamp}][${LogLevel[level]}]`
 
+        // Format parameters to clean up errors
+        const cleanParams = optionalParams.map((param) =>
+            param instanceof Error ? formatError(param) : param
+        )
+
         // In development, output to console
         if (LogConfig.enableConsoleOutput) {
             switch (level) {
                 case LogLevel.DEBUG:
-                    console.log(prefix, message, ...optionalParams)
+                    console.log(prefix, message, ...cleanParams)
                     break
                 case LogLevel.INFO:
-                    console.info(prefix, message, ...optionalParams)
+                    console.info(prefix, message, ...cleanParams)
                     break
                 case LogLevel.WARN:
-                    console.warn(prefix, message, ...optionalParams)
+                    console.warn(prefix, message, ...cleanParams)
                     break
                 case LogLevel.ERROR:
-                    console.error(prefix, message, ...optionalParams)
+                    console.error(prefix, message, ...cleanParams)
                     break
             }
         }

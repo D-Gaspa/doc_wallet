@@ -1,16 +1,20 @@
+// src/services/auth/googleAuth.ts
 import { Platform } from "react-native"
 import {
     authorize,
+    prefetchConfiguration,
     refresh,
     revoke,
-    prefetchConfiguration,
 } from "react-native-app-auth"
-import { TokenService } from "./token"
+import { TokenService } from "./tokenService.ts"
 import { jwtDecode } from "jwt-decode"
 import { IGoogleUser } from "../../types/user.ts"
 import { IGoogleAuthResponse, IJwtPayload } from "../../types/auth.ts"
 import Config from "react-native-config"
+import { LoggingService } from "../monitoring/loggingService"
+import { PerformanceMonitoringService } from "../monitoring/performanceMonitoringService"
 
+const logger = LoggingService.getLogger("GoogleAuth")
 const clientIdIOS = Config.GOOGLE_CLIENT_ID_IOS
 const clientIdAndroid = Config.GOOGLE_CLIENT_ID_ANDROID
 
@@ -34,21 +38,24 @@ export const GoogleAuthService = {
     preloadConfig: async () => {
         try {
             if (!googleConfig.clientId) {
-                console.error(`Missing Google client ID for ${Platform.OS}`)
+                logger.error(`Missing Google client ID for ${Platform.OS}`)
                 return
             }
 
+            logger.debug("Preloading Google authentication configuration")
             await prefetchConfiguration({
                 warmAndPrefetchChrome: true,
                 ...googleConfig,
             })
+            logger.debug("Google configuration preloaded successfully")
         } catch (error) {
-            console.error("Failed to preload configuration", error)
+            logger.error("Failed to preload Google configuration", error)
         }
     },
 
     getUserFromIdToken: (idToken: string): IGoogleUser => {
         try {
+            logger.debug("Decoding user information from ID token")
             const decodedToken = jwtDecode<IJwtPayload>(idToken)
 
             return {
@@ -58,18 +65,23 @@ export const GoogleAuthService = {
                 photo: decodedToken.picture || null,
             }
         } catch (error) {
-            console.error("Error decoding ID token", error)
+            logger.error("Error decoding ID token", error)
             throw new Error("Failed to decode user information from token")
         }
     },
 
     signIn: async (): Promise<IGoogleAuthResponse> => {
+        PerformanceMonitoringService.startMeasure("google_sign_in")
         try {
+            logger.info("Initiating Google sign-in")
             // Perform authorization request
             const result = await authorize(googleConfig)
 
             // Get user info from ID token
             const user = GoogleAuthService.getUserFromIdToken(result.idToken)
+            logger.info("Google authorization successful", {
+                email: user.email,
+            })
 
             const expiresAt = new Date(
                 result.accessTokenExpirationDate
@@ -81,6 +93,7 @@ export const GoogleAuthService = {
                 expiresAt,
             })
 
+            PerformanceMonitoringService.endMeasure("google_sign_in")
             return {
                 user,
                 tokens: {
@@ -90,13 +103,15 @@ export const GoogleAuthService = {
                 },
             }
         } catch (error) {
-            console.error("Google sign in error:", error)
+            logger.error("Google sign in error:", error)
+            PerformanceMonitoringService.endMeasure("google_sign_in")
             throw new Error("Google sign in failed")
         }
     },
 
     signOut: async (): Promise<void> => {
         try {
+            logger.info("Initiating Google sign-out")
             const tokens = await TokenService.getTokens()
 
             if (tokens) {
@@ -104,21 +119,26 @@ export const GoogleAuthService = {
                     tokenToRevoke: tokens.accessToken,
                     includeBasicAuth: true,
                 })
+                logger.info("Google token revoked successfully")
             }
 
             await TokenService.clearTokens()
+            logger.info("Google sign-out completed")
         } catch (error) {
-            console.error("Sign out error:", error)
+            logger.error("Google sign out error:", error)
             // Still clear local tokens even if revoke fails
             await TokenService.clearTokens()
         }
     },
 
     refreshAccessToken: async (): Promise<boolean> => {
+        PerformanceMonitoringService.startMeasure("token_refresh")
         try {
+            logger.debug("Refreshing Google access token")
             const tokens = await TokenService.getTokens()
 
             if (!tokens || !tokens.refreshToken) {
+                logger.warn("No refresh token available, cannot refresh")
                 return false
             }
 
@@ -136,18 +156,25 @@ export const GoogleAuthService = {
                 expiresAt,
             })
 
+            logger.info("Google token refreshed successfully")
+            PerformanceMonitoringService.endMeasure("token_refresh")
             return true
         } catch (error) {
-            console.error("Error refreshing token:", error)
+            logger.error("Error refreshing Google token:", error)
+            PerformanceMonitoringService.endMeasure("token_refresh")
             return false
         }
     },
 
     isAuthenticated: async (): Promise<boolean> => {
         try {
-            return await TokenService.isTokenValid()
+            const isValid = await TokenService.isTokenValid()
+            logger.debug("Google authentication status checked", {
+                isAuthenticated: isValid,
+            })
+            return isValid
         } catch (error) {
-            console.error("Error checking authentication:", error)
+            logger.error("Error checking Google authentication status:", error)
             return false
         }
     },
@@ -158,11 +185,13 @@ export const GoogleAuthService = {
             const isValid = await TokenService.isTokenValid()
 
             if (!tokens || !isValid) {
+                logger.debug("No valid tokens, cannot get current user")
                 return null
             }
 
-            // TODO: Check request of user info
+            // Get user info from Google API
             try {
+                logger.debug("Requesting user info from Google API")
                 const response = await fetch(
                     "https://www.googleapis.com/oauth2/v3/userinfo",
                     {
@@ -174,6 +203,7 @@ export const GoogleAuthService = {
 
                 if (response.ok) {
                     const userData = await response.json()
+                    logger.debug("User info retrieved successfully")
                     return {
                         id: userData.sub,
                         name: userData.name || null,
@@ -181,18 +211,18 @@ export const GoogleAuthService = {
                         photo: userData.picture || null,
                     }
                 } else {
-                    console.error(
-                        "Failed to get user info:",
+                    logger.error(
+                        "Failed to get user info from Google API",
                         await response.text()
                     )
                     return null
                 }
             } catch (error) {
-                console.error("Error getting user info:", error)
+                logger.error("Error getting user info from Google API:", error)
                 return null
             }
         } catch (error) {
-            console.error("Error getting current user:", error)
+            logger.error("Error getting current Google user:", error)
             return null
         }
     },

@@ -1,12 +1,12 @@
 import { useAuthStore } from "../../store"
 import { AuthService } from "../../services/auth/authService"
 import { GoogleAuthService } from "../../services/auth/googleAuth"
-import { TokenService } from "../../services/auth/token"
+import { TokenService } from "../../services/auth/tokenService.ts"
 import { AuthMethod } from "../../types/auth"
 
 jest.mock("../../services/auth/authService")
 jest.mock("../../services/auth/googleAuth")
-jest.mock("../../services/auth/token")
+jest.mock("../../services/auth/tokenService.ts")
 
 describe("useAuthStore", () => {
     beforeEach(() => {

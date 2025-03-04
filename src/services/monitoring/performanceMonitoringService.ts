@@ -9,24 +9,42 @@ import {
 
 const PERF_METRICS_KEY = "com.doc_wallet.performance_metrics"
 
+const isPerformanceAPIAvailable = () => {
+    return (
+        typeof performance !== "undefined" &&
+        typeof performance.mark === "function" &&
+        typeof performance.measure === "function" &&
+        typeof performance.getEntriesByName === "function"
+    )
+}
+
 export class PerformanceMonitoringService {
     private static measures: Record<string, number[]> = {}
     private static isEnabled = isDevelopment
     private static logger = LoggingService.getLogger("Performance")
     private static metricsBuffer: IPerformanceMetric[] = []
     private static bufferSize = 20
+    // Add a timing map for fallback
+    private static timingMap: Record<string, number> = {}
 
     // Enable/disable performance monitoring
     static setEnabled(enabled: boolean): void {
         this.isEnabled = enabled
+        if (!enabled) {
+            this.timingMap = {}
+        }
     }
 
-    // Start timing the operation
     static startMeasure(operationName: string): void {
         if (!this.isEnabled) return
 
         try {
-            performance.mark(`${operationName}_start`)
+            if (isPerformanceAPIAvailable()) {
+                performance.mark(`${operationName}_start`)
+            } else {
+                // Fallback to Date.now() when performance API unavailable
+                this.timingMap[`${operationName}_start`] = Date.now()
+            }
         } catch (err) {
             this.logger.error(`Failed to start measure '${operationName}'`, err)
         }
@@ -40,17 +58,32 @@ export class PerformanceMonitoringService {
         if (!this.isEnabled) return null
 
         try {
-            performance.mark(`${operationName}_end`)
-            performance.measure(
-                operationName,
-                `${operationName}_start`,
-                `${operationName}_end`
-            )
+            let duration: number | null = null
 
-            const entries = performance.getEntriesByName(operationName)
-            if (entries.length > 0) {
-                const duration = entries[entries.length - 1].duration
+            if (isPerformanceAPIAvailable()) {
+                performance.mark(`${operationName}_end`)
+                performance.measure(
+                    operationName,
+                    `${operationName}_start`,
+                    `${operationName}_end`
+                )
 
+                const entries = performance.getEntriesByName(operationName)
+                if (entries.length > 0) {
+                    duration = entries[entries.length - 1].duration
+                }
+            } else {
+                // Fallback calculation using Date.now()
+                const endTime = Date.now()
+                const startTime = this.timingMap[`${operationName}_start`]
+
+                if (startTime) {
+                    duration = endTime - startTime
+                    delete this.timingMap[`${operationName}_start`] // Clean up
+                }
+            }
+
+            if (duration !== null) {
                 // Store the measurement
                 if (!this.measures[operationName]) {
                     this.measures[operationName] = []
@@ -122,12 +155,15 @@ export class PerformanceMonitoringService {
         }
     }
 
-    // Clear all measurements
     static clearMeasurements(): void {
         this.measures = {}
+        this.timingMap = {}
+
         try {
-            performance.clearMarks()
-            performance.clearMeasures()
+            if (isPerformanceAPIAvailable()) {
+                performance.clearMarks()
+                performance.clearMeasures()
+            }
         } catch (err) {
             this.logger.error("Failed to clear performance measurements", err)
         }
@@ -138,7 +174,7 @@ export class PerformanceMonitoringService {
 
         // Flush buffer if it reaches the limit
         if (this.metricsBuffer.length >= this.bufferSize) {
-            this.flushMetricsBuffer().then((r) => r)
+            this.flushMetricsBuffer().then(() => {})
         }
     }
 
