@@ -1,12 +1,15 @@
+// src/hooks/useNavigationPersistence.ts
 import { useEffect, useState } from "react"
 import { Linking, Platform } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { NAVIGATION_STATE_KEY } from "../navigation/persistence.ts"
+import { LoggingService } from "../services/monitoring/loggingService"
+
+const logger = LoggingService.getLogger("NavigationPersistence")
 
 /**
  * Hook to handle navigation state persistence
  * This allows the app to restore the user's last navigation state after a reload
- * (Should probably be moved to hooks folder)
  */
 export function useNavigationPersistence() {
     const [isReady, setIsReady] = useState(Platform.OS === "web") // Web uses URL-based routing
@@ -15,8 +18,16 @@ export function useNavigationPersistence() {
     useEffect(() => {
         const restoreState = async () => {
             try {
+                logger.debug("Attempting to restore navigation state")
                 // Check if we have a deep link first
                 const initialUrl = await Linking.getInitialURL()
+
+                if (initialUrl) {
+                    logger.debug(
+                        "Deep link detected, skipping state restoration",
+                        { initialUrl }
+                    )
+                }
 
                 // Only restore if there's no deep link
                 if (Platform.OS !== "web" && initialUrl == null) {
@@ -25,11 +36,14 @@ export function useNavigationPersistence() {
                     )
 
                     if (savedState) {
+                        logger.debug("Navigation state restored from storage")
                         setInitialState(JSON.parse(savedState))
+                    } else {
+                        logger.debug("No saved navigation state found")
                     }
                 }
             } catch (error) {
-                console.warn("Failed to restore navigation state:", error)
+                logger.warn("Failed to restore navigation state:", error)
             } finally {
                 setIsReady(true)
             }
@@ -48,7 +62,7 @@ export function useNavigationPersistence() {
                 NAVIGATION_STATE_KEY,
                 JSON.stringify(state)
             ).catch((error) => {
-                console.warn("Failed to save navigation state:", error)
+                logger.warn("Failed to save navigation state:", error)
             })
         }
     }

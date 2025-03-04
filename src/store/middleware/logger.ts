@@ -1,4 +1,7 @@
 import { StateCreator, StoreApi } from "zustand"
+import { LoggingService } from "../../services/monitoring/loggingService"
+
+const logger = LoggingService.getLogger("ZustandStore")
 
 type SetStateFunction<T> = (
     partial: T | Partial<T> | ((state: T) => T | Partial<T>),
@@ -7,7 +10,7 @@ type SetStateFunction<T> = (
 
 type GetStateFunction<T> = () => T
 
-export const logger =
+export const middlewareLogger =
     <T extends object>(f: StateCreator<T, [], []>, name = "store") =>
     (
         set: SetStateFunction<T>,
@@ -15,9 +18,9 @@ export const logger =
         store: StoreApi<T>
     ) => {
         const loggedSet: typeof set = (...args: Parameters<typeof set>) => {
-            console.log(`[${name}]: applying:`, args)
+            logger.debug(`[${name}]: Applying state update`, args[0])
             set(...args)
-            console.log(`[${name}]: new state:`, get())
+            logger.debug(`[${name}]: New state:`, get())
         }
         return f(loggedSet, get, store)
     }

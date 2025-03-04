@@ -204,11 +204,58 @@ describe("PerformanceMonitoringService", () => {
     })
 
     test("setEnabled should control monitoring status", () => {
+        // Mock Date.now to track if it's called
+        const originalDateNow = Date.now
+        Date.now = jest.fn(() => 1234567890)
+
         PerformanceMonitoringService.setEnabled(false)
         mockMark.mockClear()
+        ;(Date.now as jest.Mock).mockClear()
 
         PerformanceMonitoringService.startMeasure("disabled_test")
 
+        // Performance.mark should not be called
         expect(mockMark).not.toHaveBeenCalled()
+
+        // Date.now should not be called either (fallback shouldn't be used)
+        expect(Date.now).not.toHaveBeenCalled()
+
+        // Check that timing map is empty
+        expect(
+            Object.keys(PerformanceMonitoringService["timingMap"])
+        ).toHaveLength(0)
+
+        // Restore Date.now
+        Date.now = originalDateNow
+    })
+
+    test("startMeasure should use Date.now fallback when performance API is not available", () => {
+        // Temporarily remove the performance object to simulate environment without Performance API
+        const originalPerformance = global.performance
+        Object.defineProperty(global, "performance", {
+            configurable: true,
+            value: undefined,
+        })
+
+        // Mock Date.now
+        const originalDateNow = Date.now
+        Date.now = jest.fn(() => 1234567890)
+
+        PerformanceMonitoringService.startMeasure("fallback_test")
+
+        // Date.now should have been called
+        expect(Date.now).toHaveBeenCalled()
+
+        // Check that the start time was recorded in the timing map
+        expect(
+            PerformanceMonitoringService["timingMap"]["fallback_test_start"]
+        ).toBe(1234567890)
+
+        // Restore originals
+        Object.defineProperty(global, "performance", {
+            configurable: true,
+            value: originalPerformance,
+        })
+        Date.now = originalDateNow
     })
 })

@@ -70,6 +70,68 @@ export const DocumentCard: FC<IDocumentCardProps> = ({ documentId }) => {
     - Use consistent prop names (e.g., `onPress` for actions).
     - Add error boundaries for critical components (e.g., document viewers).
 
+## Security Monitoring Guide
+
+DocWallet includes comprehensive monitoring tools for logging, error tracking, crash reporting, and performance
+analysis.
+
+### Logging System
+
+```typescript
+// Basic usage
+import { LoggingService } from "../services/monitoring/loggingService";
+
+LoggingService.debug("Loading document", { docId: "123" });
+LoggingService.info("User logged in");
+LoggingService.warn("Document expiring soon", { daysLeft: 5 });
+LoggingService.error("Failed to decrypt", error);
+
+// Component-specific logger (preferred)
+const logger = LoggingService.getLogger("AuthService");
+logger.info("PIN verified");
+```
+
+### Error Tracking
+
+```typescript
+import { ErrorTrackingService } from "../services/monitoring/errorTrackingService";
+
+try {
+    // Risky operation
+} catch (error) {
+    ErrorTrackingService.handleError(error, false); // Non-fatal error
+}
+```
+
+### Performance Monitoring
+
+```typescript
+import { PerformanceMonitoringService } from "../services/monitoring/performanceMonitoringService";
+
+// Basic pattern
+PerformanceMonitoringService.startMeasure("operation_name");
+// ... perform operation
+PerformanceMonitoringService.endMeasure("operation_name");
+
+// For operations with return values
+async function loadDocument(id) {
+    PerformanceMonitoringService.startMeasure(`load_document_${id}`);
+    try {
+        return await actualLoadDocument(id);
+    } finally {
+        PerformanceMonitoringService.endMeasure(`load_document_${id}`);
+    }
+}
+```
+
+### Best Practices
+
+1. **Be Descriptive**: Include contextual data with logs
+2. **Use Appropriate Levels**: ERROR for actual errors, DEBUG for details
+3. **Measure Critical Operations**: Focus on potentially slow operations
+4. **Use Consistent Tags**: For easier log filtering
+5. **Protect Sensitive Data**: Never log passwords, tokens, or PII
+
 ## Pull Requests
 
 ### Template

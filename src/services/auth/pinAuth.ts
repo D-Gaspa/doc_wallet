@@ -1,11 +1,15 @@
 import * as Keychain from "react-native-keychain"
+import { LoggingService } from "../monitoring/loggingService"
+import { PerformanceMonitoringService } from "../monitoring/performanceMonitoringService"
 
 export class PinAuthService {
     private readonly pinKey = "com.doc_wallet.auth.pin"
     private readonly attemptsKey = "com.doc_wallet.auth.pin_attempts"
     private readonly maxAttempts = 5
+    private readonly logger = LoggingService.getLogger("PinAuth")
 
     async createPin(pin: string): Promise<boolean> {
+        PerformanceMonitoringService.startMeasure("pin_creation")
         try {
             const hashedPin = this.hashPin(pin)
 
@@ -16,19 +20,25 @@ export class PinAuthService {
 
             await this.resetAttempts()
 
+            this.logger.info("PIN created successfully")
+            PerformanceMonitoringService.endMeasure("pin_creation")
             return true
         } catch (error) {
-            console.error("Error creating PIN:", error)
+            this.logger.error("Error creating PIN:", error)
+            PerformanceMonitoringService.endMeasure("pin_creation")
             return false
         }
     }
 
     async verifyPin(pin: string): Promise<boolean> {
+        PerformanceMonitoringService.startMeasure("pin_verification")
         try {
             const attempts = await this.getAttempts()
 
             if (attempts >= this.maxAttempts) {
-                throw new Error("Maximum PIN attempts reached")
+                this.logger.warn(
+                    `Maximum PIN attempts (${this.maxAttempts}) reached`
+                )
             }
 
             const credentials = await Keychain.getGenericPassword({
@@ -36,6 +46,8 @@ export class PinAuthService {
             })
 
             if (!credentials) {
+                this.logger.warn("No PIN found during verification")
+                PerformanceMonitoringService.endMeasure("pin_verification")
                 return false
             }
 
@@ -44,13 +56,21 @@ export class PinAuthService {
 
             if (isValid) {
                 await this.resetAttempts()
+                this.logger.debug("PIN verified successfully")
+                PerformanceMonitoringService.endMeasure("pin_verification")
                 return true
             } else {
                 await this.incrementAttempts()
+                const attempts = await this.getAttempts()
+                this.logger.warn(
+                    `Invalid PIN attempt. Attempts: ${attempts}/${this.maxAttempts}`
+                )
+                PerformanceMonitoringService.endMeasure("pin_verification")
                 return false
             }
         } catch (error) {
-            console.error("Error verifying PIN:", error)
+            this.logger.error("Error verifying PIN:", error)
+            PerformanceMonitoringService.endMeasure("pin_verification")
             return false
         }
     }
@@ -61,7 +81,8 @@ export class PinAuthService {
                 service: this.pinKey,
             })
             return !!credentials
-        } catch {
+        } catch (error) {
+            this.logger.error("Error checking if PIN is set:", error)
             return false
         }
     }
@@ -77,29 +98,41 @@ export class PinAuthService {
             }
 
             return parseInt(credentials.password, 10)
-        } catch {
+        } catch (error) {
+            this.logger.error("Error getting PIN attempts:", error)
             return 0
         }
     }
 
     private async incrementAttempts(): Promise<void> {
-        const attempts = await this.getAttempts()
-        await Keychain.setGenericPassword(
-            "attempts",
-            (attempts + 1).toString(),
-            { service: this.attemptsKey }
-        )
+        try {
+            const attempts = await this.getAttempts()
+            await Keychain.setGenericPassword(
+                "attempts",
+                (attempts + 1).toString(),
+                { service: this.attemptsKey }
+            )
+            this.logger.debug(`PIN attempts incremented to ${attempts + 1}`)
+        } catch (error) {
+            this.logger.error("Error incrementing PIN attempts:", error)
+        }
     }
 
     private async resetAttempts(): Promise<void> {
-        await Keychain.setGenericPassword("attempts", "0", {
-            service: this.attemptsKey,
-        })
+        try {
+            await Keychain.setGenericPassword("attempts", "0", {
+                service: this.attemptsKey,
+            })
+            this.logger.debug("PIN attempts reset to 0")
+        } catch (error) {
+            this.logger.error("Error resetting PIN attempts:", error)
+        }
     }
 
     private hashPin(pin: string): string {
         // In a production app, we should consider a more sophisticated approach like PBKDF2.
-        // This is a simplified but more secure implementation using SHA-256
+        // This is a simplified but more secure implementation using SHA-256.
+        // We should also probably move this to a separate security utility class
 
         // Generate a consistent salt for the app (ideally would be stored securely)
         const salt = "docwallet_secure_salt_8e7d91f3"

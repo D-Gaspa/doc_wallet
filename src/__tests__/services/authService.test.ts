@@ -1,14 +1,14 @@
 import { BiometricAuthService } from "../../services/auth/biometricAuth"
 import { PinAuthService } from "../../services/auth/pinAuth"
 import { GoogleAuthService } from "../../services/auth/googleAuth"
-import { TokenService } from "../../services/auth/token"
+import { TokenService } from "../../services/auth/tokenService.ts"
 import { AuthService } from "../../services/auth/authService.ts"
 import { AuthMethod } from "../../types/auth.ts"
 
 jest.mock("../../services/auth/biometricAuth")
 jest.mock("../../services/auth/pinAuth")
 jest.mock("../../services/auth/googleAuth")
-jest.mock("../../services/auth/token")
+jest.mock("../../services/auth/tokenService.ts")
 
 describe("AuthService", () => {
     let authService: AuthService
