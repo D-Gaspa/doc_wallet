@@ -22,6 +22,10 @@ import {
 
 import { useAuth } from "./hooks/useAuth.ts"
 import { ENV, isDevelopment } from "./config/env.ts"
+import { LoggingService } from "./services/monitoring/loggingService"
+import { ErrorTrackingService } from "./services/monitoring/errorTrackingService"
+import { CrashReportingService } from "./services/monitoring/crashReportingService"
+import { PerformanceMonitoringService } from "./services/monitoring/performanceMonitoringService.ts"
 
 type SectionProps = PropsWithChildren<{
     title: string
@@ -65,20 +69,41 @@ function App(): React.JSX.Element {
     const { isLoading, loginWithGoogle, user, logout } = useAuth()
 
     useEffect(() => {
+        // Initialize monitoring services
+        ErrorTrackingService.init()
+
+        // Check for previous crashes
+        CrashReportingService.checkForPreviousCrash().then((crashed) => {
+            if (crashed) {
+                LoggingService.warn("Application recovered from a crash")
+                // Potentially show a message to the user or take recovery actions
+            }
+        })
+
+        // Enable performance monitoring in development
+        PerformanceMonitoringService.setEnabled(isDevelopment)
+
         if (isDevelopment) {
-            console.log("App running in environment:", ENV.ENV_NAME)
+            LoggingService.info("App running in environment:", ENV.ENV_NAME)
 
             // Check if required config is available
+            // This should probably be done in a utility function
             if (!ENV.GOOGLE_CLIENT_ID_IOS) {
-                console.warn(
+                LoggingService.warn(
                     "Missing Google client IDs for IOS in environment configuration"
                 )
             }
             if (!ENV.GOOGLE_CLIENT_ID_ANDROID) {
-                console.warn(
+                LoggingService.warn(
                     "Missing Google client IDs for Android in environment configuration"
                 )
             }
+        }
+
+        return () => {
+            CrashReportingService.markGracefulShutdown().catch((e: Error) =>
+                console.error("Failed to mark graceful shutdown", e)
+            )
         }
     }, [])
 
