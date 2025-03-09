@@ -2,19 +2,20 @@ import { lightThemeColors, darkThemeColors } from "./colors"
 import { typography } from "./typography"
 import { spacing } from "./spacing"
 import { designTokens } from "./designTokens"
+import { Theme as NavigationTheme } from "@react-navigation/native"
 
-const lightTheme = {
-    colors: lightThemeColors,
-    typography,
-    spacing,
+export const lightTheme: NavigationTheme = {
+    dark: false,
+    colors: { ...lightThemeColors },
+    fonts: { ...typography.fonts },
     ...designTokens,
 }
 
-const darkTheme = {
-    colors: darkThemeColors,
-    typography,
-    spacing,
+export const darkTheme: NavigationTheme = {
+    dark: true,
+    colors: { ...darkThemeColors },
+    fonts: { ...typography.fonts },
     ...designTokens,
 }
 
-export { lightTheme, darkTheme, typography, spacing, designTokens }
+export { typography, spacing, designTokens }
