@@ -7,6 +7,7 @@ export const lightThemeColors = {
     searchbar: "#F8F8F8",
     notification: "#FAFAFA",
     border: "#323232",
+    error: "#FF0000",
 }
 
 export const darkThemeColors = {
@@ -18,4 +19,5 @@ export const darkThemeColors = {
     searchbar: "#414141",
     notification: "#323232",
     border: "#323232",
+    error: "#FF0000",
 }
