@@ -29,7 +29,7 @@ describe("LoadingScreens", () => {
         const { colors } = useTheme() // Get the mocked theme colors
         expect(backgroundView.props.style).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ backgroundColor: colors.background })
+                expect.objectContaining({ backgroundColor: colors.background }),
             ])
         )
     })
