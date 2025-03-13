@@ -55,7 +55,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     const toggleTheme = async () => {
         try {
             const newTheme = themeType === "light" ? "dark" : "light"
-            await themeSettings.saveTheme(newTheme) // ✅ Ensure AsyncStorage updates before state change
+            await themeSettings.saveTheme(newTheme)
             setThemeType(newTheme)
             logger.info(`Theme switched to ${newTheme}`)
         } catch (error) {
