@@ -14,6 +14,7 @@ export const lightThemeColors = {
     tabbarIcon_active: "#FFFFFF",
     tabbarIcon_inactive: "#000000",
     shadow: "#000000",
+
 }
 
 export const darkThemeColors = {
