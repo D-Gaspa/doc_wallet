@@ -1,10 +1,10 @@
 import React from "react"
 import { render } from "@testing-library/react-native"
-import LoadingScreens from "../../components/common/LoadingScreens"
-import { useTheme } from "../../hooks/useTheme"
+import LoadingScreens from "../../../components/common/LoadingScreens.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 
 // Mock useTheme to provide a testable theme
-jest.mock("../../hooks/useTheme", () => ({
+jest.mock("../../../hooks/useTheme.ts", () => ({
     useTheme: jest.fn(() => ({
         colors: {
             background: "black", // Ensure this matches what the component expects

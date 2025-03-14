@@ -1,6 +1,6 @@
-import React, { createContext, useState, useEffect, useContext } from "react"
+import React, { createContext, useContext, useEffect, useState } from "react"
 import { Appearance } from "react-native"
-import { lightTheme, darkTheme } from "../config/theme"
+import { darkTheme, lightTheme } from "../config/theme"
 import { LoggingService } from "../services/monitoring/loggingService"
 import { themeSettings } from "../services/settings/themeSettings.ts"
 
@@ -45,7 +45,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
             }
         }
 
-        loadTheme()
+        loadTheme().then((r) => r)
 
         return () => {
             isMounted = false // Prevent state updates after unmount

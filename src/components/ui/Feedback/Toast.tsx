@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react"
 import { Text, StyleSheet, Animated } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext"
+import { useThemeContext } from "../../../context/ThemeContext.tsx"
 
 export interface ToastProps {
     message: string

@@ -1,10 +1,10 @@
 import React from "react"
 import { render, fireEvent } from "@testing-library/react-native"
-import BaseModal from "./BaseModal"
+import BaseModal from "../../../../components/common/modal/BaseModal.tsx"
 import { Text } from "react-native"
 
 // Mock useTheme hook
-jest.mock("../../../hooks/useTheme", () => ({
+jest.mock("../../../../hooks/useTheme.ts", () => ({
     useTheme: jest.fn(() => ({
         colors: {
             background: "white",

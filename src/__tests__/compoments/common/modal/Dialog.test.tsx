@@ -1,10 +1,10 @@
 import React from "react"
 import { render, fireEvent } from "@testing-library/react-native"
-import Dialog from "./Dialog"
+import Dialog from "../../../../components/common/modal/Dialog.tsx"
 import { Text } from "react-native"
 
 // Mock useTheme to return colors dynamically
-jest.mock("../../../hooks/useTheme", () => ({
+jest.mock("../../../../hooks/useTheme.ts", () => ({
     useTheme: jest.fn(() => ({
         colors: {
             background: "mocked-background",

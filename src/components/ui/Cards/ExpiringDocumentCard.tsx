@@ -1,6 +1,6 @@
 import React from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext"
+import { useThemeContext } from "../../../context/ThemeContext.tsx"
 import ExpiringIcon from "../assets/svg/ExclamationIcon.svg"
 
 export interface ExpiringDocumentCardProps {

@@ -1,6 +1,6 @@
 import React from "react"
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext"
+import { useThemeContext } from "../../../context/ThemeContext.tsx"
 import ArrowIcon from "../assets/svg/Arrow 1.svg"
 
 export interface DocumentCardProps {

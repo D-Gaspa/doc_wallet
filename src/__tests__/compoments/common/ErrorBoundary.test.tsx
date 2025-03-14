@@ -3,7 +3,7 @@ const mockLogger = {
     error: jest.fn(),
 }
 
-jest.mock("../../services/monitoring/loggingService", () => ({
+jest.mock("../../../services/monitoring/loggingService.ts", () => ({
     LoggingService: {
         getLogger: jest.fn(() => mockLogger), // Ensures this returns a valid object
     },
@@ -12,11 +12,11 @@ jest.mock("../../services/monitoring/loggingService", () => ({
 import React from "react"
 import { render } from "@testing-library/react-native"
 import { Text } from "react-native"
-import ErrorBoundary from "../../components/common/ErrorBoundary"
-import { ErrorTrackingService } from "../../services/monitoring/errorTrackingService"
+import ErrorBoundary from "../../../components/common/ErrorBoundary.tsx"
+import { ErrorTrackingService } from "../../../services/monitoring/errorTrackingService.ts"
 
 // Mock ErrorTrackingService
-jest.mock("../../services/monitoring/errorTrackingService", () => ({
+jest.mock("../../../services/monitoring/errorTrackingService.ts", () => ({
     ErrorTrackingService: {
         handleError: jest.fn(),
     },

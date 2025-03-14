@@ -1,7 +1,5 @@
-// Tests and saving retrieving the theme
-
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import { themeSettings } from "./themeSettings"
+import { themeSettings } from "../../../services/settings/themeSettings.ts"
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
     setItem: jest.fn(),

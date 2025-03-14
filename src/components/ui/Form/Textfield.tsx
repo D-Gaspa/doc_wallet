@@ -1,6 +1,6 @@
 import React from "react"
 import { TextInput, StyleSheet, ViewStyle } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext"
+import { useThemeContext } from "../../../context/ThemeContext.tsx"
 
 export interface TextFieldProps {
     placeholder: string

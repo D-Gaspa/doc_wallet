@@ -1,6 +1,6 @@
 import React from "react"
 import { render, act, fireEvent } from "@testing-library/react-native"
-import { ThemeProvider, useThemeContext } from "./ThemeContext.tsx"
+import { ThemeProvider, useThemeContext } from "../../context/ThemeContext.tsx"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { Appearance, Text, Button } from "react-native"
 import { waitFor } from "@testing-library/react-native"

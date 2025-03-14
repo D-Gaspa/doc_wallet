@@ -1,6 +1,6 @@
 import React from "react"
-import { Text as RNText, TextProps, StyleSheet } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext"
+import { StyleSheet, Text as RNText, TextProps } from "react-native"
+import { useThemeContext } from "../../../context/ThemeContext.tsx"
 import { typography } from "../../../config/theme"
 
 export type TextVariant = "xl" | "lg" | "md" | "base" | "sm" | "xm"

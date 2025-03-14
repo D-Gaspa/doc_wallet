@@ -1,6 +1,6 @@
 import React from "react"
 import { TouchableOpacity, View, Text, StyleSheet } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext"
+import { useThemeContext } from "../../../context/ThemeContext.tsx"
 import CheckIcon from "../assets/svg/Check.svg"
 
 export interface CheckboxProps {

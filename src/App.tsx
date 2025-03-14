@@ -1,10 +1,10 @@
 import React, { useState } from "react"
-import { ThemeProvider } from "./context/ThemeContext"
-import { View, StyleSheet, ScrollView } from "react-native"
-import { Tabbar } from "./components/ui/Layout/Tabbar/Tabbar.tsx"
+import { ThemeProvider } from "./context/ThemeContext.tsx"
+import { ScrollView, StyleSheet, View } from "react-native"
+import { TabBar } from "./components/ui/Layout/TabBar/TabBar.tsx"
 import { useTheme } from "./hooks/useTheme.ts"
 import { SearchBar } from "./components/ui/SearchBar"
-import { Stack, Row, Container, Spacer } from "./components/ui/Layout"
+import { Container, Row, Spacer, Stack } from "./components/ui/Layout"
 import { Checkbox, TextField } from "./components/ui/Form"
 import { Button } from "./components/ui/Button"
 import { Alert, Toast } from "./components/ui/Feedback"
@@ -15,6 +15,7 @@ import {
 } from "./components/ui/Cards"
 import { Text } from "./components/ui/Typography"
 import { ProfileHeader } from "./components/ui/ProfileHeader"
+
 export default function App() {
     return (
         <ThemeProvider>
@@ -190,8 +191,8 @@ const AppContent = () => {
                     />
                 </Container>
             </ScrollView>
-            <View style={styles.tabbarWrapper}>
-                <Tabbar
+            <View style={styles.tabBarWrapper}>
+                <TabBar
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                     onAddPress={() => console.log("Center Add Button Pressed!")}
@@ -201,17 +202,16 @@ const AppContent = () => {
     )
 }
 
-// Ensure Tabbar is always visible at the bottom
 const styles = StyleSheet.create({
     screen: {
         flex: 1,
-        justifyContent: "space-between", // Pushes content up and keeps tabbar at bottom
+        justifyContent: "space-between",
     },
     text: {
         fontSize: 18,
         fontWeight: "bold",
     },
-    tabbarWrapper: {
+    tabBarWrapper: {
         position: "absolute",
         bottom: 0,
         left: 0,

@@ -20,7 +20,7 @@ const tabs = [
     { tab: "Profile", icon: ProfileIcon, useFill: false },
 ]
 
-export function TabbarNavigation({
+export function TabBarNavigation({
     activeTab,
     onTabChange,
     testID,
