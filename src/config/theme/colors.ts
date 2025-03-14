@@ -1,12 +1,19 @@
 export const lightThemeColors = {
     background: "#FFFFFF",
     primary: "#31859A",
-    secondary: "#DBEFF4",
+    secondary: "#CBE9F1",
     text: "#000000",
     card: "#FAFAFA",
     searchbar: "#F8F8F8",
     notification: "#FAFAFA",
     border: "#323232",
+    error: "#FF0000",
+    success: "#28A745",
+    warning: "#FED000",
+    secondaryText: "#898989",
+    tabbarIcon_active: "#FFFFFF",
+    tabbarIcon_inactive: "#000000",
+    shadow: "#000000",
 }
 
 export const darkThemeColors = {
@@ -18,4 +25,11 @@ export const darkThemeColors = {
     searchbar: "#414141",
     notification: "#323232",
     border: "#323232",
+    error: "#FF0000",
+    success: "#28A745",
+    warning: "#FED000",
+    secondaryText: "#DFDFDF",
+    tabbarIcon_active: "#FFFFFF",
+    tabbarIcon_inactive: "#FFFFFF",
+    shadow: "#C4C4C4",
 }

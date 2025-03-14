@@ -8,4 +8,9 @@ export default {
     ],
     setupFiles: ["./jest.setup.js"],
     moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
+    moduleNameMapper: {
+        "^@/components/(.*)$": "<rootDir>/src/components/$1",
+        "^react-native-svg$": "react-native-svg-mock",
+        "\\.(svg)$": "<rootDir>/src/__mocks__/svgMock.js",
+    },
 }

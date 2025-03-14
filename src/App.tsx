@@ -1,230 +1,220 @@
-import type { PropsWithChildren } from "react"
-import React, { useEffect } from "react"
+import React, { useState } from "react"
+import { ThemeProvider } from "./context/ThemeContext.tsx"
+import { ScrollView, StyleSheet, View } from "react-native"
+import { TabBar } from "./components/ui/Layout/TabBar/TabBar.tsx"
+import { useTheme } from "./hooks/useTheme.ts"
+import { SearchBar } from "./components/ui/SearchBar"
+import { Container, Row, Spacer, Stack } from "./components/ui/Layout"
+import { Checkbox, TextField } from "./components/ui/Form"
+import { Button } from "./components/ui/Button"
+import { Alert, Toast } from "./components/ui/Feedback"
 import {
-    Alert,
-    Button,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    useColorScheme,
-    View,
-} from "react-native"
+    DocumentCard,
+    DocumentCardCarousel,
+    FolderCard,
+} from "./components/ui/Cards"
+import { Text } from "./components/ui/Typography"
+import { ProfileHeader } from "./components/ui/ProfileHeader"
 
-import {
-    Colors,
-    DebugInstructions,
-    Header,
-    LearnMoreLinks,
-    ReloadInstructions,
-} from "react-native/Libraries/NewAppScreen"
-
-import { useAuth } from "./hooks/useAuth.ts"
-import { ENV, isDevelopment } from "./config/env.ts"
-import { LoggingService } from "./services/monitoring/loggingService"
-import { ErrorTrackingService } from "./services/monitoring/errorTrackingService"
-import { CrashReportingService } from "./services/monitoring/crashReportingService"
-import { PerformanceMonitoringService } from "./services/monitoring/performanceMonitoringService.ts"
-
-type SectionProps = PropsWithChildren<{
-    title: string
-}>
-
-function Section({ children, title }: SectionProps): React.JSX.Element {
-    const isDarkMode = useColorScheme() === "dark"
+export default function App() {
     return (
-        <View style={styles.sectionContainer}>
-            <Text
-                style={[
-                    styles.sectionTitle,
-                    {
-                        color: isDarkMode ? Colors.white : Colors.black,
-                    },
-                ]}
-            >
-                {title}
-            </Text>
-            <Text
-                style={[
-                    styles.sectionDescription,
-                    {
-                        color: isDarkMode ? Colors.light : Colors.dark,
-                    },
-                ]}
-            >
-                {children}
-            </Text>
+        <ThemeProvider>
+            <AppContent />
+        </ThemeProvider>
+    )
+}
+
+const AppContent = () => {
+    const { colors, toggleTheme } = useTheme()
+    const [activeTab, setActiveTab] = useState("Home")
+    const [checked, setChecked] = useState(false)
+    const [text, setText] = useState<string>("")
+    const [toastVisible, setToastVisible] = useState<boolean>(false)
+    const [alertVisible, setAlertVisible] = useState<boolean>(false)
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const CURP = require("../src/components/ui/assets/images/curp-ejemplo.jpg")
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const INE = require("../src/components/ui/assets/images/ine-ejemplo.jpeg")
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Pasaporte = require("../src/components/ui/assets/images/pasaporte-ejemplo.jpg")
+
+    return (
+        <View style={[styles.screen, { backgroundColor: colors.background }]}>
+            <ScrollView>
+                <Container>
+                    <Stack spacing={10}>
+                        <Spacer size={10} />
+                        <Text variant="xl" weight="bold">
+                            Bienvenido a DocWallet
+                        </Text>
+                        <Text variant="lg" weight="bold">
+                            Carpetas
+                        </Text>
+                        <Text variant="md" weight="medium">
+                            Subtítulo
+                        </Text>
+                        <Text variant="base" weight="regular">
+                            Nombre de usuario
+                        </Text>
+                        <Text variant="sm" weight="regular">
+                            Ya tengo una cuenta
+                        </Text>
+                        <Text variant="xm" weight="regular">
+                            Texto muy pequeño
+                        </Text>
+                        <Spacer size={10} />
+                        <Row spacing={5}>
+                            <Text style={styles.text}>
+                                Current Tab: {activeTab}
+                            </Text>
+                            <Spacer size={15} horizontal />
+                            <Checkbox
+                                checked={checked}
+                                label={"Checked checkbox?"}
+                                onToggle={() => setChecked(!checked)}
+                            />
+                        </Row>
+                        <SearchBar
+                            placeholder="Buscar..."
+                            onSearch={(query) =>
+                                console.log("Searching for:", query)
+                            }
+                        />
+                        <Button
+                            title="Toggle theme"
+                            onPress={() => {
+                                toggleTheme()
+                                setToastVisible(!toastVisible)
+                            }}
+                        />
+                        <Toast
+                            message="This is a toast message - toggle theme "
+                            visible={toastVisible}
+                        />
+                        <TextField
+                            placeholder={"Write something"}
+                            value={text}
+                            onChangeText={(newText) => setText(newText)}
+                        />
+                        <DocumentCardCarousel
+                            documents={[
+                                {
+                                    type: "expiring",
+                                    title: "INE",
+                                    expirationDate: "25 de Abril de 2025",
+                                },
+                                {
+                                    type: "expiring",
+                                    title: "Visa USA",
+                                    expirationDate: "10 de Marzo de 2025",
+                                },
+                                {
+                                    type: "expiring",
+                                    title: "Pasaporte",
+                                    expirationDate: "30 de Julio de 2025",
+                                },
+                            ]}
+                            onPress={(title) =>
+                                console.log("Viewing document:", title)
+                            }
+                        />
+
+                        <DocumentCardCarousel
+                            documents={[
+                                {
+                                    title: "CURP",
+                                    type: "favorite",
+                                    image: CURP,
+                                },
+                                { title: "INE", type: "favorite", image: INE },
+                                {
+                                    title: "Pasaporte",
+                                    type: "favorite",
+                                    image: Pasaporte,
+                                },
+                            ]}
+                            onPress={(title) =>
+                                console.log("Viewing document:", title)
+                            }
+                        />
+                        <Stack spacing={5}>
+                            <DocumentCard
+                                title={"INE"}
+                                image={INE}
+                                onPress={() => setAlertVisible(!alertVisible)}
+                            />
+                            <DocumentCard
+                                title={"CURP"}
+                                image={CURP}
+                                onPress={() => setAlertVisible(!alertVisible)}
+                            />
+                            <DocumentCard
+                                title={"Pasaporte"}
+                                image={Pasaporte}
+                                onPress={() => setAlertVisible(!alertVisible)}
+                            />
+                        </Stack>
+                        <Alert
+                            type="warning"
+                            message="You clicked on a document !"
+                            visible={alertVisible}
+                            onClose={() => setAlertVisible(false)} // Hide on close
+                        />
+                    </Stack>
+
+                    <Spacer size={30} />
+
+                    <Stack spacing={5}>
+                        <FolderCard
+                            title="Documentos de viajes"
+                            type="travel"
+                            onPress={() =>
+                                console.log("Opening travel documents")
+                            }
+                        />
+                        <FolderCard
+                            title="Recets médicas"
+                            type="medical"
+                            onPress={() =>
+                                console.log("Opening medical documents")
+                            }
+                        />
+                    </Stack>
+
+                    <Spacer size={30} />
+
+                    <ProfileHeader
+                        username="Georgina Zerón"
+                        profileImage={undefined}
+                        onPressEdit={() => console.log("Edit??")}
+                    />
+                </Container>
+            </ScrollView>
+            <View style={styles.tabBarWrapper}>
+                <TabBar
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                    onAddPress={() => console.log("Center Add Button Pressed!")}
+                />
+            </View>
         </View>
     )
 }
 
-function App(): React.JSX.Element {
-    const isDarkMode = useColorScheme() === "dark"
-
-    const backgroundStyle = {
-        backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-    }
-
-    const { isLoading, loginWithGoogle, user, logout } = useAuth()
-
-    useEffect(() => {
-        // Initialize monitoring services
-        ErrorTrackingService.init()
-
-        // Check for previous crashes
-        CrashReportingService.checkForPreviousCrash().then((crashed) => {
-            if (crashed) {
-                LoggingService.warn("Application recovered from a crash")
-                // Potentially show a message to the user or take recovery actions
-            }
-        })
-
-        // Enable performance monitoring in development
-        PerformanceMonitoringService.setEnabled(isDevelopment)
-
-        if (isDevelopment) {
-            LoggingService.info("App running in environment:", ENV.ENV_NAME)
-
-            // Check if required config is available
-            // This should probably be done in a utility function
-            if (!ENV.GOOGLE_CLIENT_ID_IOS) {
-                LoggingService.warn(
-                    "Missing Google client IDs for IOS in environment configuration"
-                )
-            }
-            if (!ENV.GOOGLE_CLIENT_ID_ANDROID) {
-                LoggingService.warn(
-                    "Missing Google client IDs for Android in environment configuration"
-                )
-            }
-        }
-
-        return () => {
-            CrashReportingService.markGracefulShutdown().catch((e: Error) =>
-                console.error("Failed to mark graceful shutdown", e)
-            )
-        }
-    }, [])
-
-    return (
-        <SafeAreaView style={[backgroundStyle, styles.safeArea]}>
-            <StatusBar
-                barStyle={isDarkMode ? "light-content" : "dark-content"}
-                backgroundColor={backgroundStyle.backgroundColor}
-            />
-            <ScrollView
-                style={backgroundStyle}
-                contentInsetAdjustmentBehavior="automatic"
-            >
-                <Header />
-                <View
-                    style={{
-                        backgroundColor: isDarkMode
-                            ? Colors.black
-                            : Colors.white,
-                    }}
-                >
-                    <Text style={styles.appName}>{ENV.APP_NAME}</Text>
-                    {isDevelopment && (
-                        <Text style={styles.envLabel}>
-                            Environment: {ENV.ENV_NAME}
-                        </Text>
-                    )}
-
-                    <Section title="Authentication">
-                        {user ? (
-                            <View>
-                                <Text style={styles.welcomeText}>
-                                    Welcome, {user.name || user.email}!
-                                </Text>
-                                <Button
-                                    title="Logout"
-                                    onPress={logout}
-                                    disabled={isLoading}
-                                />
-                            </View>
-                        ) : (
-                            <View>
-                                <Text>Sign in to manage your documents</Text>
-                                <Button
-                                    title={
-                                        isLoading
-                                            ? "Logging in..."
-                                            : "Login with Google"
-                                    }
-                                    onPress={async () => {
-                                        try {
-                                            await loginWithGoogle()
-                                        } catch {
-                                            Alert.alert(
-                                                "Login Failed",
-                                                "Could not sign in with Google. Please try again."
-                                            )
-                                        }
-                                    }}
-                                    disabled={isLoading}
-                                />
-                            </View>
-                        )}
-                    </Section>
-
-                    {/* Only show these sections in development mode */}
-                    {isDevelopment && (
-                        <>
-                            <Section title="See Your Changes">
-                                <ReloadInstructions />
-                            </Section>
-                            <Section title="Debug">
-                                <DebugInstructions />
-                            </Section>
-                            <Section title="Learn More">
-                                <Text>
-                                    Read the docs to discover what to do next:
-                                </Text>
-                            </Section>
-                            <LearnMoreLinks />
-                        </>
-                    )}
-                </View>
-            </ScrollView>
-        </SafeAreaView>
-    )
-}
-
 const styles = StyleSheet.create({
-    safeArea: {
+    screen: {
         flex: 1,
+        justifyContent: "space-between",
     },
-    sectionContainer: {
-        marginTop: 32,
-        paddingHorizontal: 24,
-    },
-    sectionTitle: {
-        fontSize: 24,
-        fontWeight: "600",
-    },
-    sectionDescription: {
-        marginTop: 8,
+    text: {
         fontSize: 18,
-        fontWeight: "400",
-    },
-    appName: {
-        fontSize: 28,
         fontWeight: "bold",
-        textAlign: "center",
-        marginVertical: 20,
     },
-    envLabel: {
-        fontSize: 14,
-        textAlign: "center",
-        marginBottom: 20,
-        opacity: 0.7,
-    },
-    welcomeText: {
-        fontSize: 16,
-        marginBottom: 10,
+    tabBarWrapper: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
     },
 })
-
-export default App

@@ -9,8 +9,7 @@ import { linking } from "./linking"
 import { navigationRef } from "./index"
 import { Text } from "react-native"
 import { useNavigationPersistence } from "../hooks/useNavigationPersistence.ts"
-// import { useColorScheme } from "react-native"
-// import { DarkTheme, LightTheme } from "theme_modules"
+import { useTheme } from "../hooks/useTheme.ts"
 
 // Placeholder loading screen
 export function LoadingScreen() {
@@ -22,9 +21,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>()
 export function AppNavigator() {
     const { isReady, initialState, onStateChange } = useNavigationPersistence()
 
-    // In the future, we should use the user's color scheme preference
-    // const colorScheme = useColorScheme()
-    // const theme = colorScheme === "dark" ? DarkTheme : LightTheme
+    const { theme } = useTheme()
 
     if (!isReady) {
         // Return a loading screen or null until navigation state is restored
@@ -37,7 +34,7 @@ export function AppNavigator() {
             initialState={initialState}
             onStateChange={onStateChange}
             linking={linking}
-            // theme={theme}
+            theme={theme}
         >
             <Stack.Navigator
                 initialRouteName={ROOT_ROUTES.LOADING}
