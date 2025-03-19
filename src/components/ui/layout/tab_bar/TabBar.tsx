@@ -1,16 +1,16 @@
 import React from "react"
-import { View, StyleSheet } from "react-native" //TouchableOpacity
+import { View, StyleSheet } from "react-native"
 import { useThemeContext } from "../../../../context/ThemeContext.tsx"
 import { TabBarNavigation } from "./TabBarNavigation.tsx"
 
-export interface TabbarProps {
+export interface TabBarProps {
     activeTab: string
     onTabChange: (tab: string) => void
     onAddPress?: () => void
     testID?: string
 }
 
-export function TabBar({ activeTab, onTabChange, testID }: TabbarProps) {
+export function TabBar({ activeTab, onTabChange, testID }: TabBarProps) {
     const { colors } = useThemeContext()
 
     return (
@@ -22,7 +22,7 @@ export function TabBar({ activeTab, onTabChange, testID }: TabbarProps) {
                     shadowColor: colors.shadow,
                 },
             ]}
-            testID={testID ?? "tabbar-root"}
+            testID={testID ?? "tabBar-root"}
         >
             {/* Bottom Navigation Tabs */}
             <TabBarNavigation activeTab={activeTab} onTabChange={onTabChange} />

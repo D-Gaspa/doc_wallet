@@ -1,20 +1,20 @@
 import React, { useState } from "react"
 import { ThemeProvider } from "./context/ThemeContext.tsx"
 import { ScrollView, StyleSheet, View } from "react-native"
-import { TabBar } from "./components/ui/Layout/TabBar/TabBar.tsx"
+import { TabBar } from "./components/ui/layout/tab_bar/TabBar.tsx"
 import { useTheme } from "./hooks/useTheme.ts"
-import { SearchBar } from "./components/ui/SearchBar"
-import { Container, Row, Spacer, Stack } from "./components/ui/Layout"
-import { Checkbox, TextField } from "./components/ui/Form"
-import { Button } from "./components/ui/Button"
-import { Alert, Toast } from "./components/ui/Feedback"
+import { SearchBar } from "./components/ui/search_bar"
+import { Container, Row, Spacer, Stack } from "./components/ui/layout"
+import { Checkbox, TextField } from "./components/ui/form"
+import { Button } from "./components/ui/button"
+import { Alert, Toast } from "./components/ui/feedback"
 import {
     DocumentCard,
     DocumentCardCarousel,
     FolderCard,
-} from "./components/ui/Cards"
-import { Text } from "./components/ui/Typography"
-import { ProfileHeader } from "./components/ui/ProfileHeader"
+} from "./components/ui/cards"
+import { Text } from "./components/ui/typography"
+import { ProfileHeader } from "./components/ui/profile_header"
 
 export default function App() {
     return (
