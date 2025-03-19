@@ -15,14 +15,21 @@ const BaseModal: React.FC<IBaseModalProps> = ({
     dismissOnBackdropPress = true,
     children,
 }) => {
+    const { colors } = useTheme()
     return (
         <Modal transparent visible={isVisible} testID="base-modal">
             <TouchableWithoutFeedback
                 onPress={dismissOnBackdropPress ? onClose : undefined}
-                testID="modal-backdrop" // ✅ Separate testID for tests
+                testID="modal-backdrop"
             >
                 <View style={styles.overlay}>
-                    <View style={styles.modalContainer} testID="modal-content">
+                    <View
+                        style={[
+                            styles.modalContainer,
+                            { backgroundColor: colors.background },
+                        ]}
+                        testID="modal-content"
+                    >
                         {children}
                     </View>
                 </View>
@@ -40,7 +47,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     modalContainer: {
-        backgroundColor: useTheme().colors.background,
         padding: 20,
         borderRadius: 10,
     },
