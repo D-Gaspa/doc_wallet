@@ -13,16 +13,20 @@ export interface FolderCardProps {
     title: string
     type?: "travel" | "medical" | "car" | "education" | "custom"
     onPress: () => void
+    onLongPress?: () => void // Add optional onLongPress handler
     customIcon?: React.ReactNode // Allows any SVG component
     isNewFolder?: boolean // If true, shows "Create New Folder" button
+    testID?: string // Add optional testID for testing
 }
 
 export function FolderCard({
     title,
     type = "custom",
     onPress,
+    onLongPress, // Optional, won't break existing functionality
     customIcon,
     isNewFolder = false,
+    testID,
 }: FolderCardProps) {
     const { colors } = useThemeContext()
 
@@ -44,6 +48,9 @@ export function FolderCard({
                 { borderBottomColor: colors.secondaryText },
             ]}
             onPress={onPress}
+            onLongPress={onLongPress} // Add the onLongPress handler
+            delayLongPress={500} // Add a reasonable delay for long press
+            testID={testID}
         >
             <View style={styles.iconWrapper}>
                 {isNewFolder ? (
