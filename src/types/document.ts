@@ -1,10 +1,28 @@
+export enum DocumentType {
+    PDF = "application/pdf",
+    IMAGE = "image/jpeg",
+    IMAGE_PNG = "image/png",
+    UNKNOWN = "unknown",
+}
+
 export interface IDocument {
     id: string
     title: string
     content: string
     createdAt: string
     updatedAt: string
+    type: DocumentType
     tags?: string[]
+}
+
+export interface IDocumentMetadata {
+    id: string
+    documentId: string
+    key: string
+    value: string | undefined
+    type: string | number | Date | boolean | null
+    isSearchable: boolean
+    isSystem: boolean
 }
 
 export interface IDocState {
@@ -30,4 +48,19 @@ export interface IDocState {
     deleteDocument: (id: string) => Promise<void>
     selectDocument: (id: string | null) => void
     clearError: () => void
+}
+
+export interface ImportOptions {
+    allowMultiple?: boolean
+    fileTypes?: string[]
+    allowVirtualFiles?: boolean
+}
+
+export interface ImportFileResult {
+    uri: string
+    name: string | null
+    size: number | null
+    type: DocumentType
+    mimeType: string | null
+    localUri?: string // Only present when we needed to make a local copy
 }
