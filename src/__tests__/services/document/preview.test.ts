@@ -85,7 +85,6 @@ describe("DocumentPreview", () => {
                 size: 12345,
             })
         })
-
         ;(FileSystem.readDirectoryAsync as jest.Mock).mockImplementation(() =>
             Promise.resolve([
                 "preview_123.pdf",
@@ -169,7 +168,6 @@ describe("DocumentPreview", () => {
             ;(AppState.addEventListener as jest.Mock).mockReturnValue(
                 mockSubscription
             )
-
             ;(viewDocument as jest.Mock).mockImplementationOnce(() =>
                 Promise.reject(new Error("Test error"))
             )

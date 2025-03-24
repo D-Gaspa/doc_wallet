@@ -130,7 +130,6 @@ describe("DocumentEncryptionService", () => {
                     uri: fileUri,
                 })
             )
-
             ;(FileSystem.readAsStringAsync as jest.Mock).mockImplementation(
                 () => Promise.resolve("file-content-base64")
             )
@@ -206,11 +205,9 @@ describe("DocumentEncryptionService", () => {
                     password: "encryption-key-base64",
                 })
             )
-
             ;(FileSystem.readAsStringAsync as jest.Mock).mockImplementation(
                 () => Promise.resolve("DWENC2:iv-base64:encrypted-content")
             )
-
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementation(() =>
                 Promise.resolve({
                     exists: true,
@@ -274,7 +271,6 @@ describe("DocumentEncryptionService", () => {
                 username: docId,
                 password: "encryption-key-base64",
             })
-
             ;(FileSystem.readAsStringAsync as jest.Mock).mockImplementation(
                 () => Promise.resolve("INVALID-FORMAT")
             )
@@ -298,11 +294,9 @@ describe("DocumentEncryptionService", () => {
                 username: docId,
                 password: "encryption-key-base64",
             })
-
             ;(FileSystem.readAsStringAsync as jest.Mock).mockResolvedValue(
                 "DWENC2:iv-base64:encrypted-content"
             )
-
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementation(() =>
                 Promise.resolve({
                     exists: false,

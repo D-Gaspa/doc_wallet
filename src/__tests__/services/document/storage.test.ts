@@ -105,7 +105,6 @@ describe("DocumentStorageService", () => {
 
     beforeEach(async () => {
         jest.clearAllMocks()
-
         ;(FileSystem.getInfoAsync as jest.Mock).mockImplementation(
             async (path: string) => {
                 if (path.includes("encrypted")) {
@@ -152,7 +151,6 @@ describe("DocumentStorageService", () => {
                     uri: "file:///document/encrypted/",
                 })
             )
-
             ;(
                 FileSystem.makeDirectoryAsync as jest.Mock
             ).mockImplementationOnce(() =>
@@ -173,7 +171,6 @@ describe("DocumentStorageService", () => {
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({ exists: true, uri: sourceUri, size: 12345 })
             )
-
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: true,
@@ -249,7 +246,6 @@ describe("DocumentStorageService", () => {
                     uri: "file:///document/documents/doc123_test.pdf",
                 })
             )
-
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: true,
@@ -283,14 +279,12 @@ describe("DocumentStorageService", () => {
                     uri: "file:///document/documents/doc123_test.pdf",
                 })
             )
-
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: false,
                     uri: "file:///document/encrypted/doc123_test.pdf",
                 })
             )
-
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: true,
@@ -350,7 +344,6 @@ describe("DocumentStorageService", () => {
                     },
                 })
             )
-
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: true,
@@ -451,7 +444,6 @@ describe("DocumentStorageService", () => {
             ).mockImplementationOnce(() =>
                 Promise.resolve(["doc123_file.pdf", "other.pdf"])
             )
-
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: true,
