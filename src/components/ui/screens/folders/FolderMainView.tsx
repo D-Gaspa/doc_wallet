@@ -14,6 +14,12 @@ import { LoggingService } from "../../../../services/monitoring/loggingService"
 import { FolderCreateModal, FolderType } from "./FolderCreateModal"
 import { FolderEditModal } from "./FolderEditModal"
 import { getIconById, ThemeColors } from "./CustomIconSelector"
+import { documentImport } from "../../../../services/document/import.ts"
+import { types } from "@react-native-documents/picker"
+import { documentPreview } from "../../../../services/document/preview.ts"
+import { useDocStore } from "../../../../store"
+import { documentStorage } from "../../../../services/document/storage.ts"
+import { DocumentType } from "../../../../types/document.ts"
 
 // Define folder data structure
 interface Folder {
@@ -170,6 +176,88 @@ export function FolderMainView({ initialFolders = [] }: FolderMainViewProps) {
     // Open create folder modal
     const handleCreateFolderPress = () => {
         setCreateModalVisible(true)
+    }
+
+    const handleAddSingleDocument = async () => {
+        try {
+            const importedDocuments = await documentImport.importDocument({
+                allowMultiple: false,
+                fileTypes: [types.pdf, types.images, types.docx],
+                allowVirtualFiles: true,
+            })
+
+            // Check if any documents were selected (user might cancel import)
+            if (importedDocuments.length > 0) {
+                const document = importedDocuments[0]
+
+                const documentTitle = document.name || `Document_${Date.now()}`
+                const uri = document.localUri || document.uri
+                const type = document.type || DocumentType.UNKNOWN
+
+                const docStore = useDocStore.getState()
+
+                // Add logging to debug the URI values
+                console.log(`Adding document with URI: ${uri}`)
+
+                const storedDocument = await docStore.addDocument({
+                    title: documentTitle,
+                    sourceUri: uri,
+                    tags: [],
+                    metadata: {
+                        createdAt: Date.now().toString(),
+                        updatedAt: Date.now().toString(),
+                        type: type,
+                    },
+                })
+
+                console.log("Document stored successfully:", storedDocument)
+
+                docStore.selectDocument(storedDocument.id)
+
+                // Give a short delay to ensure encryption is complete
+                await new Promise((resolve) => setTimeout(resolve, 200))
+
+                const previewResult = await docStore.getDocumentPreview(
+                    storedDocument.id
+                )
+
+                if (!previewResult) {
+                    console.error("Failed to get document preview")
+                    throw new Error("Document preview could not be generated")
+                }
+
+                console.log(`Preview URI: ${previewResult.sourceUri}`)
+                console.log(`Document type: ${previewResult.metadata.type}`)
+
+                // Determine the MIME type from the document type
+                let mimeType: string | undefined
+                if (previewResult.metadata.type === DocumentType.PDF) {
+                    mimeType = "application/pdf"
+                } else if (previewResult.metadata.type === DocumentType.IMAGE) {
+                    mimeType = "image/jpeg"
+                } else if (
+                    previewResult.metadata.type === DocumentType.IMAGE_PNG
+                ) {
+                    mimeType = "image/png"
+                }
+
+                // View the document using the preview URI
+                await documentPreview.viewDocumentByUri(
+                    previewResult.sourceUri,
+                    mimeType,
+                    async () => {
+                        // Clean up after viewing
+                        const storage = await documentStorage
+                        await storage.deletePreviewFile(previewResult.sourceUri)
+                        console.log("Preview file cleaned up after viewing")
+                    }
+                )
+            }
+        } catch (error) {
+            console.error("Error handling document:", error)
+            // Show an error message to the user
+            // You might want to add a Toast or Alert here
+        }
     }
 
     // Create a new folder
@@ -433,6 +521,16 @@ export function FolderMainView({ initialFolders = [] }: FolderMainViewProps) {
                 </Stack>
 
                 {/* Fixed position button container */}
+                <View style={styles.secondButtonContainer}>
+                    <Button
+                        title="Add Solo Document"
+                        onPress={handleAddSingleDocument}
+                        testID="add-document"
+                    />
+                </View>
+
+                {/* Fixed position button container */}
+
                 <View style={styles.buttonContainer}>
                     <Button
                         title="Create New Folder"
@@ -504,6 +602,13 @@ const styles = StyleSheet.create({
         padding: 20,
         alignItems: "center",
         justifyContent: "center",
+    },
+    secondButtonContainer: {
+        position: "absolute",
+        bottom: 120,
+        left: 20,
+        right: 20,
+        zIndex: 1,
     },
     buttonContainer: {
         position: "absolute",

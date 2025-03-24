@@ -17,6 +17,7 @@ import {
 } from "../../types/document"
 import { FileToCopy } from "@react-native-documents/picker/src/keepLocalCopy.ts"
 import type { NonEmptyArray } from "@react-native-documents/picker/src/types.ts"
+import * as FileSystem from "expo-file-system"
 
 const logger = LoggingService.getLogger("DocumentImport")
 
@@ -46,6 +47,8 @@ export class DocumentImport {
                 type: fileTypes,
             })
 
+            logger.debug("Imported documents:", results)
+
             const invalidFiles = results.filter(
                 (file) => !file.hasRequestedType
             )
@@ -61,6 +64,8 @@ export class DocumentImport {
                 allowVirtualFiles
             )
 
+            logger.debug("Imported processed documents:", processedResults)
+
             PerformanceMonitoringService.endMeasure("import_document")
             return processedResults
         } catch (error) {
@@ -70,6 +75,17 @@ export class DocumentImport {
                     PerformanceMonitoringService.endMeasure("import_document")
                     return []
                 }
+
+                if (error.code === errorCodes.UNABLE_TO_OPEN_FILE_TYPE) {
+                    logger.error(
+                        "Unable to open this file type. The system doesn't support it or permissions are missing.",
+                        error
+                    )
+                    throw new Error(
+                        "Unable to open this file type. Please try a different file format or download it to your device first."
+                    )
+                }
+
                 logger.error(`Document import error: ${error.code}`, error)
             } else {
                 logger.error("Document import error:", error)
@@ -105,15 +121,24 @@ export class DocumentImport {
             PerformanceMonitoringService.endMeasure("import_image")
             return processedResults
         } catch (error) {
-            if (
-                isErrorWithCode(error) &&
-                error.code === errorCodes.OPERATION_CANCELED
-            ) {
-                logger.debug("User canceled image import")
-                PerformanceMonitoringService.endMeasure("import_image")
-                return []
+            if (isErrorWithCode(error)) {
+                if (error.code === errorCodes.OPERATION_CANCELED) {
+                    logger.debug("User canceled image import")
+                    PerformanceMonitoringService.endMeasure("import_image")
+                    return []
+                }
+
+                if (error.code === errorCodes.UNABLE_TO_OPEN_FILE_TYPE) {
+                    logger.error("Unable to open this image type", error)
+                    throw new Error(
+                        "Unable to open this image. Please try a different image format."
+                    )
+                }
+
+                logger.error(`Image import error: ${error.code}`, error)
+            } else {
+                logger.error("Image import error:", error)
             }
-            logger.error("Image import error:", error)
             PerformanceMonitoringService.endMeasure("import_image")
             throw error
         }
@@ -145,15 +170,24 @@ export class DocumentImport {
             PerformanceMonitoringService.endMeasure("import_pdf")
             return processedResults
         } catch (error) {
-            if (
-                isErrorWithCode(error) &&
-                error.code === errorCodes.OPERATION_CANCELED
-            ) {
-                logger.debug("User canceled PDF import")
-                PerformanceMonitoringService.endMeasure("import_pdf")
-                return []
+            if (isErrorWithCode(error)) {
+                if (error.code === errorCodes.OPERATION_CANCELED) {
+                    logger.debug("User canceled PDF import")
+                    PerformanceMonitoringService.endMeasure("import_pdf")
+                    return []
+                }
+
+                if (error.code === errorCodes.UNABLE_TO_OPEN_FILE_TYPE) {
+                    logger.error("Unable to open this PDF file", error)
+                    throw new Error(
+                        "Unable to open this PDF. The file might be corrupted or protected."
+                    )
+                }
+
+                logger.error(`PDF import error: ${error.code}`, error)
+            } else {
+                logger.error("PDF import error:", error)
             }
-            logger.error("PDF import error:", error)
             PerformanceMonitoringService.endMeasure("import_pdf")
             throw error
         }
@@ -185,26 +219,183 @@ export class DocumentImport {
             PerformanceMonitoringService.endMeasure("import_virtual_document")
             return processedResults
         } catch (error) {
-            if (
-                isErrorWithCode(error) &&
-                error.code === errorCodes.OPERATION_CANCELED
-            ) {
-                logger.debug("User canceled virtual document import")
-                PerformanceMonitoringService.endMeasure(
-                    "import_virtual_document"
+            if (isErrorWithCode(error)) {
+                if (error.code === errorCodes.OPERATION_CANCELED) {
+                    logger.debug("User canceled virtual document import")
+                    PerformanceMonitoringService.endMeasure(
+                        "import_virtual_document"
+                    )
+                    return []
+                }
+
+                if (error.code === errorCodes.UNABLE_TO_OPEN_FILE_TYPE) {
+                    logger.error("Unable to open this cloud document", error)
+                    throw new Error(
+                        "Unable to open this cloud document. Try downloading it to your device first."
+                    )
+                }
+
+                logger.error(
+                    `Virtual document import error: ${error.code}`,
+                    error
                 )
-                return []
+            } else {
+                logger.error("Virtual document import error:", error)
             }
-            logger.error("Virtual document import error:", error)
             PerformanceMonitoringService.endMeasure("import_virtual_document")
             throw error
         }
     }
 
     /**
+     * Detects if a file is from Google Drive
+     * @param uri File uri to check
+     * @returns Boolean indicating if it's a Google Drive file
+     */
+    private isGoogleDriveUri(uri: string): boolean {
+        return (
+            uri.startsWith("content://") &&
+            (uri.includes("com.google.android.apps.docs") ||
+                uri.includes("com.google.android.gm"))
+        )
+    }
+
+    /**
+     * Try to create a local copy using direct file system methods
+     * @param uri Source URI
+     * @param tempFile Destination temp file path
+     * @returns Success status
+     */
+    private async tryDirectCopy(
+        uri: string,
+        tempFile: string
+    ): Promise<boolean> {
+        try {
+            logger.debug(`Attempting direct copy from ${uri} to ${tempFile}`)
+
+            await FileSystem.copyAsync({
+                from: uri,
+                to: tempFile,
+            })
+
+            const fileInfo = await FileSystem.getInfoAsync(tempFile, {
+                size: true,
+            })
+
+            const success =
+                fileInfo.exists &&
+                fileInfo.size !== undefined &&
+                fileInfo.size > 0
+            logger.debug(
+                `Direct copy ${success ? "successful" : "failed"}: ${tempFile}`
+            )
+
+            return success
+        } catch (error) {
+            logger.debug(
+                `Direct copy failed: ${
+                    error instanceof Error ? error.message : "Unknown error"
+                }`
+            )
+            return false
+        }
+    }
+
+    /**
+     * Create a local copy of file using picker library
+     * @param file The source file result from document picker
+     * @returns Local URI if successful, null if failed
+     */
+    private async createLocalCopyOfFile(
+        file: DocumentPickerResponse
+    ): Promise<string | null> {
+        try {
+            if (!file.uri) {
+                logger.error("No URI provided for file")
+                return null
+            }
+
+            if (!file.name) {
+                logger.error("No filename provided for file")
+                return null
+            }
+
+            const tempFilePath = `${FileSystem.cacheDirectory}temp_direct_${file.name}`
+
+            // First try direct copy as it's faster
+            const directCopySuccess = await this.tryDirectCopy(
+                file.uri,
+                tempFilePath
+            )
+            if (directCopySuccess) {
+                return tempFilePath
+            }
+
+            // If direct copy fails, try keepLocalCopy which handles various content providers better
+            logger.debug("Direct copy failed, attempting keepLocalCopy...")
+
+            let fileToCopy: FileToCopy
+
+            // Special handling for Google Drive files that support conversion
+            if (
+                this.isGoogleDriveUri(file.uri) &&
+                file.isVirtual &&
+                file.convertibleToMimeTypes &&
+                file.convertibleToMimeTypes.length > 0
+            ) {
+                const conversion = file.convertibleToMimeTypes[0]
+                logger.debug(
+                    `Using conversion for Google Drive file: ${conversion.mimeType}`
+                )
+
+                fileToCopy = {
+                    uri: file.uri,
+                    fileName: `${file.name || `file_${Date.now()}`}.${
+                        conversion.extension || "bin"
+                    }`,
+                    convertVirtualFileToType: conversion.mimeType,
+                }
+            } else {
+                // Standard file handling
+                fileToCopy = {
+                    uri: file.uri,
+                    fileName: file.name || `file_${Date.now()}`,
+                }
+            }
+
+            logger.debug(
+                `Attempting keepLocalCopy for: ${fileToCopy.uri} as ${fileToCopy.fileName}`
+            )
+
+            // This strange non-empty array type is required by the function definition
+            const nonEmptyArray: NonEmptyArray<FileToCopy> = [fileToCopy]
+
+            const copyResults = await keepLocalCopy({
+                destination: "cachesDirectory",
+                files: nonEmptyArray,
+            })
+
+            if (copyResults[0].status === "success") {
+                logger.debug(
+                    `keepLocalCopy successful: ${copyResults[0].localUri}`
+                )
+                return copyResults[0].localUri
+            } else {
+                logger.error(
+                    `keepLocalCopy failed: ${copyResults[0].copyError}`
+                )
+                return null
+            }
+        } catch (error) {
+            logger.error("Failed to create local copy of file", error)
+            return null
+        }
+    }
+
+    /**
      * Process document picker results
      * @param results Document picker results
-     * @param handleVirtualFiles Whether to process virtual files
+     * @param handleVirtualFiles Whether to process virtual files for special conversions
      * @returns Processed file results
      */
     private async processImportResults(
@@ -219,80 +410,41 @@ export class DocumentImport {
             const filesToProcess = [...results]
             const processedResults: ImportFileResult[] = []
 
-            const virtualFiles = filesToProcess.filter(
-                (file) => file.isVirtual === true
-            )
-            const regularFiles = filesToProcess.filter(
-                (file) => file.isVirtual !== true
-            )
-
-            for (const file of regularFiles) {
-                processedResults.push({
-                    uri: file.uri,
-                    name: file.name || `file_${Date.now()}`,
-                    size: file.size,
-                    type: this.determineDocumentType(file.type),
-                    mimeType: file.type,
-                })
-            }
-
-            if (handleVirtualFiles && virtualFiles.length > 0) {
-                const filesToCopy = virtualFiles.map((file) => {
-                    const hasConversions =
-                        file.convertibleToMimeTypes &&
-                        file.convertibleToMimeTypes.length > 0
-
-                    if (hasConversions && file.convertibleToMimeTypes?.[0]) {
-                        // We can convert this virtual file to a specific mimetype
-                        const virtualFileMeta = file.convertibleToMimeTypes[0]
-                        return {
-                            uri: file.uri,
-                            fileName: `${file.name || `file_${Date.now()}`}.${
-                                virtualFileMeta.extension || "tmp"
-                            }`,
-                            convertVirtualFileToType: virtualFileMeta.mimeType,
-                        }
-                    } else {
-                        // No conversion needed/available
-                        return {
-                            uri: file.uri,
-                            fileName: file.name || `file_${Date.now()}`,
-                        }
-                    }
-                })
-
-                if (filesToCopy.length > 0) {
+            // Process all files by creating local copies
+            for (const file of filesToProcess) {
+                // Skip virtual files if not handling them
+                if (file.isVirtual === true && !handleVirtualFiles) {
                     logger.debug(
-                        `Making local copies of ${filesToCopy.length} virtual files`
+                        `Skipping virtual file ${
+                            file.name || "unnamed"
+                        } as handleVirtualFiles is false`
                     )
+                    continue
+                }
 
-                    const copyResults = await keepLocalCopy({
-                        destination: "cachesDirectory",
-                        files: filesToCopy as NonEmptyArray<FileToCopy>,
+                // Create a local copy for all files
+                const localUri = await this.createLocalCopyOfFile(file)
+
+                if (localUri) {
+                    // Successfully created local copy
+                    processedResults.push({
+                        uri: file.uri, // Keep original URI for reference
+                        localUri: localUri, // Local URI for actual use
+                        name: file.name || `file_${Date.now()}`,
+                        size: file.size,
+                        type: this.determineDocumentType(file.type),
+                        mimeType: file.type,
                     })
 
-                    // Process the copied files
-                    for (let i = 0; i < copyResults.length; i++) {
-                        const copyResult = copyResults[i]
-                        const originalFile = virtualFiles[i]
-
-                        if (copyResult.status === "success") {
-                            processedResults.push({
-                                uri: originalFile.uri, // Keep the original URI for reference
-                                localUri: copyResult.localUri, // Add the local URI for actual use
-                                name: filesToCopy[i].fileName,
-                                size: originalFile.size,
-                                type: this.determineDocumentType(
-                                    originalFile.type
-                                ),
-                                mimeType: originalFile.type,
-                            })
-                        } else {
-                            logger.error(
-                                `Failed to copy virtual file: ${copyResult.copyError}`
-                            )
-                        }
-                    }
+                    logger.debug(
+                        `Successfully processed file: ${file.name || "unnamed"}`
+                    )
+                } else {
+                    logger.error(
+                        `Failed to create local copy for file: ${
+                            file.name || "unnamed file"
+                        }`
+                    )
                 }
             }
 
@@ -350,7 +502,7 @@ export class DocumentImport {
             return DocumentType.IMAGE_PNG
         }
 
-        // Could add more types here as needed
+        // Add more types as needed
 
         return DocumentType.UNKNOWN
     }

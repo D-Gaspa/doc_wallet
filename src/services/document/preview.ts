@@ -1,10 +1,11 @@
 import {
     viewDocument,
     ViewDocumentOptions,
+    errorCodes,
+    isErrorWithCode,
 } from "@react-native-documents/viewer"
-import { errorCodes, isErrorWithCode } from "./viewer-types.ts"
 import * as FileSystem from "expo-file-system"
-import { Platform } from "react-native"
+import { AppState, Platform } from "react-native"
 import { LoggingService } from "../monitoring/loggingService"
 import { PerformanceMonitoringService } from "../monitoring/performanceMonitoringService"
 import { ErrorTrackingService } from "../monitoring/errorTrackingService"
@@ -17,13 +18,20 @@ const logger = LoggingService.getLogger("DocumentPreview")
  * Service for previewing documents using the document viewer
  */
 export class DocumentPreview {
+    private _currentAppStateSubscription?: { remove: () => void }
+
     /**
      * View a document by its URI
      * @param uri URI of the document to view
      * @param mimeType Optional MIME type of the document (recommended for Android)
+     * @param onClose checks when user returns to the app
      * @returns Promise that resolves when document is closed or rejects on error
      */
-    async viewDocumentByUri(uri: string, mimeType?: string): Promise<void> {
+    async viewDocumentByUri(
+        uri: string,
+        mimeType?: string,
+        onClose?: () => void
+    ): Promise<void> {
         PerformanceMonitoringService.startMeasure("view_document")
 
         try {
@@ -36,11 +44,9 @@ export class DocumentPreview {
 
             const options: ViewDocumentOptions = { uri }
 
-            // Add mime type if provided (useful for Android)
             if (mimeType) {
                 options.mimeType = mimeType
             } else {
-                // Try to determine mime type from file extension
                 const extension = uri.split(".").pop()?.toLowerCase()
                 if (extension === "pdf") {
                     options.mimeType = "application/pdf"
@@ -57,12 +63,30 @@ export class DocumentPreview {
                 options.grantPermissions = "read"
             }
 
+            if (onClose) {
+                const subscription = AppState.addEventListener(
+                    "change",
+                    (nextAppState) => {
+                        if (nextAppState === "active") {
+                            subscription.remove()
+                            onClose()
+                        }
+                    }
+                )
+
+                this._currentAppStateSubscription = subscription
+            }
+
             await viewDocument(options)
 
             logger.debug("Document preview closed successfully")
             PerformanceMonitoringService.endMeasure("view_document")
             return
         } catch (error) {
+            if (this._currentAppStateSubscription) {
+                this._currentAppStateSubscription.remove()
+                this._currentAppStateSubscription = undefined
+            }
             if (isErrorWithCode(error)) {
                 if (error.code === errorCodes.OPERATION_CANCELED) {
                     logger.debug("User canceled document preview")

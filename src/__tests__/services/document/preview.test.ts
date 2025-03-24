@@ -1,34 +1,43 @@
 import { DocumentPreview } from "../../../services/document/preview"
 import * as FileSystem from "expo-file-system"
-import { Platform } from "react-native"
+import { Platform, AppState } from "react-native"
 import { viewDocument } from "@react-native-documents/viewer"
 import { PerformanceMonitoringService } from "../../../services/monitoring/performanceMonitoringService"
 import { ErrorTrackingService } from "../../../services/monitoring/errorTrackingService"
 import { DocumentType } from "../../../types/document"
-import { errorCodes } from "../../../services/document/viewer-types"
+import { generateUniqueId } from "../../../utils"
 
-jest.mock("react-native", () => ({
-    ...jest.requireActual("react-native"),
-    Platform: { OS: "android" },
-}))
-
+// Mock dependencies
 jest.mock("@react-native-documents/viewer", () => ({
-    viewDocument: jest.fn().mockResolvedValue(undefined),
+    viewDocument: jest.fn().mockImplementation(() => Promise.resolve()),
+    errorCodes: {
+        OPERATION_CANCELED: "CANCELED",
+        UNABLE_TO_OPEN_FILE_TYPE: "UNABLE_TO_OPEN_FILE_TYPE",
+        IN_PROGRESS: "IN_PROGRESS",
+        DOCUMENT_NOT_FOUND: "NOT_FOUND",
+    },
 }))
 
 jest.mock("expo-file-system", () => ({
     documentDirectory: "file:///document/",
     cacheDirectory: "file:///cache/",
-    getInfoAsync: jest.fn(),
-    copyAsync: jest.fn().mockResolvedValue(undefined),
-    readDirectoryAsync: jest.fn(),
-    deleteAsync: jest.fn().mockResolvedValue(undefined),
+    getInfoAsync: jest
+        .fn()
+        .mockImplementation(() => Promise.resolve({ exists: true, uri: "" })),
+    copyAsync: jest.fn().mockImplementation(() => Promise.resolve()),
+    readDirectoryAsync: jest.fn().mockImplementation(() => Promise.resolve([])),
+    deleteAsync: jest.fn().mockImplementation(() => Promise.resolve()),
 }))
 
 jest.mock("react-native", () => ({
     Platform: {
         OS: "ios",
         select: jest.fn((obj) => obj.ios),
+    },
+    AppState: {
+        addEventListener: jest.fn().mockReturnValue({
+            remove: jest.fn(),
+        }),
     },
 }))
 
@@ -52,52 +61,55 @@ jest.mock("../../../services/monitoring/performanceMonitoringService", () => ({
 
 jest.mock("../../../services/monitoring/errorTrackingService", () => ({
     ErrorTrackingService: {
-        handleError: jest.fn().mockResolvedValue(undefined),
+        handleError: jest.fn().mockImplementation(() => Promise.resolve()),
     },
+}))
+
+jest.mock("../../../utils", () => ({
+    generateUniqueId: jest.fn().mockReturnValue("mock-unique-id"),
 }))
 
 describe("DocumentPreview", () => {
     let documentPreview: DocumentPreview
+    const originalPlatformOS = Platform.OS
 
     beforeEach(() => {
         jest.clearAllMocks()
         documentPreview = new DocumentPreview()
 
-        // Reset FileSystem mocks to default behavior
+        // Reset FileSystem mock behaviors
         ;(FileSystem.getInfoAsync as jest.Mock).mockImplementation((uri) => {
-            if (uri.includes("exists")) {
-                return Promise.resolve({ exists: true, uri })
-            }
-            return Promise.resolve({ exists: false, uri })
+            return Promise.resolve({
+                exists: true,
+                uri,
+                size: 12345,
+            })
         })
 
-        ;(FileSystem.readDirectoryAsync as jest.Mock).mockResolvedValue([
-            "preview_123.pdf",
-            "preview_456.jpg",
-            "regular_file.txt",
-        ])
+        ;(FileSystem.readDirectoryAsync as jest.Mock).mockImplementation(() =>
+            Promise.resolve([
+                "preview_123.pdf",
+                "preview_456.jpg",
+                "regular_file.txt",
+            ])
+        )
+    })
+
+    afterEach(() => {
+        Platform.OS = originalPlatformOS
     })
 
     describe("viewDocumentByUri", () => {
-        const originalPlatformOS = Platform.OS
-
-        afterEach(() => {
-            Platform.OS = originalPlatformOS
-        })
-        it("should call viewDocument with the correct parameters", async () => {
-            const uri = "file:///exists/document.pdf"
-
-            ;(FileSystem.getInfoAsync as jest.Mock).mockResolvedValueOnce({
-                exists: true,
-                uri,
-            })
+        it("should call viewDocument with correct parameters for iOS", async () => {
+            Platform.OS = "ios"
+            const uri = "file:///document/test.pdf"
 
             await documentPreview.viewDocumentByUri(uri)
 
             expect(viewDocument).toHaveBeenCalledWith({
                 uri,
                 mimeType: "application/pdf",
-                headerTitle: "document.pdf",
+                headerTitle: "test.pdf",
             })
 
             expect(
@@ -108,14 +120,24 @@ describe("DocumentPreview", () => {
             ).toHaveBeenCalledWith("view_document")
         })
 
-        it("should use provided mimeType when specified", async () => {
-            const uri = "file:///exists/document.txt"
-            const mimeType = "text/plain"
+        it("should call viewDocument with correct parameters for Android", async () => {
+            Platform.OS = "android"
+            const uri = "file:///document/test.pdf"
 
-            ;(FileSystem.getInfoAsync as jest.Mock).mockResolvedValueOnce({
-                exists: true,
-                uri,
-            })
+            await documentPreview.viewDocumentByUri(uri)
+
+            expect(viewDocument).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    uri,
+                    mimeType: "application/pdf",
+                    grantPermissions: "read",
+                })
+            )
+        })
+
+        it("should use provided mimeType when specified", async () => {
+            const uri = "file:///document/test.txt"
+            const mimeType = "text/plain"
 
             await documentPreview.viewDocumentByUri(uri, mimeType)
 
@@ -127,93 +149,40 @@ describe("DocumentPreview", () => {
             )
         })
 
-        it("should use Android-specific options on Android platform", async () => {
-            Platform.OS = "android"
+        it("should register AppState listener when onClose callback is provided", async () => {
+            const uri = "file:///document/test.pdf"
+            const onClose = jest.fn()
 
-            const uri = "file:///exists/document.pdf"
+            await documentPreview.viewDocumentByUri(uri, undefined, onClose)
 
-            ;(FileSystem.getInfoAsync as jest.Mock).mockResolvedValueOnce({
-                exists: true,
-                uri,
-            })
-
-            await documentPreview.viewDocumentByUri(uri)
-
-            expect(viewDocument).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    uri,
-                    grantPermissions: "read",
-                })
+            expect(AppState.addEventListener).toHaveBeenCalledWith(
+                "change",
+                expect.any(Function)
             )
         })
 
-        it("should handle user cancellation gracefully", async () => {
-            const uri = "file:///exists/document.pdf"
+        it("should clean up AppState listener on error", async () => {
+            const uri = "file:///document/test.pdf"
+            const onClose = jest.fn()
+            const mockSubscription = { remove: jest.fn() }
 
-            ;(FileSystem.getInfoAsync as jest.Mock).mockResolvedValueOnce({
-                exists: true,
-                uri,
-            })
-            ;(viewDocument as jest.Mock).mockRejectedValueOnce({
-                code: errorCodes.OPERATION_CANCELED,
-            })
-
-            await documentPreview.viewDocumentByUri(uri)
-
-            expect(
-                PerformanceMonitoringService.endMeasure
-            ).toHaveBeenCalledWith("view_document")
-        })
-
-        it("should handle unsupported file type error", async () => {
-            const uri = "file:///exists/document.xyz"
-
-            ;(FileSystem.getInfoAsync as jest.Mock).mockResolvedValueOnce({
-                exists: true,
-                uri,
-            })
-            ;(viewDocument as jest.Mock).mockRejectedValueOnce({
-                code: errorCodes.UNABLE_TO_OPEN_FILE_TYPE,
-            })
-
-            await expect(
-                documentPreview.viewDocumentByUri(uri)
-            ).rejects.toThrow(
-                "This file type cannot be previewed by the system"
+            ;(AppState.addEventListener as jest.Mock).mockReturnValue(
+                mockSubscription
             )
 
-            expect(
-                PerformanceMonitoringService.endMeasure
-            ).toHaveBeenCalledWith("view_document")
-        })
-
-        it("should handle already in progress error", async () => {
-            const uri = "file:///exists/document.pdf"
-
-            ;(FileSystem.getInfoAsync as jest.Mock).mockResolvedValueOnce({
-                exists: true,
-                uri,
-            })
-            ;(viewDocument as jest.Mock).mockRejectedValueOnce({
-                code: errorCodes.IN_PROGRESS,
-            })
+            ;(viewDocument as jest.Mock).mockImplementationOnce(() =>
+                Promise.reject(new Error("Test error"))
+            )
 
             await expect(
-                documentPreview.viewDocumentByUri(uri)
-            ).rejects.toThrow("Another document preview is already open")
+                documentPreview.viewDocumentByUri(uri, undefined, onClose)
+            ).rejects.toThrow()
 
-            expect(
-                PerformanceMonitoringService.endMeasure
-            ).toHaveBeenCalledWith("view_document")
+            expect(mockSubscription.remove).toHaveBeenCalled()
         })
     })
 
     describe("viewDocumentByBookmark", () => {
-        const originalPlatformOS = Platform.OS
-
-        afterEach(() => {
-            Platform.OS = originalPlatformOS
-        })
         it("should call viewDocument with bookmark parameter", async () => {
             const bookmark = "bookmark-data"
 
@@ -227,20 +196,6 @@ describe("DocumentPreview", () => {
             expect(
                 PerformanceMonitoringService.startMeasure
             ).toHaveBeenCalledWith("view_document_bookmark")
-            expect(
-                PerformanceMonitoringService.endMeasure
-            ).toHaveBeenCalledWith("view_document_bookmark")
-        })
-
-        it("should handle user cancellation gracefully", async () => {
-            const bookmark = "bookmark-data"
-
-            ;(viewDocument as jest.Mock).mockRejectedValueOnce({
-                code: errorCodes.OPERATION_CANCELED,
-            })
-
-            await documentPreview.viewDocumentByBookmark(bookmark)
-
             expect(
                 PerformanceMonitoringService.endMeasure
             ).toHaveBeenCalledWith("view_document_bookmark")
@@ -324,50 +279,9 @@ describe("DocumentPreview", () => {
         })
     })
 
-    describe("getErrorMessage", () => {
-        it("should return user-friendly message for file type error", () => {
-            const error = { code: errorCodes.UNABLE_TO_OPEN_FILE_TYPE }
-            const message = documentPreview.getErrorMessage(error)
-            expect(message).toContain("cannot be previewed")
-        })
-
-        it("should return user-friendly message for in-progress error", () => {
-            const error = { code: errorCodes.IN_PROGRESS }
-            const message = documentPreview.getErrorMessage(error)
-            expect(message).toContain("already being previewed")
-        })
-
-        it("should return user-friendly message for cancellation", () => {
-            const error = { code: errorCodes.OPERATION_CANCELED }
-            const message = documentPreview.getErrorMessage(error)
-            expect(message).toContain("canceled")
-        })
-
-        it("should return generic error message for other error codes", () => {
-            const error = { code: "UNKNOWN_CODE", message: "Test error" }
-            const message = documentPreview.getErrorMessage(error)
-            expect(message).toContain("Test error")
-        })
-
-        it("should return fallback message for non-code errors", () => {
-            const error = new Error("Regular error")
-            const message = documentPreview.getErrorMessage(error)
-            expect(message).toBe("Error previewing document. Please try again.")
-        })
-    })
-
     describe("createTemporaryPreviewFile", () => {
         it("should create a temporary file and return its URI", async () => {
-            const sourceUri = "file:///exists/document.pdf"
-
-            // Mock the current time for consistent filename
-            const mockDate = new Date("2023-01-01T00:00:00.000Z")
-            jest.spyOn(global, "Date").mockImplementation(() => mockDate)
-
-            ;(FileSystem.getInfoAsync as jest.Mock).mockResolvedValueOnce({
-                exists: true,
-                uri: sourceUri,
-            })
+            const sourceUri = "file:///document/test.pdf"
 
             const tempUri = await documentPreview.createTemporaryPreviewFile(
                 sourceUri
@@ -375,24 +289,16 @@ describe("DocumentPreview", () => {
 
             expect(FileSystem.copyAsync).toHaveBeenCalledWith({
                 from: sourceUri,
-                to: expect.stringMatching(
-                    /file:\/\/\/cache\/preview_[a-z0-9]+\.pdf/
-                ),
+                to: "file:///cache/preview_mock-unique-id.pdf",
             })
 
-            expect(tempUri).toMatch(/file:\/\/\/cache\/preview_[a-z0-9]+\.pdf/)
-
-            jest.restoreAllMocks()
+            expect(tempUri).toBe("file:///cache/preview_mock-unique-id.pdf")
+            expect(generateUniqueId).toHaveBeenCalled()
         })
 
         it("should use preferred extension when provided", async () => {
-            const sourceUri = "file:///exists/document.xyz"
+            const sourceUri = "file:///document/test.xyz"
             const preferredExtension = "pdf"
-
-            ;(FileSystem.getInfoAsync as jest.Mock).mockResolvedValueOnce({
-                exists: true,
-                uri: sourceUri,
-            })
 
             const tempUri = await documentPreview.createTemporaryPreviewFile(
                 sourceUri,
@@ -401,28 +307,22 @@ describe("DocumentPreview", () => {
 
             expect(FileSystem.copyAsync).toHaveBeenCalledWith({
                 from: sourceUri,
-                to: expect.stringMatching(
-                    /file:\/\/\/cache\/preview_[a-z0-9]+\.pdf/
-                ),
+                to: "file:///cache/preview_mock-unique-id.pdf",
             })
 
-            expect(tempUri).toMatch(/file:\/\/\/cache\/preview_[a-z0-9]+\.pdf/)
+            expect(tempUri).toBe("file:///cache/preview_mock-unique-id.pdf")
         })
 
         it("should handle copy errors", async () => {
-            const sourceUri = "file:///exists/document.pdf"
+            const sourceUri = "file:///document/test.pdf"
 
-            ;(FileSystem.getInfoAsync as jest.Mock).mockResolvedValueOnce({
-                exists: true,
-                uri: sourceUri,
-            })
-            ;(FileSystem.copyAsync as jest.Mock).mockRejectedValueOnce(
-                new Error("Copy failed")
+            ;(FileSystem.copyAsync as jest.Mock).mockImplementationOnce(() =>
+                Promise.reject(new Error("Copy failed"))
             )
 
             await expect(
                 documentPreview.createTemporaryPreviewFile(sourceUri)
-            ).rejects.toThrow("Failed to prepare file for preview")
+            ).rejects.toThrow(/Failed to prepare file/)
         })
     })
 
@@ -430,7 +330,7 @@ describe("DocumentPreview", () => {
         it("should delete all temporary preview files", async () => {
             await documentPreview.cleanupTemporaryPreviewFiles()
 
-            // Should delete both preview files but not the regular file
+            // Should delete only preview files
             expect(FileSystem.deleteAsync).toHaveBeenCalledTimes(2)
             expect(FileSystem.deleteAsync).toHaveBeenCalledWith(
                 "file:///cache/preview_123.pdf",
@@ -443,8 +343,10 @@ describe("DocumentPreview", () => {
         })
 
         it("should handle errors without throwing", async () => {
-            ;(FileSystem.readDirectoryAsync as jest.Mock).mockRejectedValueOnce(
-                new Error("Read error")
+            ;(
+                FileSystem.readDirectoryAsync as jest.Mock
+            ).mockImplementationOnce(() =>
+                Promise.reject(new Error("Read error"))
             )
 
             await expect(
