@@ -20,7 +20,7 @@ describe("AuthService", () => {
             BiometricAuthService.prototype.isBiometricsAvailable as jest.Mock
         ).mockResolvedValue(true)
         ;(PinAuthService.prototype.isPinSet as jest.Mock).mockResolvedValue(
-            true
+            true,
         )
     })
 
@@ -29,7 +29,7 @@ describe("AuthService", () => {
 
         expect(method).toBe(AuthMethod.BIOMETRIC)
         expect(
-            BiometricAuthService.prototype.isBiometricsAvailable
+            BiometricAuthService.prototype.isBiometricsAvailable,
         ).toHaveBeenCalled()
         expect(PinAuthService.prototype.isPinSet).not.toHaveBeenCalled() // Should short-circuit
     })
@@ -43,7 +43,7 @@ describe("AuthService", () => {
 
         expect(method).toBe(AuthMethod.PIN)
         expect(
-            BiometricAuthService.prototype.isBiometricsAvailable
+            BiometricAuthService.prototype.isBiometricsAvailable,
         ).toHaveBeenCalled()
         expect(PinAuthService.prototype.isPinSet).toHaveBeenCalled()
     })
@@ -53,7 +53,7 @@ describe("AuthService", () => {
             BiometricAuthService.prototype.isBiometricsAvailable as jest.Mock
         ).mockResolvedValue(false)
         ;(PinAuthService.prototype.isPinSet as jest.Mock).mockResolvedValue(
-            false
+            false,
         )
 
         const method = await authService.getPreferredAuthMethod()
@@ -77,7 +77,7 @@ describe("AuthService", () => {
 
         expect(result).toEqual(mockUser)
         expect(
-            BiometricAuthService.prototype.authenticateWithBiometrics
+            BiometricAuthService.prototype.authenticateWithBiometrics,
         ).toHaveBeenCalled()
         expect(TokenService.getUserData).toHaveBeenCalled()
     })
@@ -89,7 +89,7 @@ describe("AuthService", () => {
             email: "test@example.com",
         }
         ;(PinAuthService.prototype.verifyPin as jest.Mock).mockResolvedValue(
-            true
+            true,
         )
         ;(TokenService.getUserData as jest.Mock).mockResolvedValue(mockUser)
 
@@ -104,7 +104,7 @@ describe("AuthService", () => {
 
     test("authenticate with invalid PIN should return null", async () => {
         ;(PinAuthService.prototype.verifyPin as jest.Mock).mockResolvedValue(
-            false
+            false,
         )
 
         const result = await authService.authenticate(AuthMethod.PIN, {
@@ -133,7 +133,7 @@ describe("AuthService", () => {
         }
 
         ;(GoogleAuthService.signIn as jest.Mock).mockResolvedValue(
-            mockAuthResponse
+            mockAuthResponse,
         )
         ;(TokenService.storeUserData as jest.Mock).mockResolvedValue(true)
 

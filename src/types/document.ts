@@ -44,12 +44,12 @@ export interface IDocState {
 
     // Actions
     fetchDocument: (
-        id: string
+        id: string,
     ) => Promise<{ document: IDocument; previewUri: string } | null>
     addDocument: (document: Omit<IDocument, "id">) => Promise<IDocument>
     updateDocument: (
         id: string,
-        updates: IDocument
+        updates: IDocument,
     ) => Promise<IDocument | undefined>
     deleteDocument: (id: string) => Promise<void>
     selectDocument: (id: string | null) => void

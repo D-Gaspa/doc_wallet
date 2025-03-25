@@ -15,7 +15,6 @@ export function Toast({
     duration = 3000,
     onDismiss,
 }: ToastProps) {
-
     const { colors } = useTheme()
     const opacity = useRef(new Animated.Value(0)).current
 

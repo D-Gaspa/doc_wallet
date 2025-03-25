@@ -5,7 +5,7 @@ const logger = LoggingService.getLogger("ZustandStore")
 
 type SetStateFunction<T> = (
     partial: T | Partial<T> | ((state: T) => T | Partial<T>),
-    replace?: boolean
+    replace?: boolean,
 ) => void
 
 type GetStateFunction<T> = () => T
@@ -15,7 +15,7 @@ export const middlewareLogger =
     (
         set: SetStateFunction<T>,
         get: GetStateFunction<T>,
-        store: StoreApi<T>
+        store: StoreApi<T>,
     ) => {
         const loggedSet: typeof set = (...args: Parameters<typeof set>) => {
             logger.debug(`[${name}]: Applying state update`, args[0])

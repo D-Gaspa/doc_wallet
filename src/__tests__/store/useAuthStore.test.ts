@@ -31,7 +31,7 @@ describe("useAuthStore", () => {
             AuthService.prototype.getPreferredAuthMethod as jest.Mock
         ).mockResolvedValue(AuthMethod.PIN)
         ;(AuthService.prototype.authenticate as jest.Mock).mockResolvedValue(
-            mockUser
+            mockUser,
         )
 
         const store = useAuthStore.getState()
@@ -40,7 +40,7 @@ describe("useAuthStore", () => {
         expect(AuthService.prototype.getPreferredAuthMethod).toHaveBeenCalled()
         expect(AuthService.prototype.authenticate).toHaveBeenCalledWith(
             AuthMethod.PIN,
-            { pin: "1234" }
+            { pin: "1234" },
         )
 
         // Check that store was updated correctly
@@ -70,7 +70,7 @@ describe("useAuthStore", () => {
                     return Promise.resolve(mockUser) // PIN succeeds
                 }
                 return Promise.resolve(null)
-            }
+            },
         )
 
         const store = useAuthStore.getState()
@@ -83,7 +83,7 @@ describe("useAuthStore", () => {
         const calls = (AuthService.prototype.authenticate as jest.Mock).mock
             .calls
         const biometricCall = calls.find(
-            (call) => call[0] === AuthMethod.BIOMETRIC
+            (call) => call[0] === AuthMethod.BIOMETRIC,
         )
         const pinCall = calls.find((call) => call[0] === AuthMethod.PIN)
 
@@ -128,7 +128,7 @@ describe("useAuthStore", () => {
         }
 
         ;(GoogleAuthService.isAuthenticated as jest.Mock).mockResolvedValue(
-            true
+            true,
         )
         ;(GoogleAuthService.getCurrentUser as jest.Mock).mockResolvedValue({
             id: "123",

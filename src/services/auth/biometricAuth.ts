@@ -16,14 +16,14 @@ export class BiometricAuthService {
 
             if (!hasHardware) {
                 this.logger.info(
-                    "Biometric hardware not available on this device"
+                    "Biometric hardware not available on this device",
                 )
                 return false
             }
 
             if (!isEnrolled) {
                 this.logger.info(
-                    "Biometrics available but not enrolled on this device"
+                    "Biometrics available but not enrolled on this device",
                 )
                 return false
             }
@@ -37,7 +37,7 @@ export class BiometricAuthService {
     }
 
     async authenticateWithBiometrics(
-        promptMessage: string = "Authenticate to access your documents"
+        promptMessage: string = "Authenticate to access your documents",
     ): Promise<boolean> {
         PerformanceMonitoringService.startMeasure("biometric_auth")
         try {

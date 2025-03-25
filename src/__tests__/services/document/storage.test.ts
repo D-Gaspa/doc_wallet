@@ -11,7 +11,7 @@ jest.mock("expo-file-system", () => ({
             exists: true,
             uri: "file:///document/encrypted/",
             isDirectory: true,
-        })
+        }),
     ),
     deleteAsync: jest.fn().mockImplementation(() => Promise.resolve(undefined)),
     copyAsync: jest.fn().mockImplementation(() => Promise.resolve(undefined)),
@@ -99,7 +99,7 @@ describe("DocumentStorageService", () => {
                     return { exists: true, uri: path, isDirectory: true }
                 }
                 return { exists: true, uri: path, isDirectory: true }
-            }
+            },
         )
     })
 
@@ -111,7 +111,7 @@ describe("DocumentStorageService", () => {
                     return { exists: true, uri: path, isDirectory: true }
                 }
                 return { exists: true, uri: path, isDirectory: true }
-            }
+            },
         )
 
         documentStorage = await DocumentStorageService.create()
@@ -133,14 +133,14 @@ describe("DocumentStorageService", () => {
                         return { exists: false, uri: path, isDirectory: false }
                     }
                     return { exists: true, uri: path, isDirectory: true }
-                }
+                },
             )
 
             await DocumentStorageService.create()
 
             expect(FileSystem.makeDirectoryAsync).toHaveBeenCalledWith(
                 "file:///document/encrypted/",
-                { intermediates: true }
+                { intermediates: true },
             )
         })
 
@@ -149,16 +149,16 @@ describe("DocumentStorageService", () => {
                 async () => ({
                     exists: false,
                     uri: "file:///document/encrypted/",
-                })
+                }),
             )
             ;(
                 FileSystem.makeDirectoryAsync as jest.Mock
             ).mockImplementationOnce(() =>
-                Promise.reject(new Error("Failed to create directory"))
+                Promise.reject(new Error("Failed to create directory")),
             )
 
             await expect(DocumentStorageService.create()).rejects.toThrow(
-                "Failed to initialize document storage"
+                "Failed to initialize document storage",
             )
         })
     })
@@ -169,14 +169,14 @@ describe("DocumentStorageService", () => {
             const documentId = "doc123"
 
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
-                Promise.resolve({ exists: true, uri: sourceUri, size: 12345 })
+                Promise.resolve({ exists: true, uri: sourceUri, size: 12345 }),
             )
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: true,
                     uri: "file:///document/documents/doc123_temp_file.pdf",
                     size: 12345,
-                })
+                }),
             )
 
             await documentStorage.saveFile(sourceUri, documentId, true)
@@ -196,11 +196,11 @@ describe("DocumentStorageService", () => {
             const documentId = "doc123"
 
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
-                Promise.resolve({ exists: true, uri: sourceUri, size: 0 })
+                Promise.resolve({ exists: true, uri: sourceUri, size: 0 }),
             )
 
             await expect(
-                documentStorage.saveFile(sourceUri, documentId)
+                documentStorage.saveFile(sourceUri, documentId),
             ).rejects.toThrow("Cannot access file")
         })
     })
@@ -215,7 +215,7 @@ describe("DocumentStorageService", () => {
                     exists: true,
                     uri: "file:///document/documents/doc123_test.pdf",
                     size: 1024,
-                })
+                }),
             )
 
             const result = await documentStorage.getFile(documentId, filename)
@@ -229,10 +229,10 @@ describe("DocumentStorageService", () => {
             })
 
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith("get_file_doc123")
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith("get_file_doc123")
         })
 
@@ -244,26 +244,26 @@ describe("DocumentStorageService", () => {
                 Promise.resolve({
                     exists: false,
                     uri: "file:///document/documents/doc123_test.pdf",
-                })
+                }),
             )
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: true,
                     uri: "file:///document/encrypted/doc123_test.pdf",
                     size: 1024,
-                })
+                }),
             )
 
             const result = await documentStorage.getFile(documentId, filename)
 
             expect(result).toEqual({
                 uri: expect.stringContaining(
-                    "file:///document/documents/doc123_test.pdf"
+                    "file:///document/documents/doc123_test.pdf",
                 ),
                 metadata: {
                     exists: true,
                     uri: expect.stringContaining(
-                        "file:///document/documents/doc123_test.pdf"
+                        "file:///document/documents/doc123_test.pdf",
                     ),
                 },
             })
@@ -277,20 +277,20 @@ describe("DocumentStorageService", () => {
                 Promise.resolve({
                     exists: false,
                     uri: "file:///document/documents/doc123_test.pdf",
-                })
+                }),
             )
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: false,
                     uri: "file:///document/encrypted/doc123_test.pdf",
-                })
+                }),
             )
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: true,
                     uri: "file:///document/doc123_test.pdf",
                     size: 1024,
-                })
+                }),
             )
 
             const result = await documentStorage.getFile(documentId, filename)
@@ -312,7 +312,7 @@ describe("DocumentStorageService", () => {
                 Promise.resolve({
                     exists: false,
                     uri: expect.stringContaining("doc123_missing.pdf"),
-                })
+                }),
             )
 
             const result = await documentStorage.getFile(documentId, filename)
@@ -342,20 +342,20 @@ describe("DocumentStorageService", () => {
                         exists: true,
                         uri: "file:///document/documents/doc123_document.pdf",
                     },
-                })
+                }),
             )
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: true,
                     uri: sourceUri,
                     size: 12345,
-                })
+                }),
             )
 
             const result = await documentStorage.importAndStoreDocument(
                 document as IDocument,
                 sourceUri,
-                true
+                true,
             )
 
             expect(result).toMatchObject({
@@ -374,7 +374,7 @@ describe("DocumentStorageService", () => {
                 sourceUri,
                 "doc123",
                 true,
-                "document.pdf"
+                "document.pdf",
             )
         })
 
@@ -392,14 +392,14 @@ describe("DocumentStorageService", () => {
             const sourceUri = "file:///temp/doc.pdf"
 
             jest.spyOn(documentStorage, "saveFile").mockImplementationOnce(() =>
-                Promise.reject(new Error("Import error"))
+                Promise.reject(new Error("Import error")),
             )
 
             await expect(
                 documentStorage.importAndStoreDocument(
                     document as IDocument,
-                    sourceUri
-                )
+                    sourceUri,
+                ),
             ).rejects.toThrow("Import error")
         })
     })
@@ -442,17 +442,17 @@ describe("DocumentStorageService", () => {
             ;(
                 FileSystem.readDirectoryAsync as jest.Mock
             ).mockImplementationOnce(() =>
-                Promise.resolve(["doc123_file.pdf", "other.pdf"])
+                Promise.resolve(["doc123_file.pdf", "other.pdf"]),
             )
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementationOnce(() =>
                 Promise.resolve({
                     exists: true,
                     uri: "file:///document/documents/doc123_file.pdf",
-                })
+                }),
             )
 
             mockEncryptionService.decryptFileForPreview.mockImplementationOnce(
-                () => Promise.resolve(true)
+                () => Promise.resolve(true),
             )
 
             const result = await documentStorage.getDocumentTempUri(document)
@@ -470,19 +470,19 @@ describe("DocumentStorageService", () => {
                 Promise.resolve({
                     exists: true,
                     uri: "file:///document/encrypted/doc123_test.pdf",
-                })
+                }),
             )
 
             const result = await documentStorage.deleteFile(
                 documentId,
-                filename
+                filename,
             )
 
             expect(FileSystem.deleteAsync).toHaveBeenCalledWith(
-                "file:///document/encrypted/doc123_test.pdf"
+                "file:///document/encrypted/doc123_test.pdf",
             )
             expect(
-                mockEncryptionService.deleteEncryptedDocument
+                mockEncryptionService.deleteEncryptedDocument,
             ).toHaveBeenCalledWith(documentId)
             expect(result).toBe(true)
         })

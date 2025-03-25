@@ -15,19 +15,23 @@ interface FolderSelectionControlsProps {
 }
 
 export function FolderSelectionControls({
-                                            selectionMode,
-                                            selectedFolderIds,
-                                            filteredFolders,
-                                            toggleSelectionMode,
-                                            handleSelectAll,
-                                            setBatchTagModalVisible
-                                        }: FolderSelectionControlsProps) {
+    selectionMode,
+    selectedFolderIds,
+    filteredFolders,
+    toggleSelectionMode,
+    handleSelectAll,
+    setBatchTagModalVisible,
+}: FolderSelectionControlsProps) {
     return (
         <View style={styles.container}>
             {selectionMode ? (
                 <Row justify="space-between" align="center" style={styles.row}>
                     <View style={styles.infoContainer}>
-                        <Text style={styles.selectionText} numberOfLines={1} ellipsizeMode="tail">
+                        <Text
+                            style={styles.selectionText}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
                             {selectedFolderIds.length === 0
                                 ? "None"
                                 : `${selectedFolderIds.length} selected`}
@@ -45,9 +49,13 @@ export function FolderSelectionControls({
                         )}
 
                         <Button
-                            title={selectedFolderIds.length === filteredFolders.length && filteredFolders.length > 0
-                                ? "None"
-                                : "All"}
+                            title={
+                                selectedFolderIds.length ===
+                                    filteredFolders.length &&
+                                filteredFolders.length > 0
+                                    ? "None"
+                                    : "All"
+                            }
                             onPress={() => handleSelectAll(filteredFolders)}
                             style={styles.actionButton}
                             testID="select-all-button"
@@ -77,27 +85,27 @@ const styles = StyleSheet.create({
     container: {
         marginTop: 8,
         marginBottom: 12,
-        width: '100%',
+        width: "100%",
     },
     row: {
-        width: '100%',
+        width: "100%",
     },
     infoContainer: {
         flex: 0.4,
-        alignItems: 'flex-start',
-        justifyContent: 'center',
+        alignItems: "flex-start",
+        justifyContent: "center",
         paddingRight: 4,
     },
     buttonsContainer: {
         flex: 0.6,
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        flexWrap: 'nowrap',
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        flexWrap: "nowrap",
     },
     selectionText: {
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: "500",
     },
     actionButton: {
         marginLeft: 6,
@@ -119,5 +127,5 @@ const styles = StyleSheet.create({
         height: 42,
         minWidth: 10,
         maxWidth: 100,
-    }
+    },
 })

@@ -19,7 +19,7 @@ const TAG_COLORS = [
     "#1ABC9C", // Teal
     "#34495E", // Navy
     "#7F8C8D", // Gray
-];
+]
 
 interface TagEditModalProps {
     isVisible: boolean
@@ -33,16 +33,18 @@ interface TagEditModalProps {
 }
 
 export function TagEditModal({
-                                 isVisible,
-                                 onClose,
-                                 onSave,
-                                 onDelete,
-                                 initialName = "",
-                                 initialColor = TAG_COLORS[0],
-                                 tagId,
-                                 title = "Create New Tag"
-                             }: TagEditModalProps) {
-    const logger = LoggingService.getLogger ? LoggingService.getLogger("TagEditModal") : { debug: console.debug }
+    isVisible,
+    onClose,
+    onSave,
+    onDelete,
+    initialName = "",
+    initialColor = TAG_COLORS[0],
+    tagId,
+    title = "Create New Tag",
+}: TagEditModalProps) {
+    const logger = LoggingService.getLogger
+        ? LoggingService.getLogger("TagEditModal")
+        : { debug: console.debug }
 
     const [name, setName] = useState(initialName)
     const [selectedColor, setSelectedColor] = useState(initialColor)
@@ -96,16 +98,17 @@ export function TagEditModal({
                     <Stack spacing={8}>
                         <Text weight="medium">Tag Color</Text>
                         <View style={styles.colorsContainer}>
-                            {TAG_COLORS.map(color => (
+                            {TAG_COLORS.map((color) => (
                                 <TouchableOpacity
                                     key={color}
                                     style={[
                                         styles.colorOption,
                                         { backgroundColor: color },
-                                        selectedColor === color && styles.selectedColor
+                                        selectedColor === color &&
+                                            styles.selectedColor,
                                     ]}
                                     onPress={() => setSelectedColor(color)}
-                                    testID={`color-${color.replace('#', '')}`}
+                                    testID={`color-${color.replace("#", "")}`}
                                 />
                             ))}
                         </View>
@@ -119,12 +122,17 @@ export function TagEditModal({
                                 style={[
                                     styles.tagPreview,
                                     {
-                                        backgroundColor: selectedColor + '20',
-                                        borderColor: selectedColor
-                                    }
+                                        backgroundColor: selectedColor + "20",
+                                        borderColor: selectedColor,
+                                    },
                                 ]}
                             >
-                                <View style={[styles.dot, { backgroundColor: selectedColor }]} />
+                                <View
+                                    style={[
+                                        styles.dot,
+                                        { backgroundColor: selectedColor },
+                                    ]}
+                                />
                                 <Text>{name || "Tag Preview"}</Text>
                             </View>
                         </View>
@@ -147,7 +155,11 @@ export function TagEditModal({
                                     <Button
                                         title="Update"
                                         onPress={handleSave}
-                                        style={name.trim() === "" ? styles.disabledButton : {}}
+                                        style={
+                                            name.trim() === ""
+                                                ? styles.disabledButton
+                                                : {}
+                                        }
                                         testID="save-button"
                                     />
                                 </View>
@@ -173,7 +185,11 @@ export function TagEditModal({
                                 <Button
                                     title="Create Tag"
                                     onPress={handleSave}
-                                    style={name.trim() === "" ? styles.disabledButton : {}}
+                                    style={
+                                        name.trim() === ""
+                                            ? styles.disabledButton
+                                            : {}
+                                    }
                                     testID="save-button"
                                 />
                             </View>
@@ -191,12 +207,12 @@ const styles = StyleSheet.create({
     },
     title: {
         marginBottom: 16,
-        textAlign: 'center'
+        textAlign: "center",
     },
     colorsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
     },
     colorOption: {
         width: 36,
@@ -212,12 +228,12 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     previewContainer: {
-        alignItems: 'center',
+        alignItems: "center",
         padding: 8,
     },
     tagPreview: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         borderRadius: 16,
         paddingHorizontal: 12,
         paddingVertical: 6,

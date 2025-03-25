@@ -8,7 +8,7 @@ import { getIconById, ThemeColors } from "./CustomIconSelector"
 import { useTagContext } from "../../tag_functionality/TagContext" // Import only exported types
 
 // Define the type using ReturnType utility to extract it from the hook
-type TagContextType = ReturnType<typeof useTagContext>;
+type TagContextType = ReturnType<typeof useTagContext>
 
 interface FoldersListProps {
     folders: Folder[]
@@ -23,16 +23,16 @@ interface FoldersListProps {
 }
 
 export function FoldersList({
-                                folders,
-                                selectedFolderIds,
-                                selectedTagFilters,
-                                tagContext,
-                                handleFolderPress,
-                                //handleFolderSelect,
-                                showFolderOptions,
-                                //selectionMode,
-                                handleAddTagToFolder
-                            }: FoldersListProps) {
+    folders,
+    selectedFolderIds,
+    selectedTagFilters,
+    tagContext,
+    handleFolderPress,
+    //handleFolderSelect,
+    showFolderOptions,
+    //selectionMode,
+    handleAddTagToFolder,
+}: FoldersListProps) {
     const { colors } = useTheme()
 
     // Get custom icon for folder if needed
@@ -46,7 +46,7 @@ export function FoldersList({
     // Render folder item with tags and selection state
     const renderFolderItem = ({ item }: { item: Folder }) => {
         // Get tags for this folder
-        const folderTags = tagContext.getTagsForItem(item.id, 'folder')
+        const folderTags = tagContext.getTagsForItem(item.id, "folder")
 
         return (
             <FolderCard
@@ -62,9 +62,11 @@ export function FoldersList({
                 tags={folderTags}
                 allTags={tagContext.tags} // Pass all available tags
                 //onTagPress={(tagId: string) => {
-                    // This would be handled by the parent component
+                // This would be handled by the parent component
                 //}}
-                onAddTag={(tagId: string) => handleAddTagToFolder(tagId, item.id)}
+                onAddTag={(tagId: string) =>
+                    handleAddTagToFolder(tagId, item.id)
+                }
                 folderId={item.id} // Pass the folder ID
                 selectedTagIds={selectedTagFilters}
             />
@@ -99,5 +101,5 @@ const styles = StyleSheet.create({
         padding: 20,
         alignItems: "center",
         justifyContent: "center",
-    }
+    },
 })

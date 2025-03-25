@@ -73,7 +73,7 @@ export class DocumentStorageService {
         sourceUri: string,
         documentId: string,
         shouldEncrypt: boolean = true,
-        filename?: string
+        filename?: string,
     ): Promise<{ uri: string; metadata: FileMetadata }> {
         PerformanceMonitoringService.startMeasure(`save_file_${documentId}`)
 
@@ -87,7 +87,7 @@ export class DocumentStorageService {
 
             const sanitizedFilename = extractedFilename.replace(
                 /[/:*?"<>|\\]/g,
-                "_"
+                "_",
             )
 
             // Verify we have a file we can work with
@@ -118,7 +118,7 @@ export class DocumentStorageService {
                 // Verify copy was successful
                 const permFileInfo = await FileSystem.getInfoAsync(
                     permanentPath,
-                    { size: true }
+                    { size: true },
                 )
                 if (
                     !permFileInfo.exists ||
@@ -129,7 +129,7 @@ export class DocumentStorageService {
 
                 finalUri = permanentPath
                 this.logger.debug(
-                    `Created permanent copy of file at: ${permanentPath}`
+                    `Created permanent copy of file at: ${permanentPath}`,
                 )
 
                 // Clean up the cache file if we successfully copied it
@@ -142,7 +142,7 @@ export class DocumentStorageService {
                     // Just log cleanup errors, don't fail
                     this.logger.debug(
                         `Failed to clean up cache file: ${sourceUri}`,
-                        cleanupError
+                        cleanupError,
                     )
                 }
             } else {
@@ -154,7 +154,7 @@ export class DocumentStorageService {
             if (shouldEncrypt) {
                 const success = await this.encryptionService.encryptDocument(
                     documentId,
-                    finalUri
+                    finalUri,
                 )
 
                 if (!success) {
@@ -177,7 +177,7 @@ export class DocumentStorageService {
             }
 
             this.logger.info(
-                `File saved successfully for document ${documentId}`
+                `File saved successfully for document ${documentId}`,
             )
 
             const metadata: FileMetadata = {
@@ -193,7 +193,7 @@ export class DocumentStorageService {
         } catch (error) {
             this.logger.error(
                 `Failed to save file for document ${documentId}`,
-                error
+                error,
             )
             PerformanceMonitoringService.endMeasure(`save_file_${documentId}`)
             throw error
@@ -208,7 +208,7 @@ export class DocumentStorageService {
      */
     async getFile(
         documentId: string,
-        filename: string
+        filename: string,
     ): Promise<{ uri: string; metadata: FileMetadata }> {
         PerformanceMonitoringService.startMeasure(`get_file_${documentId}`)
 
@@ -237,7 +237,7 @@ export class DocumentStorageService {
 
                     if (!fileInfo.exists) {
                         this.logger.error(
-                            `File not found for document ${documentId}`
+                            `File not found for document ${documentId}`,
                         )
                     }
                 }
@@ -249,7 +249,7 @@ export class DocumentStorageService {
             }
 
             this.logger.debug(
-                `File retrieved successfully for document ${documentId}`
+                `File retrieved successfully for document ${documentId}`,
             )
             PerformanceMonitoringService.endMeasure(`get_file_${documentId}`)
 
@@ -260,7 +260,7 @@ export class DocumentStorageService {
         } catch (error) {
             this.logger.error(
                 `Failed to get file for document ${documentId}`,
-                error
+                error,
             )
             PerformanceMonitoringService.endMeasure(`get_file_${documentId}`)
             throw error
@@ -292,7 +292,7 @@ export class DocumentStorageService {
         } catch (error) {
             this.logger.error(
                 `Failed to check if file exists for document ${documentId}`,
-                error
+                error,
             )
             return false
         }
@@ -320,10 +320,10 @@ export class DocumentStorageService {
                 await this.encryptionService.deleteEncryptedDocument(documentId)
 
                 this.logger.info(
-                    `Encrypted file deleted for document ${documentId}`
+                    `Encrypted file deleted for document ${documentId}`,
                 )
                 PerformanceMonitoringService.endMeasure(
-                    `delete_file_${documentId}`
+                    `delete_file_${documentId}`,
                 )
                 return true
             }
@@ -335,10 +335,10 @@ export class DocumentStorageService {
             if (fileInfo.exists) {
                 await FileSystem.deleteAsync(fileUri)
                 this.logger.info(
-                    `Unencrypted file deleted for document ${documentId}`
+                    `Unencrypted file deleted for document ${documentId}`,
                 )
                 PerformanceMonitoringService.endMeasure(
-                    `delete_file_${documentId}`
+                    `delete_file_${documentId}`,
                 )
                 return true
             }
@@ -350,23 +350,23 @@ export class DocumentStorageService {
             if (fileInfo.exists) {
                 await FileSystem.deleteAsync(fileUri)
                 this.logger.info(
-                    `Legacy file deleted for document ${documentId}`
+                    `Legacy file deleted for document ${documentId}`,
                 )
                 PerformanceMonitoringService.endMeasure(
-                    `delete_file_${documentId}`
+                    `delete_file_${documentId}`,
                 )
                 return true
             }
 
             this.logger.warn(
-                `File not found for deletion: document ${documentId}, filename ${filename}`
+                `File not found for deletion: document ${documentId}, filename ${filename}`,
             )
             PerformanceMonitoringService.endMeasure(`delete_file_${documentId}`)
             return false
         } catch (error) {
             this.logger.error(
                 `Failed to delete file for document ${documentId}`,
-                error
+                error,
             )
             PerformanceMonitoringService.endMeasure(`delete_file_${documentId}`)
             return false
@@ -383,7 +383,7 @@ export class DocumentStorageService {
     async importAndStoreDocument(
         document: IDocument,
         sourceUri: string,
-        encrypt: boolean = true
+        encrypt: boolean = true,
     ): Promise<IDocument> {
         const documentId = document.id
         const filename = sourceUri.split("/").pop() || `document_${documentId}`
@@ -393,7 +393,7 @@ export class DocumentStorageService {
                 sourceUri,
                 documentId,
                 encrypt,
-                filename
+                filename,
             )
 
             if (!metadata.exists) {
@@ -419,7 +419,7 @@ export class DocumentStorageService {
         } catch (error) {
             this.logger.error(
                 `Failed to import and store document for ${sourceUri}`,
-                error
+                error,
             )
             throw error
         }
@@ -451,11 +451,11 @@ export class DocumentStorageService {
                 let documentFiles: string[] = []
                 try {
                     documentFiles = await FileSystem.readDirectoryAsync(
-                        this.documentsDirectory
+                        this.documentsDirectory,
                     )
                 } catch (error) {
                     this.logger.debug(
-                        `Could not read documents directory: ${error}`
+                        `Could not read documents directory: ${error}`,
                     )
                 }
 
@@ -463,25 +463,25 @@ export class DocumentStorageService {
                 let encryptedFiles: string[] = []
                 try {
                     encryptedFiles = await FileSystem.readDirectoryAsync(
-                        this.encryptedDirectory
+                        this.encryptedDirectory,
                     )
                 } catch (error) {
                     this.logger.debug(
-                        `Could not read encrypted directory: ${error}`
+                        `Could not read encrypted directory: ${error}`,
                     )
                 }
 
                 // Check both directories for files with the document ID prefix
                 const allFiles = [...documentFiles, ...encryptedFiles]
                 const documentFile = allFiles.find((file) =>
-                    file.startsWith(`${documentId}_`)
+                    file.startsWith(`${documentId}_`),
                 )
 
                 if (!documentFile) {
                     // Try another approach - check for the file using the title
                     const titleBasedName = `${documentId}_${document.title?.replace(
                         /[/:*?"<>|\\]/g,
-                        "_"
+                        "_",
                     )}`
 
                     let fileUri = `${this.documentsDirectory}${titleBasedName}`
@@ -493,7 +493,7 @@ export class DocumentStorageService {
 
                         if (!fileInfo.exists) {
                             this.logger.error(
-                                `Encrypted file not found for document ${documentId}`
+                                `Encrypted file not found for document ${documentId}`,
                             )
                             throw new Error("Encrypted file not found")
                         }
@@ -502,17 +502,16 @@ export class DocumentStorageService {
                     // Found the file by constructed name
                     const sanitizedFilename = titleBasedName.replace(
                         /[/:*?"<>|\\]/g,
-                        "_"
+                        "_",
                     )
                     const previewUri = `${this.cacheDirectory}preview_${sanitizedFilename}`
 
                     // Check if a preview already exists
-                    const previewExists = await FileSystem.getInfoAsync(
-                        previewUri
-                    )
+                    const previewExists =
+                        await FileSystem.getInfoAsync(previewUri)
                     if (previewExists.exists) {
                         this.logger.debug(
-                            `Using existing preview file at ${previewUri}`
+                            `Using existing preview file at ${previewUri}`,
                         )
                         return previewUri
                     }
@@ -522,20 +521,20 @@ export class DocumentStorageService {
                         await this.encryptionService.decryptFileForPreview(
                             documentId,
                             fileUri,
-                            previewUri
+                            previewUri,
                         )
 
                     if (!success) {
                         this.logger.error(
-                            "Document was not decrypted successfully"
+                            "Document was not decrypted successfully",
                         )
                         throw new Error(
-                            "Failed to decrypt document for preview"
+                            "Failed to decrypt document for preview",
                         )
                     }
 
                     this.logger.debug(
-                        `Created decrypted preview file at ${previewUri}`
+                        `Created decrypted preview file at ${previewUri}`,
                     )
                     return previewUri
                 }
@@ -551,7 +550,7 @@ export class DocumentStorageService {
                 // Create a preview filename
                 const sanitizedFilename = documentFile.replace(
                     /[/:*?"<>|\\]/g,
-                    "_"
+                    "_",
                 )
                 const previewUri = `${this.cacheDirectory}preview_${sanitizedFilename}`
 
@@ -559,7 +558,7 @@ export class DocumentStorageService {
                 const previewExists = await FileSystem.getInfoAsync(previewUri)
                 if (previewExists.exists) {
                     this.logger.debug(
-                        `Using existing preview file at ${previewUri}`
+                        `Using existing preview file at ${previewUri}`,
                     )
                     return previewUri
                 }
@@ -569,7 +568,7 @@ export class DocumentStorageService {
                     await this.encryptionService.decryptFileForPreview(
                         documentId,
                         fileUri,
-                        previewUri
+                        previewUri,
                     )
 
                 if (!success) {
@@ -578,7 +577,7 @@ export class DocumentStorageService {
                 }
 
                 this.logger.debug(
-                    `Created decrypted preview file at ${previewUri}`
+                    `Created decrypted preview file at ${previewUri}`,
                 )
                 return previewUri
             } else if (document.sourceUri) {
@@ -607,19 +606,19 @@ export class DocumentStorageService {
             if (fileInfo.exists) {
                 await FileSystem.deleteAsync(previewUri, { idempotent: true })
                 this.logger.debug(
-                    `Preview file deleted successfully: ${previewUri}`
+                    `Preview file deleted successfully: ${previewUri}`,
                 )
                 return true
             }
 
             this.logger.debug(
-                `Preview file not found for deletion: ${previewUri}`
+                `Preview file not found for deletion: ${previewUri}`,
             )
             return false
         } catch (error) {
             this.logger.error(
                 `Failed to delete preview file: ${previewUri}`,
-                error
+                error,
             )
             return false
         }
@@ -631,10 +630,10 @@ export class DocumentStorageService {
     async cleanupPreviewFiles(): Promise<void> {
         try {
             const cacheFiles = await FileSystem.readDirectoryAsync(
-                this.cacheDirectory
+                this.cacheDirectory,
             )
             const previewFiles = cacheFiles.filter((file) =>
-                file.startsWith("preview_")
+                file.startsWith("preview_"),
             )
 
             for (const file of previewFiles) {
@@ -644,7 +643,7 @@ export class DocumentStorageService {
             }
 
             this.logger.debug(
-                `Cleaned up ${previewFiles.length} temporary preview files`
+                `Cleaned up ${previewFiles.length} temporary preview files`,
             )
         } catch (error) {
             this.logger.error("Failed to clean up preview files", error)

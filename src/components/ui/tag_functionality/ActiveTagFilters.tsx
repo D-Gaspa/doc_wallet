@@ -1,6 +1,12 @@
 // src/context/tag_functionality/ActiveTagFilters.tsx
 import React from "react"
-import { View, StyleSheet, TouchableOpacity, ScrollView, Text } from "react-native"
+import {
+    View,
+    StyleSheet,
+    TouchableOpacity,
+    ScrollView,
+    Text,
+} from "react-native"
 import { Row } from "../layout"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTagContext, Tag } from "./TagContext"
@@ -13,11 +19,11 @@ interface ActiveTagFiltersProps {
 }
 
 export function ActiveTagFilters({
-                                     selectedTagFilters,
-                                     onRemoveFilter,
-                                     onClearFilters,
-                                     testID
-                                 }: ActiveTagFiltersProps) {
+    selectedTagFilters,
+    onRemoveFilter,
+    onClearFilters,
+    testID,
+}: ActiveTagFiltersProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
 
@@ -25,7 +31,7 @@ export function ActiveTagFilters({
 
     // Get tags for display
     const filterTags = selectedTagFilters
-        .map(tagId => tagContext.tags.find(tag => tag.id === tagId))
+        .map((tagId) => tagContext.tags.find((tag) => tag.id === tagId))
         .filter((tag): tag is Tag => tag !== undefined)
 
     return (
@@ -40,20 +46,37 @@ export function ActiveTagFilters({
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.tagsScrollContainer}
                 >
-                    {filterTags.map(tag => (
+                    {filterTags.map((tag) => (
                         <View
                             key={tag.id}
                             style={[
                                 styles.tagItem,
-                                { backgroundColor: tag.color + '20', borderColor: tag.color }
+                                {
+                                    backgroundColor: tag.color + "20",
+                                    borderColor: tag.color,
+                                },
                             ]}
                         >
-                            <View style={[styles.tagDot, { backgroundColor: tag.color }]} />
-                            <Text style={[styles.tagText, { color: colors.text }]}>{tag.name}</Text>
+                            <View
+                                style={[
+                                    styles.tagDot,
+                                    { backgroundColor: tag.color },
+                                ]}
+                            />
+                            <Text
+                                style={[styles.tagText, { color: colors.text }]}
+                            >
+                                {tag.name}
+                            </Text>
                             <TouchableOpacity
                                 style={styles.removeButton}
                                 onPress={() => onRemoveFilter(tag.id)}
-                                hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                                hitSlop={{
+                                    top: 10,
+                                    right: 10,
+                                    bottom: 10,
+                                    left: 10,
+                                }}
                             >
                                 <Text style={{ color: colors.text }}>×</Text>
                             </TouchableOpacity>
@@ -67,7 +90,12 @@ export function ActiveTagFilters({
                         hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
                         style={styles.clearButton}
                     >
-                        <Text style={[styles.clearText, { color: colors.primary }]}>
+                        <Text
+                            style={[
+                                styles.clearText,
+                                { color: colors.primary },
+                            ]}
+                        >
                             Clear
                         </Text>
                     </TouchableOpacity>
@@ -85,21 +113,21 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     rowContainer: {
-        flexWrap: 'nowrap',
+        flexWrap: "nowrap",
     },
     label: {
         fontSize: 12,
-        fontWeight: '500',
+        fontWeight: "500",
     },
     tagsScrollContainer: {
-        flexDirection: 'row',
+        flexDirection: "row",
         flexGrow: 1,
         flexShrink: 1,
         paddingRight: 4,
     },
     tagItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         borderRadius: 12,
         paddingHorizontal: 6,
         borderWidth: 1,
@@ -114,20 +142,20 @@ const styles = StyleSheet.create({
     },
     tagText: {
         fontSize: 12,
-        fontWeight: '400',
+        fontWeight: "400",
     },
     removeButton: {
         marginLeft: 3,
         width: 20,
         height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
     },
     clearButton: {
         marginLeft: 2,
     },
     clearText: {
         fontSize: 12,
-        fontWeight: '500',
-    }
-});
+        fontWeight: "500",
+    },
+})

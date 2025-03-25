@@ -20,19 +20,19 @@ interface FolderHeaderProps {
 }
 
 export function FolderHeader({
-                                 currentFolderId,
-                                 getCurrentFolderName,
-                                 handleBackPress,
-                                 folders,
-                                 selectedTagFilters,
-                                 setSelectedTagFilters,
+    currentFolderId,
+    getCurrentFolderName,
+    handleBackPress,
+    folders,
+    selectedTagFilters,
+    setSelectedTagFilters,
 
-                                 setSearchQuery,
-                                 testID
-                             }: FolderHeaderProps) {
+    setSearchQuery,
+    testID,
+}: FolderHeaderProps) {
     // Handler for removing a single tag filter
     const handleRemoveFilter = (tagId: string) => {
-        setSelectedTagFilters(selectedTagFilters.filter(id => id !== tagId))
+        setSelectedTagFilters(selectedTagFilters.filter((id) => id !== tagId))
     }
 
     // Handler for clearing all tag filters
@@ -56,19 +56,15 @@ export function FolderHeader({
                     style={styles.breadcrumb}
                 >
                     <TouchableOpacity onPress={handleBackPress}>
-                        <Text
-                            variant="sm"
-                            weight="medium"
-                        >
+                        <Text variant="sm" weight="medium">
                             {"< Back to " +
                                 (folders.find(
                                     (f) =>
                                         f.id ===
                                         folders.find(
                                             (folder) =>
-                                                folder.id ===
-                                                currentFolderId
-                                        )?.parentId
+                                                folder.id === currentFolderId,
+                                        )?.parentId,
                                 )?.title || "Folders")}
                         </Text>
                     </TouchableOpacity>
@@ -107,7 +103,6 @@ export function FolderHeader({
     )
 }
 
-
 const styles = StyleSheet.create({
     breadcrumb: {
         paddingVertical: 8,
@@ -117,5 +112,5 @@ const styles = StyleSheet.create({
     },
     titleText: {
         flex: 1, // This allows the title to take up most of the space but shrink if needed
-    }
+    },
 })

@@ -25,15 +25,15 @@ export function useSelectionMode() {
             setSelectedFolderIds([])
         } else {
             // Otherwise select all
-            setSelectedFolderIds(folders.map(folder => folder.id))
+            setSelectedFolderIds(folders.map((folder) => folder.id))
         }
     }
 
     // Handle folder selection/deselection
     const handleFolderSelect = (folderId: string) => {
-        setSelectedFolderIds(prev => {
+        setSelectedFolderIds((prev) => {
             if (prev.includes(folderId)) {
-                return prev.filter(id => id !== folderId)
+                return prev.filter((id) => id !== folderId)
             } else {
                 return [...prev, folderId]
             }
@@ -45,6 +45,6 @@ export function useSelectionMode() {
         selectedFolderIds,
         toggleSelectionMode,
         handleSelectAll,
-        handleFolderSelect
+        handleFolderSelect,
     }
 }

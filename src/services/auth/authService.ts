@@ -20,7 +20,7 @@ export class AuthService {
 
     async authenticate(
         method: AuthMethod,
-        authData?: { pin?: string }
+        authData?: { pin?: string },
     ): Promise<IUser | null> {
         PerformanceMonitoringService.startMeasure(`auth_${method}`)
         this.logger.info(`Authentication attempt with method: ${method}`)
@@ -35,7 +35,7 @@ export class AuthService {
                         this.logger.info("Biometric authentication successful")
                         const userData = await TokenService.getUserData()
                         PerformanceMonitoringService.endMeasure(
-                            `auth_${method}`
+                            `auth_${method}`,
                         )
                         return userData
                     }
@@ -48,10 +48,10 @@ export class AuthService {
                     const pin = authData?.pin
                     if (!pin) {
                         this.logger.warn(
-                            "PIN authentication attempted without a PIN"
+                            "PIN authentication attempted without a PIN",
                         )
                         PerformanceMonitoringService.endMeasure(
-                            `auth_${method}`
+                            `auth_${method}`,
                         )
                         return null
                     }
@@ -62,7 +62,7 @@ export class AuthService {
                         this.logger.info("PIN authentication successful")
                         const userData = await TokenService.getUserData()
                         PerformanceMonitoringService.endMeasure(
-                            `auth_${method}`
+                            `auth_${method}`,
                         )
                         return userData
                     }
@@ -88,23 +88,23 @@ export class AuthService {
 
                         await TokenService.storeUserData(user)
                         PerformanceMonitoringService.endMeasure(
-                            `auth_${method}`
+                            `auth_${method}`,
                         )
                         return user
                     } catch (error) {
                         this.logger.error(
                             "Google authentication failed:",
-                            error
+                            error,
                         )
                         PerformanceMonitoringService.endMeasure(
-                            `auth_${method}`
+                            `auth_${method}`,
                         )
                         return null
                     }
 
                 default:
                     this.logger.warn(
-                        `Unsupported authentication method: ${method}`
+                        `Unsupported authentication method: ${method}`,
                     )
                     PerformanceMonitoringService.endMeasure(`auth_${method}`)
                     return null

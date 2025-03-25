@@ -35,7 +35,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
                     } else {
                         const systemTheme = Appearance.getColorScheme()
                         logger.info(
-                            `No stored theme found, using system theme: ${systemTheme}`
+                            `No stored theme found, using system theme: ${systemTheme}`,
                         )
                         setThemeType(systemTheme === "dark" ? "dark" : "light")
                     }

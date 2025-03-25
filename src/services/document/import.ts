@@ -28,7 +28,7 @@ export class DocumentImport {
      * @returns Array of document picker results
      */
     async importDocument(
-        options: ImportOptions = {}
+        options: ImportOptions = {},
     ): Promise<ImportFileResult[]> {
         PerformanceMonitoringService.startMeasure("import_document")
 
@@ -50,18 +50,18 @@ export class DocumentImport {
             logger.debug("Imported documents:", results)
 
             const invalidFiles = results.filter(
-                (file) => !file.hasRequestedType
+                (file) => !file.hasRequestedType,
             )
             if (invalidFiles.length > 0) {
                 logger.warn(
                     "User selected files with invalid types:",
-                    invalidFiles.map((f) => f.name || "unknown file")
+                    invalidFiles.map((f) => f.name || "unknown file"),
                 )
             }
 
             const processedResults = await this.processImportResults(
                 results,
-                allowVirtualFiles
+                allowVirtualFiles,
             )
 
             logger.debug("Imported processed documents:", processedResults)
@@ -79,10 +79,10 @@ export class DocumentImport {
                 if (error.code === errorCodes.UNABLE_TO_OPEN_FILE_TYPE) {
                     logger.error(
                         "Unable to open this file type. The system doesn't support it or permissions are missing.",
-                        error
+                        error,
                     )
                     throw new Error(
-                        "Unable to open this file type. Please try a different file format or download it to your device first."
+                        "Unable to open this file type. Please try a different file format or download it to your device first.",
                     )
                 }
 
@@ -101,7 +101,7 @@ export class DocumentImport {
      * @returns Array of imported image files
      */
     async importImage(
-        allowMultiple: boolean = false
+        allowMultiple: boolean = false,
     ): Promise<ImportFileResult[]> {
         PerformanceMonitoringService.startMeasure("import_image")
 
@@ -115,7 +115,7 @@ export class DocumentImport {
 
             const processedResults = await this.processImportResults(
                 results,
-                false
+                false,
             )
 
             PerformanceMonitoringService.endMeasure("import_image")
@@ -131,7 +131,7 @@ export class DocumentImport {
                 if (error.code === errorCodes.UNABLE_TO_OPEN_FILE_TYPE) {
                     logger.error("Unable to open this image type", error)
                     throw new Error(
-                        "Unable to open this image. Please try a different image format."
+                        "Unable to open this image. Please try a different image format.",
                     )
                 }
 
@@ -150,7 +150,7 @@ export class DocumentImport {
      * @returns Array of imported PDF files
      */
     async importPDF(
-        allowMultiple: boolean = false
+        allowMultiple: boolean = false,
     ): Promise<ImportFileResult[]> {
         PerformanceMonitoringService.startMeasure("import_pdf")
 
@@ -164,7 +164,7 @@ export class DocumentImport {
 
             const processedResults = await this.processImportResults(
                 results,
-                false
+                false,
             )
 
             PerformanceMonitoringService.endMeasure("import_pdf")
@@ -180,7 +180,7 @@ export class DocumentImport {
                 if (error.code === errorCodes.UNABLE_TO_OPEN_FILE_TYPE) {
                     logger.error("Unable to open this PDF file", error)
                     throw new Error(
-                        "Unable to open this PDF. The file might be corrupted or protected."
+                        "Unable to open this PDF. The file might be corrupted or protected.",
                     )
                 }
 
@@ -199,7 +199,7 @@ export class DocumentImport {
      * @returns Array of processed file results
      */
     async importVirtualDocument(
-        fileTypes: string[] = [types.pdf, types.images, types.docx]
+        fileTypes: string[] = [types.pdf, types.images, types.docx],
     ): Promise<ImportFileResult[]> {
         PerformanceMonitoringService.startMeasure("import_virtual_document")
 
@@ -213,7 +213,7 @@ export class DocumentImport {
 
             const processedResults = await this.processImportResults(
                 results,
-                true
+                true,
             )
 
             PerformanceMonitoringService.endMeasure("import_virtual_document")
@@ -223,7 +223,7 @@ export class DocumentImport {
                 if (error.code === errorCodes.OPERATION_CANCELED) {
                     logger.debug("User canceled virtual document import")
                     PerformanceMonitoringService.endMeasure(
-                        "import_virtual_document"
+                        "import_virtual_document",
                     )
                     return []
                 }
@@ -231,13 +231,13 @@ export class DocumentImport {
                 if (error.code === errorCodes.UNABLE_TO_OPEN_FILE_TYPE) {
                     logger.error("Unable to open this cloud document", error)
                     throw new Error(
-                        "Unable to open this cloud document. Try downloading it to your device first."
+                        "Unable to open this cloud document. Try downloading it to your device first.",
                     )
                 }
 
                 logger.error(
                     `Virtual document import error: ${error.code}`,
-                    error
+                    error,
                 )
             } else {
                 logger.error("Virtual document import error:", error)
@@ -268,7 +268,7 @@ export class DocumentImport {
      */
     private async tryDirectCopy(
         uri: string,
-        tempFile: string
+        tempFile: string,
     ): Promise<boolean> {
         try {
             logger.debug(`Attempting direct copy from ${uri} to ${tempFile}`)
@@ -287,7 +287,7 @@ export class DocumentImport {
                 fileInfo.size !== undefined &&
                 fileInfo.size > 0
             logger.debug(
-                `Direct copy ${success ? "successful" : "failed"}: ${tempFile}`
+                `Direct copy ${success ? "successful" : "failed"}: ${tempFile}`,
             )
 
             return success
@@ -295,7 +295,7 @@ export class DocumentImport {
             logger.debug(
                 `Direct copy failed: ${
                     error instanceof Error ? error.message : "Unknown error"
-                }`
+                }`,
             )
             return false
         }
@@ -307,7 +307,7 @@ export class DocumentImport {
      * @returns Local URI if successful, null if failed
      */
     private async createLocalCopyOfFile(
-        file: DocumentPickerResponse
+        file: DocumentPickerResponse,
     ): Promise<string | null> {
         try {
             if (!file.uri) {
@@ -325,7 +325,7 @@ export class DocumentImport {
             // First try direct copy as it's faster
             const directCopySuccess = await this.tryDirectCopy(
                 file.uri,
-                tempFilePath
+                tempFilePath,
             )
             if (directCopySuccess) {
                 return tempFilePath
@@ -345,7 +345,7 @@ export class DocumentImport {
             ) {
                 const conversion = file.convertibleToMimeTypes[0]
                 logger.debug(
-                    `Using conversion for Google Drive file: ${conversion.mimeType}`
+                    `Using conversion for Google Drive file: ${conversion.mimeType}`,
                 )
 
                 fileToCopy = {
@@ -364,7 +364,7 @@ export class DocumentImport {
             }
 
             logger.debug(
-                `Attempting keepLocalCopy for: ${fileToCopy.uri} as ${fileToCopy.fileName}`
+                `Attempting keepLocalCopy for: ${fileToCopy.uri} as ${fileToCopy.fileName}`,
             )
 
             // This strange non-empty array type is required by the function definition
@@ -377,12 +377,12 @@ export class DocumentImport {
 
             if (copyResults[0].status === "success") {
                 logger.debug(
-                    `keepLocalCopy successful: ${copyResults[0].localUri}`
+                    `keepLocalCopy successful: ${copyResults[0].localUri}`,
                 )
                 return copyResults[0].localUri
             } else {
                 logger.error(
-                    `keepLocalCopy failed: ${copyResults[0].copyError}`
+                    `keepLocalCopy failed: ${copyResults[0].copyError}`,
                 )
                 return null
             }
@@ -400,7 +400,7 @@ export class DocumentImport {
      */
     private async processImportResults(
         results: DocumentPickerResponse[],
-        handleVirtualFiles: boolean
+        handleVirtualFiles: boolean,
     ): Promise<ImportFileResult[]> {
         if (results.length === 0) {
             return []
@@ -417,7 +417,7 @@ export class DocumentImport {
                     logger.debug(
                         `Skipping virtual file ${
                             file.name || "unnamed"
-                        } as handleVirtualFiles is false`
+                        } as handleVirtualFiles is false`,
                     )
                     continue
                 }
@@ -437,13 +437,13 @@ export class DocumentImport {
                     })
 
                     logger.debug(
-                        `Successfully processed file: ${file.name || "unnamed"}`
+                        `Successfully processed file: ${file.name || "unnamed"}`,
                     )
                 } else {
                     logger.error(
                         `Failed to create local copy for file: ${
                             file.name || "unnamed file"
-                        }`
+                        }`,
                     )
                 }
             }
@@ -461,7 +461,7 @@ export class DocumentImport {
      * @returns Directory selection result or null if canceled
      */
     async selectDirectory(
-        requestLongTermAccess: boolean = false
+        requestLongTermAccess: boolean = false,
     ): Promise<DirectoryPickerResponse | null> {
         try {
             logger.debug("Selecting directory")

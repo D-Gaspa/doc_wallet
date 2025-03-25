@@ -2,7 +2,7 @@ export const mockEncryptDocument = jest.fn().mockResolvedValue(true)
 export const mockDecryptDocument = jest
     .fn()
     .mockImplementation((docId: string) =>
-        Promise.resolve(`Decrypted content for ${docId}`)
+        Promise.resolve(`Decrypted content for ${docId}`),
     )
 export const mockDeleteEncryptedDocument = jest.fn().mockResolvedValue(true)
 

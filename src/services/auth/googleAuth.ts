@@ -84,7 +84,7 @@ export const GoogleAuthService = {
             })
 
             const expiresAt = new Date(
-                result.accessTokenExpirationDate
+                result.accessTokenExpirationDate,
             ).getTime()
 
             await TokenService.storeTokens({
@@ -147,7 +147,7 @@ export const GoogleAuthService = {
             })
 
             const expiresAt = new Date(
-                result.accessTokenExpirationDate
+                result.accessTokenExpirationDate,
             ).getTime()
 
             await TokenService.storeTokens({
@@ -198,7 +198,7 @@ export const GoogleAuthService = {
                         headers: {
                             Authorization: `Bearer ${tokens.accessToken}`,
                         },
-                    }
+                    },
                 )
 
                 if (response.ok) {
@@ -213,7 +213,7 @@ export const GoogleAuthService = {
                 } else {
                     logger.error(
                         "Failed to get user info from Google API",
-                        await response.text()
+                        await response.text(),
                     )
                     return null
                 }

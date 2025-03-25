@@ -26,7 +26,7 @@ describe("Dialog", () => {
                 message="Test Dialog"
             >
                 <Text>Dialog Content</Text>
-            </Dialog>
+            </Dialog>,
         )
 
         expect(getByTestId("dialog-container")).toBeTruthy()
@@ -43,7 +43,7 @@ describe("Dialog", () => {
                 message="Hidden Dialog"
             >
                 <Text>Hidden Content</Text>
-            </Dialog>
+            </Dialog>,
         )
 
         expect(queryByTestId("dialog-container")).toBeNull()
@@ -59,7 +59,7 @@ describe("Dialog", () => {
                 message="Test Dialog"
             >
                 <Text>Test Content</Text>
-            </Dialog>
+            </Dialog>,
         )
 
         fireEvent.press(getByTestId("dialog-cancel-button")) // ✅ Corrected (used onCancel)
@@ -76,7 +76,7 @@ describe("Dialog", () => {
                 message="Confirm Action"
             >
                 <Text>Confirm Content</Text>
-            </Dialog>
+            </Dialog>,
         )
 
         fireEvent.press(getByTestId("dialog-confirm-button"))
@@ -93,7 +93,7 @@ describe("Dialog", () => {
                 message="Cancel Action"
             >
                 <Text>Cancel Content</Text>
-            </Dialog>
+            </Dialog>,
         )
 
         fireEvent.press(getByTestId("dialog-cancel-button"))

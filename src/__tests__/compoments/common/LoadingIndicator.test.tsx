@@ -30,7 +30,7 @@ describe("LoadingScreens", () => {
         expect(backgroundView.props.style).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({ backgroundColor: colors.background }),
-            ])
+            ]),
         )
     })
 })

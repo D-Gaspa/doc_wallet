@@ -142,8 +142,8 @@ export const useAuthStore = create<IAuthState>((set) => ({
                 const preferredMethod = isBiometricAvailable
                     ? AuthMethod.BIOMETRIC
                     : isPinSet
-                    ? AuthMethod.PIN
-                    : AuthMethod.GOOGLE
+                      ? AuthMethod.PIN
+                      : AuthMethod.GOOGLE
 
                 logger.info("User authenticated via local auth data", {
                     email: userData.email,
@@ -171,8 +171,8 @@ export const useAuthStore = create<IAuthState>((set) => ({
                 new Error(
                     `Auth check error: ${
                         error instanceof Error ? error.message : String(error)
-                    }`
-                )
+                    }`,
+                ),
             )
             set({ user: null, isAuthenticated: false })
             PerformanceMonitoringService.endMeasure("auth_status_check")

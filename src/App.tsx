@@ -5,7 +5,7 @@ import {
     NavigationContainer,
     useNavigation,
     NavigationProp,
-    useNavigationState
+    useNavigationState,
 } from "@react-navigation/native"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { useTheme } from "./hooks/useTheme.ts"
@@ -25,12 +25,11 @@ const FilesScreen = () => (
 
 // Define the types for navigation
 type TabParamList = {
-    Home: undefined;
-    Files: undefined;
-    Profile: undefined;
-};
+    Home: undefined
+    Files: undefined
+    Profile: undefined
+}
 const ProfileScreen: React.FC = () => {
-
     const { colors, toggleTheme } = useTheme()
     const [toastVisible, setToastVisible] = useState<boolean>(false)
 
@@ -38,11 +37,15 @@ const ProfileScreen: React.FC = () => {
     const handleToggleTheme = () => {
         toggleTheme()
         setToastVisible(true)
-
     }
 
     return (
-        <View style={[styles.screenContainer, { backgroundColor: colors.background }]}>
+        <View
+            style={[
+                styles.screenContainer,
+                { backgroundColor: colors.background },
+            ]}
+        >
             <Text>Profile</Text>
 
             {/* Theme toggle button */}
@@ -58,50 +61,47 @@ const ProfileScreen: React.FC = () => {
                     onDismiss={() => setToastVisible(false)}
                 />
             )}
-
-
         </View>
     )
 }
 // Wrapper component for the tab navigator
 function MainTabsContent() {
-
     // Use the properly typed navigation
     const navigation = useNavigation<NavigationProp<TabParamList>>()
 
     // Debug the navigation state structure
-    const currentRouteName = useNavigationState(state => {
-        console.log('Navigation State:', JSON.stringify(state, null, 2));
+    const currentRouteName = useNavigationState((state) => {
+        console.log("Navigation State:", JSON.stringify(state, null, 2))
 
         // With nested navigators, we need to check if this is a tab navigator
         // The structure might be different than expected
         if (state?.routes?.[0]?.state?.routes) {
             // This is likely a case of nested navigators (Stack containing Tabs)
-            const tabState = state.routes[0].state;
-            const tabRoutes = tabState.routes || [];
-            const tabIndex = tabState.index ?? 0;
-            return (tabRoutes[tabIndex]?.name as keyof TabParamList) || 'Home';
+            const tabState = state.routes[0].state
+            const tabRoutes = tabState.routes || []
+            const tabIndex = tabState.index ?? 0
+            return (tabRoutes[tabIndex]?.name as keyof TabParamList) || "Home"
         } else {
             // Direct tab navigation
-            const routes = state?.routes || [];
-            const index = state?.index ?? 0;
-            return (routes[index]?.name as keyof TabParamList) || 'Home';
+            const routes = state?.routes || []
+            const index = state?.index ?? 0
+            return (routes[index]?.name as keyof TabParamList) || "Home"
         }
-    });
+    })
 
     // This function tells React Navigation to navigate to the selected tab
     const handleTabChange = (tab: string) => {
         // Case sensitivity matters in React Navigation - make sure we're using
         // the exact screen names as registered in the Tab.Navigator
         const screenMapping: Record<string, keyof TabParamList> = {
-            'Home': 'Home',
-            'Files': 'Files',
-            'Profile': 'Profile'
-        };
+            Home: "Home",
+            Files: "Files",
+            Profile: "Profile",
+        }
 
-        const screenName = screenMapping[tab];
+        const screenName = screenMapping[tab]
         if (screenName) {
-            navigation.navigate(screenName);
+            navigation.navigate(screenName)
         }
     }
 
@@ -114,8 +114,8 @@ function MainTabsContent() {
                 }}
             >
                 <Tab.Screen name="Home" component={FolderMainView} />
-                <Tab.Screen name="Files" component={FilesScreen}/>
-                <Tab.Screen name="Profile" component={ProfileScreen}/>
+                <Tab.Screen name="Files" component={FilesScreen} />
+                <Tab.Screen name="Profile" component={ProfileScreen} />
             </Tab.Navigator>
 
             {/* Custom TabBar at the Bottom */}

@@ -60,7 +60,7 @@ export class LoggingService {
 
         // Format parameters to clean up errors
         const cleanParams = optionalParams.map((param) =>
-            param instanceof Error ? formatError(param) : param
+            param instanceof Error ? formatError(param) : param,
         )
 
         // In development, output to console

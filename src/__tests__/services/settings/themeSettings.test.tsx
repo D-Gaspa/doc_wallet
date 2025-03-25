@@ -31,7 +31,7 @@ describe("themeSettings", () => {
 
     it("should return null if AsyncStorage.getItem throws an error", async () => {
         ;(AsyncStorage.getItem as jest.Mock).mockRejectedValue(
-            new Error("AsyncStorage error")
+            new Error("AsyncStorage error"),
         )
         const theme = await themeSettings.getTheme()
         expect(theme).toBeNull()
@@ -39,7 +39,7 @@ describe("themeSettings", () => {
 
     it("should handle errors when saving theme", async () => {
         ;(AsyncStorage.setItem as jest.Mock).mockRejectedValue(
-            new Error("AsyncStorage error")
+            new Error("AsyncStorage error"),
         )
         await expect(themeSettings.saveTheme("dark")).resolves.toBeUndefined()
         expect(AsyncStorage.setItem).toHaveBeenCalledWith("theme", "dark")

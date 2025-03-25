@@ -14,35 +14,35 @@ export interface TagProps {
 }
 
 export function Tag({
-                        id,
-                        name,
-                        color,
-                        onPress,
-                        onLongPress,
-                        selected = false,
-                        testID
-                    }: TagProps) {
+    id,
+    name,
+    color,
+    onPress,
+    onLongPress,
+    selected = false,
+    testID,
+}: TagProps) {
     const { colors } = useTheme()
 
     // Handle the long press event
     const handleLongPress = () => {
         if (onLongPress) {
             // Call the long press handler
-            onLongPress();
+            onLongPress()
 
             // Return true to indicate the event was handled
             // and shouldn't trigger the regular press handler
-            return true;
+            return true
         }
-    };
+    }
 
     return (
         <TouchableOpacity
             style={[
                 styles.container,
-                { backgroundColor: color + '20' }, // 20% opacity
+                { backgroundColor: color + "20" }, // 20% opacity
                 { borderColor: color },
-                selected && styles.selected
+                selected && styles.selected,
             ]}
             onPress={onPress}
             onLongPress={handleLongPress}
@@ -54,10 +54,7 @@ export function Tag({
         >
             <View style={[styles.dot, { backgroundColor: color }]} />
             <Text
-                style={[
-                    styles.text,
-                    { color: colors.text }
-                ]}
+                style={[styles.text, { color: colors.text }]}
                 numberOfLines={1}
             >
                 {name}
@@ -68,8 +65,8 @@ export function Tag({
 
 const styles = StyleSheet.create({
     container: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         borderRadius: 16,
         paddingHorizontal: 8,
         paddingVertical: 6,
@@ -87,6 +84,6 @@ const styles = StyleSheet.create({
     },
     text: {
         fontSize: 14,
-        fontWeight: '500',
-    }
+        fontWeight: "500",
+    },
 })

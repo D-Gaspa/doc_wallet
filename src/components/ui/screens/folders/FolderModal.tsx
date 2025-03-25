@@ -24,7 +24,7 @@ interface UnifiedFolderModalProps {
         name: string,
         type: FolderType,
         customIconId?: string,
-        folderId?: string
+        folderId?: string,
     ) => void
     mode: "create" | "edit"
     initialData?: {
@@ -37,13 +37,13 @@ interface UnifiedFolderModalProps {
 }
 
 export function UnifiedFolderModal({
-                                       isVisible,
-                                       onClose,
-                                       onSave,
-                                       mode = "create",
-                                       initialData = {},
-                                       parentFolderId = null,
-                                   }: UnifiedFolderModalProps) {
+    isVisible,
+    onClose,
+    onSave,
+    mode = "create",
+    initialData = {},
+    parentFolderId = null,
+}: UnifiedFolderModalProps) {
     const { colors } = useTheme()
     const logger = LoggingService.getLogger
         ? LoggingService.getLogger("UnifiedFolderModal")
@@ -54,11 +54,17 @@ export function UnifiedFolderModal({
 
     // State for folder name and type
     const [folderName, setFolderName] = useState(initialData.name || "")
-    const [selectedType, setSelectedType] = useState<FolderType>(initialData.type || "custom")
-    const [customIconId, setCustomIconId] = useState(initialData.customIconId || "file")
+    const [selectedType, setSelectedType] = useState<FolderType>(
+        initialData.type || "custom",
+    )
+    const [customIconId, setCustomIconId] = useState(
+        initialData.customIconId || "file",
+    )
 
     // Track whether the custom type was selected - used to safely handle icon selector visibility
-    const [showCustomSelector, setShowCustomSelector] = useState(selectedType === "custom")
+    const [showCustomSelector, setShowCustomSelector] = useState(
+        selectedType === "custom",
+    )
 
     // Define the cancelHandler separately as a stable function reference
     const handleCancelRef = useRef(() => {
@@ -141,7 +147,7 @@ export function UnifiedFolderModal({
             folderName,
             selectedType,
             selectedType === "custom" ? customIconId : undefined,
-            initialData.id
+            initialData.id,
         )
 
         logger.debug(`${mode === "create" ? "Creating" : "Updating"} folder`, {
@@ -149,7 +155,7 @@ export function UnifiedFolderModal({
             type: selectedType,
             customIconId: selectedType === "custom" ? customIconId : undefined,
             parentId: parentFolderId,
-            id: initialData.id
+            id: initialData.id,
         })
 
         // Reset state for create mode
@@ -173,7 +179,8 @@ export function UnifiedFolderModal({
 
     // Get modal title and action button text based on mode
     const modalTitle = mode === "create" ? "Create new folder" : "Edit folder"
-    const actionButtonText = mode === "create" ? "Create Folder" : "Update Folder"
+    const actionButtonText =
+        mode === "create" ? "Create Folder" : "Update Folder"
 
     return (
         <BaseModal
@@ -182,10 +189,7 @@ export function UnifiedFolderModal({
             dismissOnBackdropPress={false}
         >
             <Animated.View
-                style={[
-                    styles.modalContent,
-                    { transform: [{ translateX }] }
-                ]}
+                style={[styles.modalContent, { transform: [{ translateX }] }]}
                 {...panHandlers}
             >
                 <View
@@ -200,12 +204,16 @@ export function UnifiedFolderModal({
                             { backgroundColor: colors.secondaryText },
                         ]}
                     />
-                    <Spacer size={20}/>
+                    <Spacer size={20} />
                     <Text variant="md" weight="bold" style={styles.title}>
                         {modalTitle}
                     </Text>
                     {/* Action buttons */}
-                    <Row justify="space-between" align="center" style={styles.buttonRow}>
+                    <Row
+                        justify="space-between"
+                        align="center"
+                        style={styles.buttonRow}
+                    >
                         {/* Cancel Button */}
                         <View style={styles.buttonContainer}>
                             <Button
@@ -221,7 +229,11 @@ export function UnifiedFolderModal({
                                 title={actionButtonText}
                                 onPress={handleSave}
                                 style={buttonStyle}
-                                testID={mode === "create" ? "create-button" : "update-button"}
+                                testID={
+                                    mode === "create"
+                                        ? "create-button"
+                                        : "update-button"
+                                }
                             />
                         </View>
                     </Row>
@@ -232,7 +244,10 @@ export function UnifiedFolderModal({
                     contentContainerStyle={styles.scrollContentContainer}
                     showsVerticalScrollIndicator={false}
                 >
-                    <View style={styles.container} testID={`folder-${mode}-modal`}>
+                    <View
+                        style={styles.container}
+                        testID={`folder-${mode}-modal`}
+                    >
                         <Stack spacing={16}>
                             {/* Folder name input */}
                             <Stack spacing={8}>
@@ -257,7 +272,8 @@ export function UnifiedFolderModal({
                                             style={[
                                                 styles.folderCardWrapper,
                                                 selectedType === item.type && {
-                                                    backgroundColor: colors.primary + "20", // 20% opacity
+                                                    backgroundColor:
+                                                        colors.primary + "20", // 20% opacity
                                                     borderColor: colors.primary,
                                                 },
                                             ]}
@@ -265,7 +281,9 @@ export function UnifiedFolderModal({
                                             <FolderCard
                                                 title={item.label}
                                                 type={item.type}
-                                                onPress={() => handleTypeSelect(item.type)}
+                                                onPress={() =>
+                                                    handleTypeSelect(item.type)
+                                                }
                                                 testID={`folder-type-${item.type}`}
                                             />
                                         </View>
@@ -275,7 +293,8 @@ export function UnifiedFolderModal({
 
                             {/* Icon selector placeholder - always present for consistent layout */}
                             <View style={styles.iconSelectorContainer}>
-                                {showCustomSelector && selectedType === "custom" ? (
+                                {showCustomSelector &&
+                                selectedType === "custom" ? (
                                     <CustomIconSelector
                                         selectedIconId={customIconId}
                                         onSelectIcon={handleIconSelect}
@@ -295,11 +314,11 @@ export function UnifiedFolderModal({
 const styles = StyleSheet.create({
     modalContent: {
         flex: 1,
-        width: '100%',
+        width: "100%",
     },
     scrollContainer: {
         flex: 1,
-        width: '100%',
+        width: "100%",
     },
     scrollContentContainer: {
         flexGrow: 1,
@@ -313,9 +332,9 @@ const styles = StyleSheet.create({
     headerBar: {
         paddingVertical: 16,
         paddingHorizontal: 20,
-        alignItems: 'center',
+        alignItems: "center",
         borderBottomWidth: 1,
-        width: '100%',
+        width: "100%",
     },
     title: {
         marginVertical: 10,
@@ -327,18 +346,18 @@ const styles = StyleSheet.create({
         marginBottom: 5,
     },
     textField: {
-        width: '100%',
+        width: "100%",
     },
     typesOuterContainer: {
-        width: '100%',
+        width: "100%",
         paddingVertical: 5,
     },
     folderCardWrapper: {
-        overflow: 'hidden',
+        overflow: "hidden",
         marginBottom: 12,
     },
     iconSelectorContainer: {
-        width: '100%',
+        width: "100%",
         minHeight: 120,
         marginTop: 10,
         marginBottom: 20,
@@ -347,7 +366,7 @@ const styles = StyleSheet.create({
         minHeight: 120,
     },
     buttonRow: {
-        width: '100%',
+        width: "100%",
     },
     buttonContainer: {
         flex: 0.48,

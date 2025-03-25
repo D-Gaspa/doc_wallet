@@ -18,7 +18,7 @@ describe("BaseModal", () => {
         const { getByTestId, queryAllByTestId } = render(
             <BaseModal isVisible={true} onClose={jest.fn()}>
                 <Text testID="modal-content">Modal Content</Text>
-            </BaseModal>
+            </BaseModal>,
         )
 
         expect(getByTestId("base-modal")).toBeTruthy() // Modal should be rendered
@@ -29,7 +29,7 @@ describe("BaseModal", () => {
         const { queryByTestId } = render(
             <BaseModal isVisible={false} onClose={jest.fn()}>
                 <Text>Hidden Modal</Text>
-            </BaseModal>
+            </BaseModal>,
         )
 
         expect(queryByTestId("base-modal")).toBeNull() // Modal should NOT be rendered
@@ -44,7 +44,7 @@ describe("BaseModal", () => {
                 dismissOnBackdropPress={true}
             >
                 <Text>Test Modal</Text>
-            </BaseModal>
+            </BaseModal>,
         )
 
         fireEvent.press(getByTestId("modal-backdrop")) // Targets backdrop
@@ -60,7 +60,7 @@ describe("BaseModal", () => {
                 dismissOnBackdropPress={false}
             >
                 <Text>Test Modal</Text>
-            </BaseModal>
+            </BaseModal>,
         )
 
         fireEvent.press(getByTestId("modal-backdrop"))

@@ -31,7 +31,7 @@ jest.mock("@react-navigation/bottom-tabs", () => ({
 // Mock your app components
 jest.mock(
     "../components/ui/screens/folders/FolderMainView.tsx",
-    () => "FolderMainView"
+    () => "FolderMainView",
 )
 jest.mock("../components/ui/layout/tab_bar/TabBar.tsx", () => "TabBar")
 

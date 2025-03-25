@@ -7,16 +7,16 @@ import {
     TouchableOpacity,
     Modal,
     FlatList,
-    TouchableWithoutFeedback
+    TouchableWithoutFeedback,
 } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { TagList } from "./TagList"
 import { TagEditModal } from "./TagEditModal"
-import { useTagContext, Tag } from './TagContext'
+import { useTagContext, Tag } from "./TagContext"
 
 export interface ItemTagsManagerProps {
     itemId: string
-    itemType: 'folder' | 'document'
+    itemType: "folder" | "document"
     tags: Tag[] // Current tags on this item
     allTags: Tag[] // All available tags for dropdown
     onTagPress?: (tagId: string) => void // Click to add tag to filter
@@ -27,24 +27,24 @@ export interface ItemTagsManagerProps {
 }
 
 export function ItemTagsManager({
-                                    itemId,
-                                    itemType,
-                                    tags = [],
-                                    allTags = [],
-                                    onTagPress,
-                                    selectedTagIds = [],
-                                    maxTags = 3,
-                                    horizontal = true,
-                                    testID
-                                }: ItemTagsManagerProps) {
+    itemId,
+    itemType,
+    tags = [],
+    allTags = [],
+    onTagPress,
+    selectedTagIds = [],
+    maxTags = 3,
+    horizontal = true,
+    testID,
+}: ItemTagsManagerProps) {
     const { colors } = useTheme()
     const { associateTag, disassociateTag, createTag } = useTagContext()
     const [currentTags, setCurrentTags] = useState<Tag[]>(tags)
 
     // Update tags when they change externally
     useEffect(() => {
-        setCurrentTags(tags);
-    }, [tags]);
+        setCurrentTags(tags)
+    }, [tags])
 
     // State for modals/menus
     const [tagMenuVisible, setTagMenuVisible] = useState(false)
@@ -62,7 +62,7 @@ export function ItemTagsManager({
             tagListRef.current.measureInWindow((x, y, width, height) => {
                 setMenuPosition({
                     top: y + height + 5,
-                    left: x + width / 2 - 100 // Center the menu
+                    left: x + width / 2 - 100, // Center the menu
                 })
                 setTagMenuVisible(true)
             })
@@ -74,9 +74,9 @@ export function ItemTagsManager({
         const success = associateTag(tagId, itemId, itemType)
         if (success) {
             // Find the tag details to add it to our local state
-            const tagToAdd = allTags.find(tag => tag.id === tagId)
-            if (tagToAdd && !currentTags.some(tag => tag.id === tagId)) {
-                setCurrentTags(prev => [...prev, tagToAdd])
+            const tagToAdd = allTags.find((tag) => tag.id === tagId)
+            if (tagToAdd && !currentTags.some((tag) => tag.id === tagId)) {
+                setCurrentTags((prev) => [...prev, tagToAdd])
             }
         }
         setTagMenuVisible(false)
@@ -102,7 +102,9 @@ export function ItemTagsManager({
             const success = disassociateTag(tagToDelete, itemId, itemType)
             if (success) {
                 // Update local state to remove the tag
-                setCurrentTags(prev => prev.filter(tag => tag.id !== tagToDelete))
+                setCurrentTags((prev) =>
+                    prev.filter((tag) => tag.id !== tagToDelete),
+                )
             }
             setConfirmDeleteVisible(false)
             setTagToDelete(null)
@@ -114,7 +116,7 @@ export function ItemTagsManager({
         const newTag = createTag(name, color)
         if (newTag) {
             // First update our local state
-            setCurrentTags(prev => [...prev, newTag])
+            setCurrentTags((prev) => [...prev, newTag])
 
             // Associate the tag with the item, passing the newly created tag
             // to bypass the tag existence check in associateTag
@@ -124,12 +126,16 @@ export function ItemTagsManager({
     }
 
     // Filter out tags that are already applied to this item
-    const availableTags = allTags.filter(tag =>
-        !currentTags.some(itemTag => itemTag.id === tag.id)
+    const availableTags = allTags.filter(
+        (tag) => !currentTags.some((itemTag) => itemTag.id === tag.id),
     )
 
     return (
-        <View style={styles.container} ref={tagListRef} testID={testID ?? "item-tags-manager"}>
+        <View
+            style={styles.container}
+            ref={tagListRef}
+            testID={testID ?? "item-tags-manager"}
+        >
             <TagList
                 tags={currentTags}
                 onTagPress={handleTagClick} // Click on tag to add to filter
@@ -148,7 +154,9 @@ export function ItemTagsManager({
                 animationType="fade"
                 onRequestClose={() => setTagMenuVisible(false)}
             >
-                <TouchableWithoutFeedback onPress={() => setTagMenuVisible(false)}>
+                <TouchableWithoutFeedback
+                    onPress={() => setTagMenuVisible(false)}
+                >
                     <View style={styles.modalOverlay}>
                         <View
                             style={[
@@ -157,11 +165,16 @@ export function ItemTagsManager({
                                     top: menuPosition.top,
                                     left: menuPosition.left,
                                     backgroundColor: colors.background,
-                                    borderColor: colors.border
-                                }
+                                    borderColor: colors.border,
+                                },
                             ]}
                         >
-                            <Text style={[styles.menuTitle, { color: colors.text }]}>
+                            <Text
+                                style={[
+                                    styles.menuTitle,
+                                    { color: colors.text },
+                                ]}
+                            >
                                 Add Tag
                             </Text>
 
@@ -172,20 +185,44 @@ export function ItemTagsManager({
                                     renderItem={({ item }) => (
                                         <TouchableOpacity
                                             style={styles.tagMenuItem}
-                                            onPress={() => handleAddTag(item.id)}
+                                            onPress={() =>
+                                                handleAddTag(item.id)
+                                            }
                                         >
-                                            <View style={[styles.tagDot, { backgroundColor: item.color }]} />
-                                            <Text style={{ color: colors.text }}>{item.name}</Text>
+                                            <View
+                                                style={[
+                                                    styles.tagDot,
+                                                    {
+                                                        backgroundColor:
+                                                            item.color,
+                                                    },
+                                                ]}
+                                            />
+                                            <Text
+                                                style={{ color: colors.text }}
+                                            >
+                                                {item.name}
+                                            </Text>
                                         </TouchableOpacity>
                                     )}
                                     ListEmptyComponent={
-                                        <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                                        <Text
+                                            style={[
+                                                styles.emptyText,
+                                                { color: colors.secondaryText },
+                                            ]}
+                                        >
                                             No more tags available
                                         </Text>
                                     }
                                 />
                             ) : (
-                                <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                                <Text
+                                    style={[
+                                        styles.emptyText,
+                                        { color: colors.secondaryText },
+                                    ]}
+                                >
                                     All tags already applied
                                 </Text>
                             )}
@@ -194,14 +231,23 @@ export function ItemTagsManager({
                             <TouchableOpacity
                                 style={styles.createTagOption}
                                 onPress={() => {
-                                    setTagMenuVisible(false);
-                                    setCreateTagModalVisible(true);
+                                    setTagMenuVisible(false)
+                                    setCreateTagModalVisible(true)
                                 }}
                             >
-                                <View style={[styles.createTagIcon, { backgroundColor: colors.primary }]}>
-                                    <Text style={{ color: colors.background}}>+</Text>
+                                <View
+                                    style={[
+                                        styles.createTagIcon,
+                                        { backgroundColor: colors.primary },
+                                    ]}
+                                >
+                                    <Text style={{ color: colors.background }}>
+                                        +
+                                    </Text>
                                 </View>
-                                <Text style={{ color: colors.primary}}>Create New Tag</Text>
+                                <Text style={{ color: colors.primary }}>
+                                    Create New Tag
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -216,27 +262,53 @@ export function ItemTagsManager({
                 onRequestClose={() => setConfirmDeleteVisible(false)}
             >
                 <View style={styles.confirmModalOverlay}>
-                    <View style={[styles.confirmDialog, { backgroundColor: colors.background }]}>
-                        <Text style={[styles.confirmTitle, { color: colors.text }]}>
+                    <View
+                        style={[
+                            styles.confirmDialog,
+                            { backgroundColor: colors.background },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.confirmTitle,
+                                { color: colors.text },
+                            ]}
+                        >
                             Remove Tag
                         </Text>
-                        <Text style={[styles.confirmMessage, { color: colors.secondaryText }]}>
-                            Are you sure you want to remove this tag from the {itemType}?
+                        <Text
+                            style={[
+                                styles.confirmMessage,
+                                { color: colors.secondaryText },
+                            ]}
+                        >
+                            Are you sure you want to remove this tag from the{" "}
+                            {itemType}?
                         </Text>
 
                         <View style={styles.confirmButtons}>
                             <TouchableOpacity
-                                style={[styles.confirmButton, { borderColor: colors.border }]}
+                                style={[
+                                    styles.confirmButton,
+                                    { borderColor: colors.border },
+                                ]}
                                 onPress={() => setConfirmDeleteVisible(false)}
                             >
-                                <Text style={{ color: colors.text }}>Cancel</Text>
+                                <Text style={{ color: colors.text }}>
+                                    Cancel
+                                </Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={[styles.confirmButton, { backgroundColor: colors.error }]}
+                                style={[
+                                    styles.confirmButton,
+                                    { backgroundColor: colors.error },
+                                ]}
                                 onPress={handleConfirmDelete}
                             >
-                                <Text style={{ color: colors.background }}>Remove</Text>
+                                <Text style={{ color: colors.background }}>
+                                    Remove
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -256,15 +328,15 @@ export function ItemTagsManager({
 
 const styles = StyleSheet.create({
     container: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "center",
     },
     modalOverlay: {
         flex: 1,
     },
     tagMenu: {
-        position: 'absolute',
+        position: "absolute",
         width: 200,
         maxHeight: 300,
         borderRadius: 8,
@@ -277,19 +349,19 @@ const styles = StyleSheet.create({
     },
     menuTitle: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: "600",
         marginBottom: 8,
-        textAlign: 'center',
+        textAlign: "center",
     },
     tagMenuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         paddingVertical: 8,
         paddingHorizontal: 12,
     },
     createTagOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         paddingVertical: 12,
         paddingHorizontal: 12,
         borderTopWidth: 1,
@@ -299,8 +371,8 @@ const styles = StyleSheet.create({
         width: 18,
         height: 18,
         borderRadius: 9,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
         marginRight: 8,
     },
     tagDot: {
@@ -311,17 +383,17 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         padding: 12,
-        textAlign: 'center',
-        fontStyle: 'italic',
+        textAlign: "center",
+        fontStyle: "italic",
     },
     // Confirm dialog styles with fixed background
     confirmModalOverlay: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
     },
     confirmDialog: {
-        width: '80%',
+        width: "80%",
         borderRadius: 8,
         padding: 16,
         shadowOffset: { width: 0, height: 2 },
@@ -331,23 +403,23 @@ const styles = StyleSheet.create({
     },
     confirmTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
+        fontWeight: "bold",
         marginBottom: 12,
-        textAlign: 'center',
+        textAlign: "center",
     },
     confirmMessage: {
-        textAlign: 'center',
+        textAlign: "center",
         marginBottom: 16,
     },
     confirmButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        flexDirection: "row",
+        justifyContent: "space-between",
     },
     confirmButton: {
         flex: 0.48,
         paddingVertical: 8,
         borderRadius: 4,
         borderWidth: 1,
-        alignItems: 'center',
+        alignItems: "center",
     },
 })

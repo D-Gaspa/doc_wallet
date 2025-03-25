@@ -36,11 +36,11 @@ describe("CrashReportingService", () => {
 
         expect(result).toBe(true)
         expect(AsyncStorage.getItem).toHaveBeenCalledWith(
-            "com.doc_wallet.last_crash_flag"
+            "com.doc_wallet.last_crash_flag",
         )
         expect(AsyncStorage.setItem).toHaveBeenCalledWith(
             "com.doc_wallet.last_crash_flag",
-            "false"
+            "false",
         )
     })
 
@@ -52,7 +52,7 @@ describe("CrashReportingService", () => {
         expect(result).toBe(false)
         expect(AsyncStorage.setItem).toHaveBeenCalledWith(
             "com.doc_wallet.last_crash_flag",
-            "true"
+            "true",
         )
     })
 
@@ -61,7 +61,7 @@ describe("CrashReportingService", () => {
 
         expect(AsyncStorage.setItem).toHaveBeenCalledWith(
             "com.doc_wallet.last_crash_flag",
-            "false"
+            "false",
         )
     })
 
@@ -72,16 +72,16 @@ describe("CrashReportingService", () => {
         await CrashReportingService.saveCrashReport(testError, appState)
 
         expect(AsyncStorage.getItem).toHaveBeenCalledWith(
-            "com.doc_wallet.crash_reports"
+            "com.doc_wallet.crash_reports",
         )
         expect(AsyncStorage.setItem).toHaveBeenCalledWith(
             "com.doc_wallet.crash_reports",
-            expect.any(String)
+            expect.any(String),
         )
 
         // Check the stored data
         const storedData = JSON.parse(
-            (AsyncStorage.setItem as jest.Mock).mock.calls[0][1]
+            (AsyncStorage.setItem as jest.Mock).mock.calls[0][1],
         )
         expect(storedData[0].message).toBe("Test crash")
         expect(storedData[0].isFatal).toBe(true)
@@ -106,13 +106,13 @@ describe("CrashReportingService", () => {
         ]
 
         ;(AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(
-            JSON.stringify(mockReports)
+            JSON.stringify(mockReports),
         )
 
         const reports = await CrashReportingService.getCrashReports()
 
         expect(AsyncStorage.getItem).toHaveBeenCalledWith(
-            "com.doc_wallet.crash_reports"
+            "com.doc_wallet.crash_reports",
         )
         expect(reports).toEqual(mockReports)
     })
@@ -121,7 +121,7 @@ describe("CrashReportingService", () => {
         await CrashReportingService.clearCrashReports()
 
         expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
-            "com.doc_wallet.crash_reports"
+            "com.doc_wallet.crash_reports",
         )
     })
 })

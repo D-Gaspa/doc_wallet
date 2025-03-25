@@ -6,7 +6,7 @@ import {
     Text,
     FlatList,
     Modal,
-    TouchableWithoutFeedback
+    TouchableWithoutFeedback,
 } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTagContext } from "./TagContext"
@@ -17,41 +17,45 @@ export interface TagFilterDropdownProps {
     selectedTagIds: string[]
     onSelectTags: (tagIds: string[]) => void
     itemName?: string // Optional item name for tag suggestions
-    itemType?: 'folder' | 'document' // Optional item type for tag suggestions
+    itemType?: "folder" | "document" // Optional item type for tag suggestions
     testID?: string
 }
 
 export function TagFilterDropdown({
-                                      selectedTagIds = [],
-                                      onSelectTags,
-                                      itemName = "",
-                                      itemType = "folder",
-                                      testID
-                                  }: TagFilterDropdownProps) {
+    selectedTagIds = [],
+    onSelectTags,
+    itemName = "",
+    itemType = "folder",
+    testID,
+}: TagFilterDropdownProps) {
     const { colors } = useTheme()
-    const {
-        tags,
-        getSuggestedTags
-    } = useTagContext()
+    const { tags, getSuggestedTags } = useTagContext()
 
     // Dropdown state
     const [isOpen, setIsOpen] = useState(false)
     const buttonRef = useRef<View>(null)
-    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 })
-    const [tempSelectedTags, setTempSelectedTags] = useState<string[]>([...selectedTagIds])
+    const [dropdownPosition, setDropdownPosition] = useState({
+        top: 0,
+        right: 0,
+    })
+    const [tempSelectedTags, setTempSelectedTags] = useState<string[]>([
+        ...selectedTagIds,
+    ])
 
     // Get tag suggestions if itemName and itemType are provided
-    const suggestedTags = (itemName && itemType)
-        ? getSuggestedTags(itemType, itemName)
-            .filter(tag => !selectedTagIds.includes(tag.id)) // Don't suggest already selected tags
-        : []
+    const suggestedTags =
+        itemName && itemType
+            ? getSuggestedTags(itemType, itemName).filter(
+                  (tag) => !selectedTagIds.includes(tag.id),
+              ) // Don't suggest already selected tags
+            : []
 
     const toggleDropdown = () => {
         if (buttonRef.current) {
             buttonRef.current.measureInWindow((x, y, width, height) => {
                 setDropdownPosition({
                     top: y + height + 5,
-                    right: 20
+                    right: 20,
                 })
                 setIsOpen(!isOpen)
             })
@@ -59,9 +63,9 @@ export function TagFilterDropdown({
     }
 
     const handleTagToggle = (tagId: string) => {
-        setTempSelectedTags(prev => {
+        setTempSelectedTags((prev) => {
             if (prev.includes(tagId)) {
-                return prev.filter(id => id !== tagId)
+                return prev.filter((id) => id !== tagId)
             } else {
                 return [...prev, tagId]
             }
@@ -87,15 +91,19 @@ export function TagFilterDropdown({
     // Group tags for better organization
     const groupedTags = [
         // First show the suggested tags section if there are suggestions
-        ...(suggestedTags.length > 0 ? [{
-            title: "Suggested Tags",
-            data: suggestedTags
-        }] : []),
+        ...(suggestedTags.length > 0
+            ? [
+                  {
+                      title: "Suggested Tags",
+                      data: suggestedTags,
+                  },
+              ]
+            : []),
         // Then show all available tags
         {
             title: "All Tags",
-            data: tags
-        }
+            data: tags,
+        },
     ]
 
     return (
@@ -105,14 +113,20 @@ export function TagFilterDropdown({
                 style={styles.filterButton}
                 onPress={toggleDropdown}
             >
-                <FilterIcon
-                    width={24}
-                    height={24}
-                    stroke={colors.primary}
-                />
+                <FilterIcon width={24} height={24} stroke={colors.primary} />
                 {selectedTagIds.length > 0 && (
-                    <View style={[styles.filterBadge, { backgroundColor: colors.primary }]}>
-                        <Text style={[styles.filterBadgeText, { color: colors.background }]}>
+                    <View
+                        style={[
+                            styles.filterBadge,
+                            { backgroundColor: colors.primary },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.filterBadgeText,
+                                { color: colors.background },
+                            ]}
+                        >
                             {selectedTagIds.length}
                         </Text>
                     </View>
@@ -128,7 +142,9 @@ export function TagFilterDropdown({
             >
                 <TouchableWithoutFeedback onPress={() => setIsOpen(false)}>
                     <View style={styles.overlay}>
-                        <TouchableWithoutFeedback onPress={e => e.stopPropagation()}>
+                        <TouchableWithoutFeedback
+                            onPress={(e) => e.stopPropagation()}
+                        >
                             <View
                                 style={[
                                     styles.dropdown,
@@ -136,35 +152,73 @@ export function TagFilterDropdown({
                                         top: dropdownPosition.top,
                                         right: dropdownPosition.right,
                                         backgroundColor: colors.background,
-                                        borderColor: colors.border
-                                    }
+                                        borderColor: colors.border,
+                                    },
                                 ]}
                             >
-                                <Text style={[styles.dropdownTitle, { color: colors.text }]}>
+                                <Text
+                                    style={[
+                                        styles.dropdownTitle,
+                                        { color: colors.text },
+                                    ]}
+                                >
                                     Filter by Tags
                                 </Text>
 
                                 {tags.length > 0 ? (
                                     <FlatList
                                         data={groupedTags}
-                                        keyExtractor={(item, index) => `group-${index}`}
+                                        keyExtractor={(item, index) =>
+                                            `group-${index}`
+                                        }
                                         renderItem={({ item: group }) => (
                                             <View style={styles.tagGroup}>
-                                                <Text style={[styles.groupTitle, { color: colors.secondaryText }]}>
+                                                <Text
+                                                    style={[
+                                                        styles.groupTitle,
+                                                        {
+                                                            color: colors.secondaryText,
+                                                        },
+                                                    ]}
+                                                >
                                                     {group.title}
                                                 </Text>
-                                                {group.data.map(tag => (
+                                                {group.data.map((tag) => (
                                                     <TouchableOpacity
                                                         key={tag.id}
                                                         style={styles.tagItem}
-                                                        onPress={() => handleTagToggle(tag.id)}
+                                                        onPress={() =>
+                                                            handleTagToggle(
+                                                                tag.id,
+                                                            )
+                                                        }
                                                     >
                                                         <Checkbox
-                                                            checked={tempSelectedTags.includes(tag.id)}
-                                                            onToggle={() => handleTagToggle(tag.id)}
+                                                            checked={tempSelectedTags.includes(
+                                                                tag.id,
+                                                            )}
+                                                            onToggle={() =>
+                                                                handleTagToggle(
+                                                                    tag.id,
+                                                                )
+                                                            }
                                                         />
-                                                        <View style={[styles.tagColor, { backgroundColor: tag.color }]} />
-                                                        <Text style={{ color: colors.text }}>{tag.name}</Text>
+                                                        <View
+                                                            style={[
+                                                                styles.tagColor,
+                                                                {
+                                                                    backgroundColor:
+                                                                        tag.color,
+                                                                },
+                                                            ]}
+                                                        />
+                                                        <Text
+                                                            style={{
+                                                                color: colors.text,
+                                                            }}
+                                                        >
+                                                            {tag.name}
+                                                        </Text>
                                                     </TouchableOpacity>
                                                 ))}
                                             </View>
@@ -172,7 +226,12 @@ export function TagFilterDropdown({
                                         style={styles.tagsList}
                                     />
                                 ) : (
-                                    <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                                    <Text
+                                        style={[
+                                            styles.emptyText,
+                                            { color: colors.secondaryText },
+                                        ]}
+                                    >
                                         No tags available
                                     </Text>
                                 )}
@@ -180,16 +239,28 @@ export function TagFilterDropdown({
                                 {/* Action buttons */}
                                 <View style={styles.actionButtons}>
                                     <TouchableOpacity
-                                        style={[styles.actionButton, { borderColor: colors.border }]}
+                                        style={[
+                                            styles.actionButton,
+                                            { borderColor: colors.border },
+                                        ]}
                                         onPress={resetFilters}
                                     >
-                                        <Text style={{ color: colors.error }}>Reset</Text>
+                                        <Text style={{ color: colors.error }}>
+                                            Reset
+                                        </Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                                        style={[
+                                            styles.actionButton,
+                                            { backgroundColor: colors.primary },
+                                        ]}
                                         onPress={applyFilters}
                                     >
-                                        <Text style={{ color: colors.background }}>Apply</Text>
+                                        <Text
+                                            style={{ color: colors.background }}
+                                        >
+                                            Apply
+                                        </Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -204,27 +275,27 @@ export function TagFilterDropdown({
 const styles = StyleSheet.create({
     filterButton: {
         padding: 8,
-        position: 'relative',
+        position: "relative",
     },
     filterBadge: {
-        position: 'absolute',
+        position: "absolute",
         top: 0,
         right: 0,
         width: 16,
         height: 16,
         borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
     },
     filterBadgeText: {
         fontSize: 10,
-        fontWeight: 'bold',
+        fontWeight: "bold",
     },
     overlay: {
         flex: 1,
     },
     dropdown: {
-        position: 'absolute',
+        position: "absolute",
         width: 250,
         maxHeight: 500,
         borderRadius: 8,
@@ -237,9 +308,9 @@ const styles = StyleSheet.create({
     },
     dropdownTitle: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: "600",
         marginBottom: 12,
-        textAlign: 'center',
+        textAlign: "center",
     },
     tagsList: {
         maxHeight: 350,
@@ -249,13 +320,13 @@ const styles = StyleSheet.create({
     },
     groupTitle: {
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: "500",
         marginBottom: 8,
         paddingHorizontal: 4,
     },
     tagItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         paddingVertical: 8,
     },
     tagColor: {
@@ -266,13 +337,13 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     emptyText: {
-        textAlign: 'center',
+        textAlign: "center",
         padding: 12,
-        fontStyle: 'italic',
+        fontStyle: "italic",
     },
     actionButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        flexDirection: "row",
+        justifyContent: "space-between",
         marginTop: 4,
     },
     actionButton: {
@@ -281,6 +352,6 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         borderWidth: 1,
         minWidth: 80,
-        alignItems: 'center',
-    }
-});
+        alignItems: "center",
+    },
+})

@@ -12,39 +12,39 @@ interface BatchTagManagerProps {
     isVisible: boolean
     onClose: () => void
     itemIds: string[]
-    itemType: 'folder' | 'document'
+    itemType: "folder" | "document"
     onTagsApplied?: () => void
 }
 
 export function BatchTagManager({
-                                    isVisible,
-                                    onClose,
-                                    itemIds,
-                                    itemType,
-                                    onTagsApplied
-                                }: BatchTagManagerProps) {
+    isVisible,
+    onClose,
+    itemIds,
+    itemType,
+    onTagsApplied,
+}: BatchTagManagerProps) {
     const { colors } = useTheme()
-    const {
-        tags,
-        batchAssociateTags,
-        batchDisassociateTags
-    } = useTagContext()
+    const { tags, batchAssociateTags, batchDisassociateTags } = useTagContext()
 
     // State for selected tags
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
     // Alert state
-    const [alert, setAlert] = useState<{ visible: boolean, message: string, type: "success" | "error" | "info" | "warning" }>({
+    const [alert, setAlert] = useState<{
+        visible: boolean
+        message: string
+        type: "success" | "error" | "info" | "warning"
+    }>({
         visible: false,
         message: "",
-        type: "info"
+        type: "info",
     })
 
     // Toggle tag selection
     const handleTagToggle = (tagId: string) => {
-        setSelectedTagIds(prevSelected => {
+        setSelectedTagIds((prevSelected) => {
             if (prevSelected.includes(tagId)) {
-                return prevSelected.filter(id => id !== tagId)
+                return prevSelected.filter((id) => id !== tagId)
             } else {
                 return [...prevSelected, tagId]
             }
@@ -57,7 +57,7 @@ export function BatchTagManager({
             setAlert({
                 visible: true,
                 message: "Please select at least one tag to apply",
-                type: "info"
+                type: "info",
             })
             return
         }
@@ -68,7 +68,7 @@ export function BatchTagManager({
             setAlert({
                 visible: true,
                 message: `Tags applied to ${itemIds.length} ${itemType}(s)`,
-                type: "success"
+                type: "success",
             })
 
             // Clear selection after successful application
@@ -82,7 +82,7 @@ export function BatchTagManager({
             setAlert({
                 visible: true,
                 message: "Failed to apply tags",
-                type: "error"
+                type: "error",
             })
         }
     }
@@ -93,7 +93,7 @@ export function BatchTagManager({
             setAlert({
                 visible: true,
                 message: "Please select at least one tag to remove",
-                type: "info"
+                type: "info",
             })
             return
         }
@@ -104,7 +104,7 @@ export function BatchTagManager({
             setAlert({
                 visible: true,
                 message: `Tags removed from ${itemIds.length} ${itemType}(s)`,
-                type: "success"
+                type: "success",
             })
 
             // Clear selection after successful removal
@@ -118,7 +118,7 @@ export function BatchTagManager({
             setAlert({
                 visible: true,
                 message: "Failed to remove tags",
-                type: "error"
+                type: "error",
             })
         }
     }
@@ -137,7 +137,12 @@ export function BatchTagManager({
             onRequestClose={handleClose}
         >
             <View style={styles.modalBackground}>
-                <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+                <View
+                    style={[
+                        styles.modalContainer,
+                        { backgroundColor: colors.background },
+                    ]}
+                >
                     <Stack spacing={16}>
                         <Text style={[styles.title, { color: colors.text }]}>
                             {`Manage Tags (${itemIds.length} ${itemType}s selected)`}
@@ -145,27 +150,57 @@ export function BatchTagManager({
 
                         {tags.length > 0 ? (
                             <View style={styles.tagsContainer}>
-                                {tags.map(tag => (
-                                    <Row key={tag.id} align="center" spacing={8} style={styles.tagRow}>
+                                {tags.map((tag) => (
+                                    <Row
+                                        key={tag.id}
+                                        align="center"
+                                        spacing={8}
+                                        style={styles.tagRow}
+                                    >
                                         <Checkbox
-                                            checked={selectedTagIds.includes(tag.id)}
-                                            onToggle={() => handleTagToggle(tag.id)}
+                                            checked={selectedTagIds.includes(
+                                                tag.id,
+                                            )}
+                                            onToggle={() =>
+                                                handleTagToggle(tag.id)
+                                            }
                                             testID={`checkbox-${tag.id}`}
                                         />
                                         <View
                                             style={[
                                                 styles.tagPreview,
-                                                { backgroundColor: tag.color + '20', borderColor: tag.color }
+                                                {
+                                                    backgroundColor:
+                                                        tag.color + "20",
+                                                    borderColor: tag.color,
+                                                },
                                             ]}
                                         >
-                                            <View style={[styles.dot, { backgroundColor: tag.color }]} />
-                                            <Text style={{ color: colors.text }}>{tag.name}</Text>
+                                            <View
+                                                style={[
+                                                    styles.dot,
+                                                    {
+                                                        backgroundColor:
+                                                            tag.color,
+                                                    },
+                                                ]}
+                                            />
+                                            <Text
+                                                style={{ color: colors.text }}
+                                            >
+                                                {tag.name}
+                                            </Text>
                                         </View>
                                     </Row>
                                 ))}
                             </View>
                         ) : (
-                            <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                            <Text
+                                style={[
+                                    styles.emptyText,
+                                    { color: colors.secondaryText },
+                                ]}
+                            >
                                 No tags available. Create tags first.
                             </Text>
                         )}
@@ -176,7 +211,11 @@ export function BatchTagManager({
                                     <Button
                                         title="Apply Tags"
                                         onPress={handleApplyTags}
-                                        style={selectedTagIds.length === 0 ? styles.disabledButton : {}}
+                                        style={
+                                            selectedTagIds.length === 0
+                                                ? styles.disabledButton
+                                                : {}
+                                        }
                                         testID="apply-tags-button"
                                     />
                                 </View>
@@ -203,7 +242,9 @@ export function BatchTagManager({
                             type={alert.type}
                             message={alert.message}
                             visible={alert.visible}
-                            onClose={() => setAlert({ ...alert, visible: false })}
+                            onClose={() =>
+                                setAlert({ ...alert, visible: false })
+                            }
                         />
                     )}
                 </View>
@@ -215,19 +256,19 @@ export function BatchTagManager({
 const styles = StyleSheet.create({
     modalBackground: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
     },
     modalContainer: {
-        width: '85%',
+        width: "85%",
         borderRadius: 10,
         padding: 20,
-        maxHeight: '80%',
+        maxHeight: "80%",
     },
     title: {
         fontSize: 18,
-        fontWeight: 'bold',
-        textAlign: 'center',
+        fontWeight: "bold",
+        textAlign: "center",
         marginBottom: 16,
     },
     tagsContainer: {
@@ -237,8 +278,8 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     tagPreview: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         borderRadius: 16,
         paddingHorizontal: 12,
         paddingVertical: 6,
@@ -252,9 +293,9 @@ const styles = StyleSheet.create({
         marginRight: 6,
     },
     emptyText: {
-        fontStyle: 'italic',
+        fontStyle: "italic",
         opacity: 0.7,
-        textAlign: 'center',
+        textAlign: "center",
         marginTop: 8,
     },
     buttonContainer: {

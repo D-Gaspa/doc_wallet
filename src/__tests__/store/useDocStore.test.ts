@@ -19,7 +19,7 @@ jest.mock("../../services/security/documentEncryption", () => {
         decryptDocument: jest
             .fn()
             .mockImplementation((id) =>
-                Promise.resolve(`Decrypted content for ${id}`)
+                Promise.resolve(`Decrypted content for ${id}`),
             ),
         decryptFileForPreview: jest
             .fn()
@@ -44,7 +44,7 @@ jest.mock("../../services/document/storage", () => {
                     exists: true,
                     uri: "file:///document/documents/mock-id_document.pdf",
                 },
-            })
+            }),
         ),
         getFile: jest.fn().mockImplementation(() =>
             Promise.resolve({
@@ -53,13 +53,13 @@ jest.mock("../../services/document/storage", () => {
                     exists: true,
                     uri: "file:///document/documents/mock-id_document.pdf",
                 },
-            })
+            }),
         ),
         deleteFile: jest.fn().mockImplementation(() => Promise.resolve(true)),
         getDocumentTempUri: jest
             .fn()
             .mockImplementation(() =>
-                Promise.resolve("file:///cache/preview_document.pdf")
+                Promise.resolve("file:///cache/preview_document.pdf"),
             ),
         importAndStoreDocument: jest.fn().mockImplementation((doc) =>
             Promise.resolve({
@@ -71,7 +71,7 @@ jest.mock("../../services/document/storage", () => {
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                 },
-            })
+            }),
         ),
         cleanupPreviewFiles: jest
             .fn()
@@ -147,10 +147,10 @@ describe("Document Store", () => {
             expect(updatedStore.documents.length).toBe(initialCount + 1)
             expect(updatedStore.documents[0].title).toBe("Test Document")
             expect(updatedStore.documents[0].content).toBe(
-                `encrypted:${newDoc.id}`
+                `encrypted:${newDoc.id}`,
             )
             expect(updatedStore.documents[0].sourceUri).toBe(
-                "file:///document/documents/mock-id_document.pdf"
+                "file:///document/documents/mock-id_document.pdf",
             )
         })
 
@@ -189,7 +189,7 @@ describe("Document Store", () => {
             // Check document was updated
             const updatedStore = useDocStore.getState()
             const updatedDoc = updatedStore.documents.find(
-                (d) => d.id === doc.id
+                (d) => d.id === doc.id,
             )
             expect(updatedDoc?.title).toBe("Updated Title")
             expect(updatedDoc?.content).toBe(`encrypted:${doc.id}`)
@@ -232,13 +232,13 @@ describe("Document Store", () => {
                 "file:///temp/updated.pdf",
                 doc.id,
                 true,
-                expect.any(String)
+                expect.any(String),
             )
 
             // Check document was updated
             const updatedStore = useDocStore.getState()
             const updatedDoc = updatedStore.documents.find(
-                (d) => d.id === doc.id
+                (d) => d.id === doc.id,
             )
             expect(updatedDoc?.title).toBe("Updated Document")
             expect(updatedDoc?.content).toBe(`encrypted:${doc.id}`)
@@ -272,7 +272,7 @@ describe("Document Store", () => {
             const updatedStore = useDocStore.getState()
             expect(updatedStore.documents.length).toBe(initialCount - 1)
             expect(
-                updatedStore.documents.find((d) => d.id === doc.id)
+                updatedStore.documents.find((d) => d.id === doc.id),
             ).toBeUndefined()
 
             // Check file was deleted
@@ -337,7 +337,7 @@ describe("Document Store", () => {
             // Check the decryption service was called
             const encryptionService = new DocumentEncryptionService()
             expect(encryptionService.decryptDocument).toHaveBeenCalledWith(
-                doc.id
+                doc.id,
             )
 
             // Check the correct content was returned
@@ -370,7 +370,7 @@ describe("Document Store", () => {
             expect(result).not.toBeNull()
             expect(result?.document.id).toBe(doc.id)
             expect(result?.previewUri).toBe(
-                "file:///document/documents/mock-id_document.pdf"
+                "file:///document/documents/mock-id_document.pdf",
             )
         })
 
@@ -411,14 +411,14 @@ describe("Document Store", () => {
             expect(preview).not.toBeNull()
             expect(preview?.id).toBe(doc.id)
             expect(preview?.sourceUri).toBe(
-                "file:///cache/preview_document.pdf"
+                "file:///cache/preview_document.pdf",
             )
             expect(preview?.metadata.mimeType).toBe(DocumentType.PDF.toString())
 
             // Check that getDocumentTempUri was called
             const documentStorage = await DocumentStorageService.create()
             expect(documentStorage.getDocumentTempUri).toHaveBeenCalledWith(
-                expect.objectContaining({ id: doc.id })
+                expect.objectContaining({ id: doc.id }),
             )
         })
 
@@ -455,7 +455,7 @@ describe("Document Store", () => {
             ;(
                 documentStorage.getDocumentTempUri as jest.Mock
             ).mockImplementationOnce(() =>
-                Promise.reject(new Error("Storage error"))
+                Promise.reject(new Error("Storage error")),
             )
 
             // Get document preview
@@ -486,7 +486,7 @@ describe("Document Store", () => {
             ;(
                 documentStorage.cleanupPreviewFiles as jest.Mock
             ).mockImplementationOnce(() =>
-                Promise.reject(new Error("Cleanup error"))
+                Promise.reject(new Error("Cleanup error")),
             )
 
             // Call cleanupTempFiles
@@ -518,7 +518,7 @@ describe("Document Store", () => {
             ;(
                 documentStorage.importAndStoreDocument as jest.Mock
             ).mockImplementationOnce(() =>
-                Promise.reject(new Error("Import error"))
+                Promise.reject(new Error("Import error")),
             )
 
             // Try to add a document
@@ -534,7 +534,7 @@ describe("Document Store", () => {
                         type: DocumentType.PDF,
                         mimeType: "application/pdf",
                     },
-                })
+                }),
             ).rejects.toThrow("Import error")
 
             // Error state should be set
@@ -563,7 +563,7 @@ describe("Document Store", () => {
             jest.clearAllMocks()
             const documentStorage = await DocumentStorageService.create()
             ;(documentStorage.saveFile as jest.Mock).mockImplementationOnce(
-                () => Promise.reject(new Error("Update error"))
+                () => Promise.reject(new Error("Update error")),
             )
 
             // Try to update the document
@@ -575,7 +575,7 @@ describe("Document Store", () => {
                         ...doc.metadata,
                         updatedAt: new Date().toISOString(),
                     },
-                })
+                }),
             ).rejects.toThrow("Update error")
 
             // Error state should be set

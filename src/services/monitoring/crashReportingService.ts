@@ -45,7 +45,7 @@ export class CrashReportingService {
     // Save crash information for later reporting
     static async saveCrashReport(
         error: Error,
-        appState?: IAppState
+        appState?: IAppState,
     ): Promise<void> {
         try {
             const crashReport: CrashReport = {
@@ -71,13 +71,13 @@ export class CrashReportingService {
             // Add new report and limit the number stored
             const updatedReports = [crashReport, ...reports].slice(
                 0,
-                MAX_CRASH_REPORTS
+                MAX_CRASH_REPORTS,
             )
 
             // Save updated reports
             await AsyncStorage.setItem(
                 CRASH_REPORT_KEY,
-                JSON.stringify(updatedReports)
+                JSON.stringify(updatedReports),
             )
 
             this.logger.info("Crash report saved")

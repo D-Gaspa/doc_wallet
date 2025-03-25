@@ -76,11 +76,11 @@ describe("ErrorTrackingService", () => {
         // Should store the error for fatal errors
         expect(AsyncStorage.setItem).toHaveBeenCalledWith(
             "com.doc_wallet.errors",
-            expect.any(String)
+            expect.any(String),
         )
 
         const storedData = JSON.parse(
-            (AsyncStorage.setItem as jest.Mock).mock.calls[0][1]
+            (AsyncStorage.setItem as jest.Mock).mock.calls[0][1],
         )
         expect(storedData[0].message).toBe("Test fatal error")
         expect(storedData[0].isFatal).toBe(true)
@@ -109,13 +109,13 @@ describe("ErrorTrackingService", () => {
         ]
 
         ;(AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(
-            JSON.stringify(mockErrors)
+            JSON.stringify(mockErrors),
         )
 
         const storedErrors = await ErrorTrackingService.getStoredErrors()
 
         expect(AsyncStorage.getItem).toHaveBeenCalledWith(
-            "com.doc_wallet.errors"
+            "com.doc_wallet.errors",
         )
         expect(storedErrors).toEqual(mockErrors)
     })
@@ -124,7 +124,7 @@ describe("ErrorTrackingService", () => {
         await ErrorTrackingService.clearStoredErrors()
 
         expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
-            "com.doc_wallet.errors"
+            "com.doc_wallet.errors",
         )
     })
 

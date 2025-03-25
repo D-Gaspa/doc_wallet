@@ -20,9 +20,7 @@ export interface FolderMainViewProps {
     initialDocuments?: Document[]
 }
 
-function FolderMainViewContent({
-                                   initialFolders = [],
-                               }: FolderMainViewProps) {
+function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
     const logger = LoggingService.getLogger
         ? LoggingService.getLogger("FolderMainView")
         : { debug: console.debug }
@@ -37,7 +35,9 @@ function FolderMainViewContent({
 
     // State for the unified modal
     const [folderModalVisible, setFolderModalVisible] = useState(false)
-    const [folderModalMode, setFolderModalMode] = useState<"create" | "edit">("create")
+    const [folderModalMode, setFolderModalMode] = useState<"create" | "edit">(
+        "create",
+    )
     const [folderToEdit, setFolderToEdit] = useState<Folder | null>(null)
 
     // Alert state using the existing AlertType from the Alert component
@@ -51,17 +51,15 @@ function FolderMainViewContent({
         type: "info",
     })
 
-
     const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([])
     const [batchTagModalVisible, setBatchTagModalVisible] = useState(false)
-
 
     const {
         handleCreateFolder,
         handleUpdateFolder,
         getCurrentFolders,
         getCurrentFolderName,
-        showFolderOptions
+        showFolderOptions,
     } = useFolderOperations({
         folders,
         setFolders,
@@ -70,7 +68,7 @@ function FolderMainViewContent({
         setFolderModalMode,
         setFolderToEdit,
         setFolderModalVisible,
-        logger
+        logger,
     })
 
     const {
@@ -78,7 +76,7 @@ function FolderMainViewContent({
         selectedFolderIds,
         toggleSelectionMode,
         handleSelectAll,
-        handleFolderSelect
+        handleFolderSelect,
     } = useSelectionMode()
 
     // Initialize mock data
@@ -94,7 +92,7 @@ function FolderMainViewContent({
                     createdAt: new Date(),
                     updatedAt: new Date(),
                     childFolderIds: ["5", "6"],
-                    documentIds: []
+                    documentIds: [],
                 },
                 {
                     id: "2",
@@ -106,7 +104,7 @@ function FolderMainViewContent({
                     createdAt: new Date(),
                     updatedAt: new Date(),
                     childFolderIds: [],
-                    documentIds: []
+                    documentIds: [],
                 },
                 {
                     id: "3",
@@ -117,7 +115,7 @@ function FolderMainViewContent({
                     createdAt: new Date(),
                     updatedAt: new Date(),
                     childFolderIds: [],
-                    documentIds: []
+                    documentIds: [],
                 },
                 {
                     id: "4",
@@ -128,7 +126,7 @@ function FolderMainViewContent({
                     createdAt: new Date(),
                     updatedAt: new Date(),
                     childFolderIds: [],
-                    documentIds: []
+                    documentIds: [],
                 },
                 {
                     id: "5",
@@ -140,7 +138,7 @@ function FolderMainViewContent({
                     createdAt: new Date(),
                     updatedAt: new Date(),
                     childFolderIds: [],
-                    documentIds: []
+                    documentIds: [],
                 },
                 {
                     id: "6",
@@ -153,7 +151,7 @@ function FolderMainViewContent({
                     createdAt: new Date(),
                     updatedAt: new Date(),
                     childFolderIds: [],
-                    documentIds: []
+                    documentIds: [],
                 },
                 {
                     id: "7",
@@ -165,7 +163,7 @@ function FolderMainViewContent({
                     createdAt: new Date(),
                     updatedAt: new Date(),
                     childFolderIds: [],
-                    documentIds: []
+                    documentIds: [],
                 },
             ]
             setFolders(mockFolders)
@@ -218,7 +216,7 @@ function FolderMainViewContent({
         folderName: string,
         folderType: FolderType,
         customIconId?: string,
-        folderId?: string
+        folderId?: string,
     ) => {
         if (folderId) {
             // Update existing folder
@@ -236,9 +234,9 @@ function FolderMainViewContent({
             setSelectedTagFilters([])
         } else {
             // Toggle the tag in the filter list
-            setSelectedTagFilters(prev => {
+            setSelectedTagFilters((prev) => {
                 if (prev.includes(tagId)) {
-                    return prev.filter(id => id !== tagId)
+                    return prev.filter((id) => id !== tagId)
                 } else {
                     return [...prev, tagId]
                 }
@@ -249,7 +247,7 @@ function FolderMainViewContent({
     // Handle adding a tag to a folder
     const handleAddTagToFolder = (tagId: string, folderId: string) => {
         // Call the associate tag function from your tag context
-        tagContext.associateTag(tagId, folderId, 'folder')
+        tagContext.associateTag(tagId, folderId, "folder")
 
         setAlert({
             visible: true,
@@ -261,27 +259,36 @@ function FolderMainViewContent({
     }
 
     // Filter folders based on search query and tags
-    const filteredFolders = searchQuery || selectedTagFilters.length > 0
-        ? folders.filter(folder => {
-            // Check if folder is in the current directory
-            const inCurrentDirectory = folder.parentId === currentFolderId
+    const filteredFolders =
+        searchQuery || selectedTagFilters.length > 0
+            ? folders.filter((folder) => {
+                  // Check if folder is in the current directory
+                  const inCurrentDirectory = folder.parentId === currentFolderId
 
-            // Apply search filter
-            const matchesSearch = !searchQuery ||
-                folder.title.toLowerCase().includes(searchQuery.toLowerCase())
+                  // Apply search filter
+                  const matchesSearch =
+                      !searchQuery ||
+                      folder.title
+                          .toLowerCase()
+                          .includes(searchQuery.toLowerCase())
 
-            // Apply tag filters if any are selected
-            let matchesTags = true
-            if (selectedTagFilters.length > 0) {
-                const folderTags = tagContext.getTagsForItem(folder.id, 'folder')
-                const folderTagIds = folderTags.map(tag => tag.id)
-                // Folder must have ALL selected tags (AND logic)
-                matchesTags = selectedTagFilters.every(tagId => folderTagIds.includes(tagId))
-            }
+                  // Apply tag filters if any are selected
+                  let matchesTags = true
+                  if (selectedTagFilters.length > 0) {
+                      const folderTags = tagContext.getTagsForItem(
+                          folder.id,
+                          "folder",
+                      )
+                      const folderTagIds = folderTags.map((tag) => tag.id)
+                      // Folder must have ALL selected tags (AND logic)
+                      matchesTags = selectedTagFilters.every((tagId) =>
+                          folderTagIds.includes(tagId),
+                      )
+                  }
 
-            return inCurrentDirectory && matchesSearch && matchesTags
-        })
-        : getCurrentFolders()
+                  return inCurrentDirectory && matchesSearch && matchesTags
+              })
+            : getCurrentFolders()
 
     return (
         <Container testID="folder-main-view">
@@ -319,7 +326,13 @@ function FolderMainViewContent({
                         tagContext={tagContext}
                         handleFolderPress={handleFolderPress}
                         handleFolderSelect={handleFolderSelect}
-                        showFolderOptions={(folder) => showFolderOptions(folder, selectionMode, handleFolderSelect)}
+                        showFolderOptions={(folder) =>
+                            showFolderOptions(
+                                folder,
+                                selectionMode,
+                                handleFolderSelect,
+                            )
+                        }
                         selectionMode={selectionMode}
                         handleAddTagToFolder={handleAddTagToFolder}
                     />
@@ -353,12 +366,16 @@ function FolderMainViewContent({
                     }}
                     onSave={handleSaveFolder}
                     mode={folderModalMode}
-                    initialData={folderToEdit ? {
-                        id: folderToEdit.id,
-                        name: folderToEdit.title,
-                        type: folderToEdit.type || "custom",
-                        customIconId: folderToEdit.customIconId
-                    } : {}}
+                    initialData={
+                        folderToEdit
+                            ? {
+                                  id: folderToEdit.id,
+                                  name: folderToEdit.title,
+                                  type: folderToEdit.type || "custom",
+                                  customIconId: folderToEdit.customIconId,
+                              }
+                            : {}
+                    }
                     parentFolderId={currentFolderId}
                 />
 
@@ -422,5 +439,5 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         zIndex: 10,
-    }
+    },
 })

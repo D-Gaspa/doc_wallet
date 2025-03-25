@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
 // Function to get icon component by ID for external use with proper typing
 export function getIconById(
     iconId: string,
-    colors: ThemeColors
+    colors: ThemeColors,
 ): React.ReactNode {
     switch (iconId) {
         case "travel":

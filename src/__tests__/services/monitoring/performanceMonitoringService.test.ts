@@ -85,13 +85,13 @@ describe("PerformanceMonitoringService", () => {
         expect(mockMeasure).toHaveBeenCalledWith(
             "test_operation",
             "test_operation_start",
-            "test_operation_end"
+            "test_operation_end",
         )
         expect(result).toBe(42.5)
 
         // Check that it was stored in measures
         expect(
-            PerformanceMonitoringService["measures"]["test_operation"]
+            PerformanceMonitoringService["measures"]["test_operation"],
         ).toEqual([42.5])
     })
 
@@ -145,17 +145,17 @@ describe("PerformanceMonitoringService", () => {
         ]
 
         ;(AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce(
-            JSON.stringify(existingMetrics)
+            JSON.stringify(existingMetrics),
         )
 
         const metrics = await PerformanceMonitoringService.getStoredMetrics()
 
         // Should have called flushMetricsBuffer and AsyncStorage.getItem
         expect(
-            PerformanceMonitoringService["flushMetricsBuffer"]
+            PerformanceMonitoringService["flushMetricsBuffer"],
         ).toHaveBeenCalled()
         expect(AsyncStorage.getItem).toHaveBeenCalledWith(
-            "com.doc_wallet.performance_metrics"
+            "com.doc_wallet.performance_metrics",
         )
 
         // Verify that we're returning what AsyncStorage.getItem gave us
@@ -177,7 +177,7 @@ describe("PerformanceMonitoringService", () => {
         // Should store the metrics
         expect(AsyncStorage.setItem).toHaveBeenCalledWith(
             "com.doc_wallet.performance_metrics",
-            expect.any(String)
+            expect.any(String),
         )
 
         // Buffer should be empty after flush
@@ -188,7 +188,7 @@ describe("PerformanceMonitoringService", () => {
         await PerformanceMonitoringService.clearStoredMetrics()
 
         expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
-            "com.doc_wallet.performance_metrics"
+            "com.doc_wallet.performance_metrics",
         )
     })
 
@@ -222,7 +222,7 @@ describe("PerformanceMonitoringService", () => {
 
         // Check that timing map is empty
         expect(
-            Object.keys(PerformanceMonitoringService["timingMap"])
+            Object.keys(PerformanceMonitoringService["timingMap"]),
         ).toHaveLength(0)
 
         // Restore Date.now
@@ -248,7 +248,7 @@ describe("PerformanceMonitoringService", () => {
 
         // Check that the start time was recorded in the timing map
         expect(
-            PerformanceMonitoringService["timingMap"]["fallback_test_start"]
+            PerformanceMonitoringService["timingMap"]["fallback_test_start"],
         ).toBe(1234567890)
 
         // Restore originals

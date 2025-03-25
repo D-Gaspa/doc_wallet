@@ -37,7 +37,7 @@ it("renders children when no error occurs", () => {
     const { getByText } = render(
         <ErrorBoundary>
             <Text>Normal Content</Text>
-        </ErrorBoundary>
+        </ErrorBoundary>,
     )
 
     expect(getByText("Normal Content")).toBeTruthy()
@@ -52,7 +52,7 @@ it("catches errors and renders fallback UI", () => {
     const { getByText } = render(
         <ErrorBoundary>
             <ProblemChild />
-        </ErrorBoundary>
+        </ErrorBoundary>,
     )
 
     expect(getByText("Something went wrong.")).toBeTruthy()
@@ -67,7 +67,7 @@ it("logs errors when a child component crashes", () => {
     render(
         <ErrorBoundary>
             <ProblemChild />
-        </ErrorBoundary>
+        </ErrorBoundary>,
     )
 
     console.log("Mock Logger Calls:", mockLogger.error.mock.calls)
@@ -75,7 +75,7 @@ it("logs errors when a child component crashes", () => {
     expect(mockLogger.error).toHaveBeenCalledTimes(1)
     expect(mockLogger.error).toHaveBeenCalledWith(
         "UI Error caught by boundary",
-        expect.any(Error)
+        expect.any(Error),
     )
 })
 
@@ -88,11 +88,11 @@ it("sends errors to ErrorTrackingService", () => {
     render(
         <ErrorBoundary>
             <ProblemChild />
-        </ErrorBoundary>
+        </ErrorBoundary>,
     )
 
     expect(ErrorTrackingService.handleError).toHaveBeenCalledWith(
         expect.any(Error),
-        false
+        false,
     )
 })

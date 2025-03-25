@@ -27,18 +27,18 @@ export interface FolderCardProps {
 }
 
 export function FolderCard({
-                               title,
-                               type = "custom",
-                               onPress,
-                               onLongPress,
-                               customIcon,
-                               isNewFolder = false,
-                               selected = false,
-                               folderId,
-                               onTagPress,
-                               selectedTagIds = [],
-                               testID,
-                           }: FolderCardProps) {
+    title,
+    type = "custom",
+    onPress,
+    onLongPress,
+    customIcon,
+    isNewFolder = false,
+    selected = false,
+    folderId,
+    onTagPress,
+    selectedTagIds = [],
+    testID,
+}: FolderCardProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
 
@@ -54,14 +54,16 @@ export function FolderCard({
     }
 
     // Get folder tags if folder has an ID
-    const folderTags = folderId ? tagContext.getTagsForItem(folderId, 'folder') : []
+    const folderTags = folderId
+        ? tagContext.getTagsForItem(folderId, "folder")
+        : []
 
     return (
         <TouchableOpacity
             style={[
                 styles.container,
                 { borderBottomColor: colors.secondaryText },
-                selected && { backgroundColor: colors.background }
+                selected && { backgroundColor: colors.background },
             ]}
             onPress={onPress}
             onLongPress={onLongPress}
@@ -71,7 +73,12 @@ export function FolderCard({
         >
             {/* Selection indicator */}
             {selected && (
-                <View style={[styles.selectionIndicator, { backgroundColor: colors.primary }]} />
+                <View
+                    style={[
+                        styles.selectionIndicator,
+                        { backgroundColor: colors.primary },
+                    ]}
+                />
             )}
 
             <View style={styles.contentContainer}>
@@ -82,7 +89,11 @@ export function FolderCard({
                         folderIcons[type]
                     )}
                 </View>
-                <Text style={[styles.title, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
+                <Text
+                    style={[styles.title, { color: colors.text }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                >
                     {isNewFolder ? "Create a new folder" : title}
                 </Text>
             </View>
@@ -113,19 +124,19 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         paddingHorizontal: 4,
         borderBottomWidth: 1,
-        position: 'relative',
+        position: "relative",
         height: 60,
     },
     selectionIndicator: {
-        position: 'absolute',
+        position: "absolute",
         left: 0,
         top: 0,
         bottom: 0,
         width: 4,
     },
     contentContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         flex: 0.8,
         minWidth: 140,
     },
@@ -133,8 +144,8 @@ const styles = StyleSheet.create({
         marginRight: 12,
         width: 24,
         height: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
     },
     title: {
         fontSize: 16,
@@ -143,9 +154,9 @@ const styles = StyleSheet.create({
     },
     tagsContainer: {
         flex: 0.4,
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "center",
         minWidth: 120,
-    }
+    },
 })

@@ -28,16 +28,15 @@ interface UseFolderOperationsProps {
 }
 
 export function useFolderOperations({
-                                        folders,
-                                        setFolders,
-                                        currentFolderId,
-                                        setAlert,
-                                        setFolderModalMode,
-                                        setFolderToEdit,
-                                        setFolderModalVisible,
-                                        logger
-                                    }: UseFolderOperationsProps) {
-
+    folders,
+    setFolders,
+    currentFolderId,
+    setAlert,
+    setFolderModalMode,
+    setFolderToEdit,
+    setFolderModalVisible,
+    logger,
+}: UseFolderOperationsProps) {
     // Get folders for current view (root or nested)
     const getCurrentFolders = () => {
         return folders.filter((folder) => folder.parentId === currentFolderId)
@@ -54,7 +53,7 @@ export function useFolderOperations({
     const handleCreateFolder = (
         folderName: string,
         folderType: FolderType,
-        customIconId?: string
+        customIconId?: string,
     ) => {
         const newFolder: Folder = {
             id: `folder-${Date.now()}`, // Simple ID generation for UI prototype
@@ -66,21 +65,23 @@ export function useFolderOperations({
             createdAt: new Date(),
             updatedAt: new Date(),
             childFolderIds: [],
-            documentIds: []
+            documentIds: [],
         }
 
         // Update parent folder's childFolderIds if there is a parent
-        const updatedFolders = [...folders];
+        const updatedFolders = [...folders]
         if (currentFolderId) {
-            const parentIndex = updatedFolders.findIndex(f => f.id === currentFolderId);
+            const parentIndex = updatedFolders.findIndex(
+                (f) => f.id === currentFolderId,
+            )
             if (parentIndex >= 0) {
                 updatedFolders[parentIndex] = {
                     ...updatedFolders[parentIndex],
                     childFolderIds: [
                         ...(updatedFolders[parentIndex].childFolderIds || []),
-                        newFolder.id
-                    ]
-                };
+                        newFolder.id,
+                    ],
+                }
             }
         }
 
@@ -104,7 +105,7 @@ export function useFolderOperations({
         folderId: string,
         folderName: string,
         folderType: FolderType,
-        customIconId?: string
+        customIconId?: string,
     ) => {
         const updatedFolders = folders.map((folder) => {
             if (folder.id === folderId) {
@@ -150,12 +151,16 @@ export function useFolderOperations({
                     onPress: () => {
                         // Check if folder has subfolders
                         const hasSubfolders = folders.some(
-                            (folder) => folder.parentId === folderId
+                            (folder) => folder.parentId === folderId,
                         )
 
                         // Check if folder has documents
-                        const folderToDelete = folders.find(f => f.id === folderId);
-                        const hasDocuments = folderToDelete?.documentIds && folderToDelete.documentIds.length > 0;
+                        const folderToDelete = folders.find(
+                            (f) => f.id === folderId,
+                        )
+                        const hasDocuments =
+                            folderToDelete?.documentIds &&
+                            folderToDelete.documentIds.length > 0
 
                         if (hasSubfolders) {
                             setAlert({
@@ -177,18 +182,27 @@ export function useFolderOperations({
 
                         // Remove the folder
                         const updatedFolders = folders.filter(
-                            (folder) => folder.id !== folderId
+                            (folder) => folder.id !== folderId,
                         )
 
                         // Also update parent folder's childFolderIds if applicable
-                        const folderToRemove = folders.find(f => f.id === folderId);
+                        const folderToRemove = folders.find(
+                            (f) => f.id === folderId,
+                        )
                         if (folderToRemove && folderToRemove.parentId) {
-                            const parentIndex = updatedFolders.findIndex(f => f.id === folderToRemove.parentId);
+                            const parentIndex = updatedFolders.findIndex(
+                                (f) => f.id === folderToRemove.parentId,
+                            )
                             if (parentIndex >= 0) {
                                 updatedFolders[parentIndex] = {
                                     ...updatedFolders[parentIndex],
-                                    childFolderIds: updatedFolders[parentIndex].childFolderIds?.filter(id => id !== folderId) || []
-                                };
+                                    childFolderIds:
+                                        updatedFolders[
+                                            parentIndex
+                                        ].childFolderIds?.filter(
+                                            (id) => id !== folderId,
+                                        ) || [],
+                                }
                             }
                         }
 
@@ -202,7 +216,7 @@ export function useFolderOperations({
                         logger.debug("Deleted folder", { folderId })
                     },
                 },
-            ]
+            ],
         )
     }
 
@@ -212,7 +226,7 @@ export function useFolderOperations({
             // Placeholder - In the future, replace with actual ZIP file sharing
             RNAlert.alert(
                 "Sharing",
-                `Folder "${folder.title}" will be shared soon!`
+                `Folder "${folder.title}" will be shared soon!`,
             )
             logger.debug("Sharing folder", {
                 folderId: folder.id,
@@ -225,7 +239,11 @@ export function useFolderOperations({
     }
 
     // Show folder options menu
-    const showFolderOptions = (folder: Folder, selectionMode: boolean, handleFolderSelect: (id: string) => void) => {
+    const showFolderOptions = (
+        folder: Folder,
+        selectionMode: boolean,
+        handleFolderSelect: (id: string) => void,
+    ) => {
         if (selectionMode) {
             // In selection mode, long press also toggles selection
             handleFolderSelect(folder.id)
@@ -265,7 +283,10 @@ export function useFolderOperations({
         handleUpdateFolder,
         handleDeleteFolder,
         handleShareFolder,
-        showFolderOptions: (folder: Folder, selectionMode: boolean, handleFolderSelect: (id: string) => void) =>
-            showFolderOptions(folder, selectionMode, handleFolderSelect)
+        showFolderOptions: (
+            folder: Folder,
+            selectionMode: boolean,
+            handleFolderSelect: (id: string) => void,
+        ) => showFolderOptions(folder, selectionMode, handleFolderSelect),
     }
 }
