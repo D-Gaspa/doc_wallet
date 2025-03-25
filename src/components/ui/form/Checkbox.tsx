@@ -1,6 +1,6 @@
 import React from "react"
 import { TouchableOpacity, View, Text, StyleSheet } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 import CheckIcon from "../assets/svg/Check.svg"
 
 export interface CheckboxProps {
@@ -11,7 +11,7 @@ export interface CheckboxProps {
 }
 
 export function Checkbox({ checked, onToggle, label, testID }: CheckboxProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
 
     return (
         <TouchableOpacity

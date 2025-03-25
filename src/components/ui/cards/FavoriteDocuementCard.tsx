@@ -1,6 +1,6 @@
 import React from "react"
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 
 export interface FavoriteDocumentCardProps {
     title: string
@@ -15,7 +15,7 @@ export function FavoriteDocumentCard({
     onPress,
     testID,
 }: FavoriteDocumentCardProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
 
     return (
         <TouchableOpacity

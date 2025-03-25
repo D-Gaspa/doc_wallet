@@ -1,6 +1,6 @@
 import React from "react"
 import { View, StyleSheet } from "react-native"
-import { useThemeContext } from "../../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../../hooks/useTheme.ts"
 import { TabBarNavigation } from "./TabBarNavigation.tsx"
 
 export interface TabBarProps {
@@ -11,7 +11,7 @@ export interface TabBarProps {
 }
 
 export function TabBar({ activeTab, onTabChange, testID }: TabBarProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
 
     return (
         <View

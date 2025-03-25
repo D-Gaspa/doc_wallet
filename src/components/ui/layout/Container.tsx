@@ -1,6 +1,6 @@
 import React from "react"
 import { View, StyleSheet, ViewStyle, SafeAreaView } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 
 export interface ContainerProps {
     children: React.ReactNode
@@ -9,7 +9,7 @@ export interface ContainerProps {
 }
 
 export function Container({ children, style, testID }: ContainerProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
 
     return (
         <SafeAreaView

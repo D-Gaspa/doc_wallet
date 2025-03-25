@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react"
 import { Text, StyleSheet, Animated } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 
 export interface ToastProps {
     message: string
@@ -15,7 +15,8 @@ export function Toast({
     duration = 3000,
     onDismiss,
 }: ToastProps) {
-    const { colors } = useThemeContext()
+
+    const { colors } = useTheme()
     const opacity = useRef(new Animated.Value(0)).current
 
     useEffect(() => {

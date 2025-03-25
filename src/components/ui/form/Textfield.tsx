@@ -1,6 +1,6 @@
 import React from "react"
 import { TextInput, StyleSheet, ViewStyle } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 
 export interface TextFieldProps {
     placeholder: string
@@ -17,7 +17,7 @@ export function TextField({
     style,
     testID,
 }: TextFieldProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
 
     return (
         <TextInput
