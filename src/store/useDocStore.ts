@@ -2,9 +2,12 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { asyncStorageMiddleware } from "./middleware/persist"
 import type { IDocState, IDocument } from "../types/document"
+import { DocumentType } from "../types/document"
 import { DocumentEncryptionService } from "../services/security/documentEncryption"
 import { LoggingService } from "../services/monitoring/loggingService"
 import { PerformanceMonitoringService } from "../services/monitoring/performanceMonitoringService"
+import { documentStorage } from "../services/document/storage"
+import { generateUniqueId } from "../utils"
 
 const docEncryption = new DocumentEncryptionService()
 const logger = LoggingService.getLogger("DocStore")
@@ -22,53 +25,70 @@ export const useDocStore = create<IDocState>()(
                 logger.debug(`Getting document by ID: ${id}`)
                 const document = get().documents.find((doc) => doc.id === id)
 
-                // If a document has encrypted content, we'll handle that
-                if (document && document.content?.startsWith("encrypted:")) {
-                    logger.debug(
-                        `Document ${id} is encrypted, preparing for decryption`
-                    )
-                    // Return a promise that resolves to the document with decrypted content
-                    return {
-                        ...document,
-                        // This is a placeholder for the actual decryption
-                        // We need to check if content is encrypted and decrypt if needed
-                        _getDecryptedContent: async () => {
-                            const encryptedId = document.content.split(":")[1]
-                            return await docEncryption.decryptDocument(
-                                encryptedId
-                            )
-                        },
+                if (document && document.content) {
+                    const isEncrypted =
+                        document.content.startsWith("encrypted:")
+
+                    if (isEncrypted) {
+                        logger.debug(
+                            `Document ${id} is encrypted, preparing for decryption`
+                        )
+
+                        const encryptedId = document.content.split(":")[1]
+
+                        return {
+                            ...document,
+                            _getDecryptedContent: async () => {
+                                return await docEncryption.decryptDocument(
+                                    encryptedId
+                                )
+                            },
+                        }
                     }
                 }
 
                 return document
             },
-
-            getFilteredDocuments: (filterFn) => {
-                logger.debug("Getting filtered documents")
-                return get().documents.filter(filterFn)
-            },
-
-            // Actions
-            fetchDocuments: async () => {
-                PerformanceMonitoringService.startMeasure("fetch_documents")
+            fetchDocument: async (
+                id: string
+            ): Promise<{ document: IDocument; previewUri: string } | null> => {
                 try {
-                    logger.info("Fetching documents")
-                    set({ isLoading: true, error: null })
-                    // Fetch implementation will go here
-                    // For now, this is just a placeholder
-                    set({ isLoading: false })
-                    logger.debug("Documents fetched successfully")
-                    PerformanceMonitoringService.endMeasure("fetch_documents")
+                    logger.debug(`Fetching document ${id} for viewing`)
+                    const document = get().documents.find(
+                        (doc) => doc.id === id
+                    )
+
+                    if (!document) {
+                        logger.warn(`Document ${id} not found`)
+                        return null
+                    }
+
+                    // For encrypted documents, we need to create a temporary preview file
+                    if (document.sourceUri.startsWith("encrypted:")) {
+                        const storage = await documentStorage
+                        const previewUri = await storage.getDocumentTempUri(
+                            document
+                        )
+
+                        logger.debug(
+                            `Created preview for encrypted document ${id}: ${previewUri}`
+                        )
+                        return {
+                            document,
+                            previewUri,
+                        }
+                    }
+
+                    logger.debug(
+                        `Using direct path for unencrypted document ${id}: ${document.sourceUri}`
+                    )
+                    return {
+                        document,
+                        previewUri: document.sourceUri,
+                    }
                 } catch (error) {
-                    const errorMessage =
-                        error instanceof Error ? error.message : String(error)
-                    logger.error("Failed to fetch documents:", error)
-                    set({
-                        error: errorMessage,
-                        isLoading: false,
-                    })
-                    PerformanceMonitoringService.endMeasure("fetch_documents")
+                    logger.error(`Error fetching document ${id}:`, error)
+                    return null
                 }
             },
 
@@ -78,41 +98,26 @@ export const useDocStore = create<IDocState>()(
                     logger.info("Adding new document")
                     set({ isLoading: true, error: null })
 
-                    const id = Date.now().toString()
-                    const newDocument: IDocument = {
-                        ...documentData,
-                        id,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                    }
-
-                    // Encrypt the document content if it exists
-                    if (documentData.content) {
-                        logger.debug(`Encrypting content for document ${id}`)
-                        const encryptionSuccess =
-                            await docEncryption.encryptDocument(
-                                id,
-                                documentData.content
-                            )
-
-                        if (encryptionSuccess) {
-                            // Store a reference to the encrypted content, not the actual content
-                            newDocument.content = `encrypted:${id}`
-                            logger.debug(
-                                `Document ${id} encrypted successfully`
-                            )
-                        } else {
-                            logger.error(`Failed to encrypt document ${id}`)
-                        }
-                    }
+                    const id = generateUniqueId()
+                    const storage = await documentStorage
+                    const storedDocument = await storage.importAndStoreDocument(
+                        {
+                            ...documentData,
+                            id,
+                        },
+                        documentData.sourceUri,
+                        true
+                    )
 
                     set((state) => ({
-                        documents: [...state.documents, newDocument],
+                        documents: [...state.documents, storedDocument],
+                        isLoading: false,
                     }))
-
-                    logger.info(`Document added successfully with ID: ${id}`)
+                    logger.info(
+                        `Document with file added successfully with ID: ${id}`
+                    )
                     PerformanceMonitoringService.endMeasure("add_document")
-                    return newDocument
+                    return storedDocument
                 } catch (error) {
                     const errorMessage =
                         error instanceof Error ? error.message : String(error)
@@ -123,8 +128,6 @@ export const useDocStore = create<IDocState>()(
                     })
                     PerformanceMonitoringService.endMeasure("add_document")
                     throw error
-                } finally {
-                    set({ isLoading: false })
                 }
             },
 
@@ -134,8 +137,65 @@ export const useDocStore = create<IDocState>()(
                     logger.info(`Updating document ${id}`)
                     set({ isLoading: true, error: null })
 
-                    const processedUpdates = { ...updates }
-                    if (updates.content) {
+                    const existingDoc = get().documents.find(
+                        (doc) => doc.id === id
+                    )
+                    if (!existingDoc) {
+                        throw new Error(`Document with ID ${id} not found`)
+                    }
+
+                    const processedUpdates: Partial<IDocument> = {
+                        ...updates,
+                        metadata: {
+                            ...(existingDoc.metadata || {}),
+                            ...(updates.metadata || {}),
+                            updatedAt: new Date().toISOString(),
+                        },
+                    }
+
+                    if (updates.sourceUri) {
+                        const storage = await documentStorage
+                        const shouldEncrypt = true
+                        const filename =
+                            updates.sourceUri.split("/").pop() ||
+                            `document_${id}`
+
+                        await storage.saveFile(
+                            updates.sourceUri,
+                            id,
+                            shouldEncrypt,
+                            filename
+                        )
+
+                        processedUpdates.content = shouldEncrypt
+                            ? `encrypted:${id}`
+                            : updates.sourceUri
+
+                        const extension = filename
+                            .split(".")
+                            .pop()
+                            ?.toLowerCase()
+                        if (extension === "pdf" && processedUpdates.metadata) {
+                            processedUpdates.metadata.type = DocumentType.PDF
+                        } else if (
+                            ["jpg", "jpeg", "png"].includes(extension || "") &&
+                            processedUpdates.metadata
+                        ) {
+                            processedUpdates.metadata.type =
+                                extension === "png"
+                                    ? DocumentType.IMAGE_PNG
+                                    : DocumentType.IMAGE
+                        }
+
+                        // Instead of deleting, set to the existing value if it exists
+                        processedUpdates.sourceUri = existingDoc.sourceUri
+
+                        logger.debug(
+                            `File for document ${id} updated successfully`
+                        )
+                    }
+                    // Handle text content updates
+                    else if (updates.content) {
                         logger.debug(
                             `Encrypting updated content for document ${id}`
                         )
@@ -164,7 +224,11 @@ export const useDocStore = create<IDocState>()(
                                 ? {
                                       ...doc,
                                       ...processedUpdates,
-                                      updatedAt: new Date().toISOString(),
+                                      metadata: {
+                                          ...doc.metadata,
+                                          ...(processedUpdates.metadata || {}),
+                                          updatedAt: new Date().toISOString(),
+                                      },
                                   }
                                 : doc
                         ),
@@ -173,9 +237,14 @@ export const useDocStore = create<IDocState>()(
                                 ? {
                                       ...state.selectedDocument,
                                       ...processedUpdates,
-                                      updatedAt: new Date().toISOString(),
+                                      metadata: {
+                                          ...state.selectedDocument.metadata,
+                                          ...(processedUpdates.metadata || {}),
+                                          updatedAt: new Date().toISOString(),
+                                      },
                                   }
                                 : state.selectedDocument,
+                        isLoading: false,
                     }))
 
                     logger.info(`Document ${id} updated successfully`)
@@ -191,8 +260,6 @@ export const useDocStore = create<IDocState>()(
                     })
                     PerformanceMonitoringService.endMeasure(`update_doc_${id}`)
                     throw error
-                } finally {
-                    set({ isLoading: false })
                 }
             },
 
@@ -206,6 +273,35 @@ export const useDocStore = create<IDocState>()(
                         (doc) => doc.id === id
                     )
 
+                    if (!document) {
+                        logger.error(`Document ${id} not found`)
+                        throw new Error(`Document with ID ${id} not found`)
+                    }
+
+                    // If the document has a file associated, delete it from storage
+                    if (document.metadata.type !== DocumentType.TEXT) {
+                        const storage = await documentStorage
+                        const filename = document.title || `document_${id}`
+
+                        const deleted = await storage.deleteFile(id, filename)
+                        if (!deleted) {
+                            logger.warn(
+                                `Could not delete file for document ${id}`
+                            )
+                        } else {
+                            logger.debug(
+                                `File for document ${id} deleted successfully`
+                            )
+                        }
+                    }
+                    // If document had encrypted content, delete it from secure storage
+                    else if (document.content?.startsWith("encrypted:")) {
+                        logger.debug(
+                            `Deleting encrypted content for document ${id}`
+                        )
+                        await docEncryption.deleteEncryptedDocument(id)
+                    }
+
                     // Delete the document from the store
                     set((state) => ({
                         documents: state.documents.filter(
@@ -215,18 +311,8 @@ export const useDocStore = create<IDocState>()(
                             state.selectedDocument?.id === id
                                 ? null
                                 : state.selectedDocument,
+                        isLoading: false,
                     }))
-
-                    // If document had encrypted content, delete it from secure storage
-                    if (
-                        document &&
-                        document.content?.startsWith("encrypted:")
-                    ) {
-                        logger.debug(
-                            `Deleting encrypted content for document ${id}`
-                        )
-                        await docEncryption.deleteEncryptedDocument(id)
-                    }
 
                     logger.info(`Document ${id} deleted successfully`)
                 } catch (error) {
@@ -238,8 +324,6 @@ export const useDocStore = create<IDocState>()(
                         isLoading: false,
                     })
                     throw error
-                } finally {
-                    set({ isLoading: false })
                 }
             },
 
@@ -254,6 +338,53 @@ export const useDocStore = create<IDocState>()(
                 const document =
                     get().documents.find((doc) => doc.id === id) || null
                 set({ selectedDocument: document })
+            },
+
+            getDocumentPreview: async (
+                id: string
+            ): Promise<IDocument | null> => {
+                try {
+                    logger.debug(`Getting preview for document ${id}`)
+                    const document = get().documents.find(
+                        (doc) => doc.id === id
+                    )
+
+                    if (!document) {
+                        logger.warn(`Document ${id} not found`)
+                        return null
+                    }
+
+                    const storage = await documentStorage
+
+                    try {
+                        const previewUri = await storage.getDocumentTempUri(
+                            document
+                        )
+
+                        logger.debug(
+                            `Preview URI generated for document ${id}: ${previewUri}`
+                        )
+
+                        // Return a new document object with the preview URI as the sourceUri
+                        return {
+                            ...document,
+                            sourceUri: previewUri,
+                            metadata: document.metadata,
+                        }
+                    } catch (error) {
+                        logger.error(
+                            `Error getting preview for document ${id}:`,
+                            error
+                        )
+                        return null
+                    }
+                } catch (error) {
+                    logger.error(
+                        `Error getting preview for document ${id}:`,
+                        error
+                    )
+                    return null
+                }
             },
 
             getDecryptedContent: async (id: string) => {
@@ -307,6 +438,17 @@ export const useDocStore = create<IDocState>()(
                         `get_decrypted_content_${id}`
                     )
                     return null
+                }
+            },
+
+            cleanupTempFiles: async () => {
+                try {
+                    logger.debug("Cleaning up temporary files")
+                    const storage = await documentStorage
+                    await storage.cleanupPreviewFiles()
+                    logger.debug("Temporary files cleaned up successfully")
+                } catch (error) {
+                    logger.error("Failed to clean up temporary files:", error)
                 }
             },
 

@@ -1,7 +1,6 @@
 import Config from "react-native-config"
 import { IEnvironmentVariables } from "../types/config.ts"
 
-// Strongly-typed environment object
 export const ENV: IEnvironmentVariables = {
     GOOGLE_CLIENT_ID: Config.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_ID_IOS: Config.GOOGLE_CLIENT_ID_IOS,
@@ -13,7 +12,6 @@ export const ENV: IEnvironmentVariables = {
         "development",
 }
 
-// Environment helpers
 export const isDevelopment = ENV.ENV_NAME === "development"
 export const isStaging = ENV.ENV_NAME === "staging"
 export const isProduction = ENV.ENV_NAME === "production"

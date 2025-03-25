@@ -1,10 +1,35 @@
+export enum DocumentType {
+    PDF = "application/pdf",
+    IMAGE = "image/jpeg",
+    IMAGE_PNG = "image/png",
+    TEXT = "text/pdf",
+    UNKNOWN = "unknown",
+}
+
 export interface IDocument {
     id: string
-    title: string
-    content: string
+    sourceUri: string
+    metadata: IDocumentMetadata
+    title?: string
+    content?: string
+    tags?: string[]
+}
+
+export interface IDocumentMetadata {
     createdAt: string
     updatedAt: string
-    tags?: string[]
+    type?: DocumentType
+    mimeType?: string
+}
+
+export interface IDocumentParameters {
+    id: string
+    documentId: string
+    key: string
+    value: string | undefined
+    type: string | number | Date | boolean | null
+    isSearchable: boolean
+    isSystem: boolean
 }
 
 export interface IDocState {
@@ -15,19 +40,35 @@ export interface IDocState {
 
     // Selectors
     getDocumentById: (id: string) => IDocument | undefined
-    getFilteredDocuments: (filterFn: (doc: IDocument) => boolean) => IDocument[]
-    getDecryptedContent: (id: string) => Promise<string | null>
+    getDecryptedContent: (id: string) => Promise<string | null | undefined>
 
     // Actions
-    fetchDocuments: () => Promise<void>
-    addDocument: (
-        document: Omit<IDocument, "id" | "createdAt" | "updatedAt">
-    ) => Promise<IDocument>
+    fetchDocument: (
+        id: string
+    ) => Promise<{ document: IDocument; previewUri: string } | null>
+    addDocument: (document: Omit<IDocument, "id">) => Promise<IDocument>
     updateDocument: (
         id: string,
-        updates: Partial<IDocument>
+        updates: IDocument
     ) => Promise<IDocument | undefined>
     deleteDocument: (id: string) => Promise<void>
     selectDocument: (id: string | null) => void
     clearError: () => void
+    getDocumentPreview: (id: string) => Promise<IDocument | null>
+    cleanupTempFiles: () => Promise<void>
+}
+
+export interface ImportOptions {
+    allowMultiple?: boolean
+    fileTypes?: string[]
+    allowVirtualFiles?: boolean
+}
+
+export interface ImportFileResult {
+    uri: string
+    name: string | null
+    size: number | null
+    type: DocumentType
+    mimeType: string | null
+    localUri?: string // Only present when we needed to make a local copy
 }
