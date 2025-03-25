@@ -437,7 +437,9 @@ export class DocumentImport {
                     })
 
                     logger.debug(
-                        `Successfully processed file: ${file.name || "unnamed"}`,
+                        `Successfully processed file: ${
+                            file.name || "unnamed"
+                        }`,
                     )
                 } else {
                     logger.error(

@@ -379,8 +379,9 @@ describe("DocumentEncryptionService", () => {
         test("should delete document from secure storage", async () => {
             const docId = "doc123"
 
-            const result =
-                await encryptionService.deleteEncryptedDocument(docId)
+            const result = await encryptionService.deleteEncryptedDocument(
+                docId,
+            )
 
             expect(result).toBe(true)
             expect(Keychain.resetGenericPassword).toHaveBeenCalledWith({
@@ -395,8 +396,9 @@ describe("DocumentEncryptionService", () => {
                 () => Promise.reject(new Error("Deletion error")),
             )
 
-            const result =
-                await encryptionService.deleteEncryptedDocument(docId)
+            const result = await encryptionService.deleteEncryptedDocument(
+                docId,
+            )
 
             expect(result).toBe(false)
         })

@@ -74,10 +74,10 @@ export function Alert({
         type === "success"
             ? SuccessIcon
             : type === "error"
-              ? ErrorIcon
-              : type === "warning"
-                ? WarningIcon
-                : InfoIcon
+            ? ErrorIcon
+            : type === "warning"
+            ? WarningIcon
+            : InfoIcon
 
     if (!visible) return null // Prevents unnecessary renders
 

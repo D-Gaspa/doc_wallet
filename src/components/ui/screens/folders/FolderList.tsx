@@ -26,7 +26,7 @@ export function FoldersList({
     folders,
     selectedFolderIds,
     selectedTagFilters,
-    tagContext,
+    // tagContext,
     handleFolderPress,
     //handleFolderSelect,
     showFolderOptions,
@@ -45,9 +45,6 @@ export function FoldersList({
 
     // Render folder item with tags and selection state
     const renderFolderItem = ({ item }: { item: Folder }) => {
-        // Get tags for this folder
-        const folderTags = tagContext.getTagsForItem(item.id, "folder")
-
         return (
             <FolderCard
                 title={item.title}
@@ -59,15 +56,10 @@ export function FoldersList({
                 onLongPress={() => showFolderOptions(item)}
                 testID={`folder-${item.id}`}
                 selected={selectedFolderIds.includes(item.id)}
-                tags={folderTags}
-                allTags={tagContext.tags} // Pass all available tags
-                //onTagPress={(tagId: string) => {
-                // This would be handled by the parent component
-                //}}
-                onAddTag={(tagId: string) =>
+                folderId={item.id}
+                onTagPress={(tagId: string) =>
                     handleAddTagToFolder(tagId, item.id)
                 }
-                folderId={item.id} // Pass the folder ID
                 selectedTagIds={selectedTagFilters}
             />
         )

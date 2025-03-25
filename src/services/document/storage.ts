@@ -507,8 +507,9 @@ export class DocumentStorageService {
                     const previewUri = `${this.cacheDirectory}preview_${sanitizedFilename}`
 
                     // Check if a preview already exists
-                    const previewExists =
-                        await FileSystem.getInfoAsync(previewUri)
+                    const previewExists = await FileSystem.getInfoAsync(
+                        previewUri,
+                    )
                     if (previewExists.exists) {
                         this.logger.debug(
                             `Using existing preview file at ${previewUri}`,

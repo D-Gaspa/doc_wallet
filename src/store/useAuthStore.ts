@@ -142,8 +142,8 @@ export const useAuthStore = create<IAuthState>((set) => ({
                 const preferredMethod = isBiometricAvailable
                     ? AuthMethod.BIOMETRIC
                     : isPinSet
-                      ? AuthMethod.PIN
-                      : AuthMethod.GOOGLE
+                    ? AuthMethod.PIN
+                    : AuthMethod.GOOGLE
 
                 logger.info("User authenticated via local auth data", {
                     email: userData.email,

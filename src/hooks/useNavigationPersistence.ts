@@ -31,8 +31,9 @@ export function useNavigationPersistence() {
 
                 // Only restore if there's no deep link
                 if (Platform.OS !== "web" && initialUrl == null) {
-                    const savedState =
-                        await AsyncStorage.getItem(NAVIGATION_STATE_KEY)
+                    const savedState = await AsyncStorage.getItem(
+                        NAVIGATION_STATE_KEY,
+                    )
 
                     if (savedState) {
                         logger.debug("Navigation state restored from storage")

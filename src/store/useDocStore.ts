@@ -66,8 +66,9 @@ export const useDocStore = create<IDocState>()(
                     // For encrypted documents, we need to create a temporary preview file
                     if (document.sourceUri.startsWith("encrypted:")) {
                         const storage = await documentStorage
-                        const previewUri =
-                            await storage.getDocumentTempUri(document)
+                        const previewUri = await storage.getDocumentTempUri(
+                            document,
+                        )
 
                         logger.debug(
                             `Created preview for encrypted document ${id}: ${previewUri}`,
@@ -356,8 +357,9 @@ export const useDocStore = create<IDocState>()(
                     const storage = await documentStorage
 
                     try {
-                        const previewUri =
-                            await storage.getDocumentTempUri(document)
+                        const previewUri = await storage.getDocumentTempUri(
+                            document,
+                        )
 
                         logger.debug(
                             `Preview URI generated for document ${id}: ${previewUri}`,

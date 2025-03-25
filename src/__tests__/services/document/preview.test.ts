@@ -281,8 +281,9 @@ describe("DocumentPreview", () => {
         it("should create a temporary file and return its URI", async () => {
             const sourceUri = "file:///document/test.pdf"
 
-            const tempUri =
-                await documentPreview.createTemporaryPreviewFile(sourceUri)
+            const tempUri = await documentPreview.createTemporaryPreviewFile(
+                sourceUri,
+            )
 
             expect(FileSystem.copyAsync).toHaveBeenCalledWith({
                 from: sourceUri,

@@ -1,4 +1,3 @@
-// src/components/ui/cards/FolderCard.tsx
 import React from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"

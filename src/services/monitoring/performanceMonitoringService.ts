@@ -183,8 +183,9 @@ export class PerformanceMonitoringService {
 
         try {
             // Get existing metrics
-            const existingMetricsJson =
-                await AsyncStorage.getItem(PERF_METRICS_KEY)
+            const existingMetricsJson = await AsyncStorage.getItem(
+                PERF_METRICS_KEY,
+            )
             const existingMetrics: IPerformanceMetric[] = existingMetricsJson
                 ? JSON.parse(existingMetricsJson)
                 : []

@@ -1,10 +1,10 @@
 import React, { useState } from "react"
-import { View, Text, StyleSheet } from "react-native"
+import { StyleSheet, Text, View } from "react-native"
 import { ThemeProvider } from "./context/ThemeContext.tsx"
 import {
     NavigationContainer,
-    useNavigation,
     NavigationProp,
+    useNavigation,
     useNavigationState,
 } from "@react-navigation/native"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
@@ -64,6 +64,7 @@ const ProfileScreen: React.FC = () => {
         </View>
     )
 }
+
 // Wrapper component for the tab navigator
 function MainTabsContent() {
     // Use the properly typed navigation
@@ -74,7 +75,7 @@ function MainTabsContent() {
         console.log("Navigation State:", JSON.stringify(state, null, 2))
 
         // With nested navigators, we need to check if this is a tab navigator
-        // The structure might be different than expected
+        // The structure might be different from expected
         if (state?.routes?.[0]?.state?.routes) {
             // This is likely a case of nested navigators (Stack containing Tabs)
             const tabState = state.routes[0].state
