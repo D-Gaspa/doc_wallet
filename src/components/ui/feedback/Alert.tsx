@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react"
 import { Text, StyleSheet, Animated, TouchableOpacity } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 
 // Import alert icons
 import SuccessIcon from "../assets/svg/success.svg"
@@ -27,7 +27,7 @@ export function Alert({
     autoDismiss = true,
     duration = 3000,
 }: AlertProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
     const fadeAnim = useRef(new Animated.Value(0)).current
 
     useEffect(() => {

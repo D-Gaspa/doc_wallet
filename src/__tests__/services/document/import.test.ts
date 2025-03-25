@@ -72,7 +72,7 @@ describe("DocumentImport", () => {
                     hasRequestedType: true,
                     isVirtual: false,
                 },
-            ])
+            ]),
         )
 
         // Default directory picker response
@@ -80,7 +80,7 @@ describe("DocumentImport", () => {
             Promise.resolve({
                 uri: "file:///selected/directory",
                 name: "directory",
-            })
+            }),
         )
 
         // Default keepLocalCopy success response
@@ -90,19 +90,19 @@ describe("DocumentImport", () => {
                     status: "success",
                     localUri: "file:///cache/document.pdf",
                 },
-            ])
+            ]),
         )
 
         // Default direct copy success
         ;(FileSystem.copyAsync as jest.Mock).mockImplementation(() =>
-            Promise.resolve()
+            Promise.resolve(),
         )
         ;(FileSystem.getInfoAsync as jest.Mock).mockImplementation(() =>
             Promise.resolve({
                 exists: true,
                 uri: "file:///cache/temp_file.pdf",
                 size: 12345,
-            })
+            }),
         )
     })
 
@@ -128,10 +128,10 @@ describe("DocumentImport", () => {
             ])
 
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith("import_document")
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith("import_document")
         })
 
@@ -154,7 +154,7 @@ describe("DocumentImport", () => {
                         hasRequestedType: true,
                         isVirtual: false,
                     },
-                ])
+                ]),
             )
 
             const results = await documentImport.importDocument({
@@ -164,7 +164,7 @@ describe("DocumentImport", () => {
             expect(pick).toHaveBeenCalledWith(
                 expect.objectContaining({
                     allowMultiSelection: true,
-                })
+                }),
             )
 
             expect(results.length).toBe(2)
@@ -183,7 +183,7 @@ describe("DocumentImport", () => {
                         hasRequestedType: true,
                         isVirtual: false,
                     },
-                ])
+                ]),
             )
 
             const results = await documentImport.importImage()
@@ -195,10 +195,10 @@ describe("DocumentImport", () => {
 
             expect(results[0].type).toBe(DocumentType.IMAGE)
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith("import_image")
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith("import_image")
         })
     })
@@ -214,10 +214,10 @@ describe("DocumentImport", () => {
 
             expect(results[0].type).toBe(DocumentType.PDF)
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith("import_pdf")
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith("import_pdf")
         })
     })
@@ -234,7 +234,7 @@ describe("DocumentImport", () => {
                         hasRequestedType: true,
                         isVirtual: true,
                     },
-                ])
+                ]),
             )
 
             const results = await documentImport.importVirtualDocument()
@@ -247,10 +247,10 @@ describe("DocumentImport", () => {
             expect(results.length).toBe(1)
             expect(results[0].localUri).toBeDefined()
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith("import_virtual_document")
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith("import_virtual_document")
         })
 
@@ -271,7 +271,7 @@ describe("DocumentImport", () => {
                             },
                         ],
                     },
-                ])
+                ]),
             )
 
             const results = await documentImport.importVirtualDocument()
@@ -296,7 +296,7 @@ describe("DocumentImport", () => {
                             },
                         ],
                     },
-                ])
+                ]),
             )
 
             await documentImport.importVirtualDocument()
@@ -304,7 +304,7 @@ describe("DocumentImport", () => {
             // The test will check if the method didn't throw, which implicitly tests
             // that the Google Drive URI was handled correctly
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith("import_virtual_document")
         })
 
@@ -319,12 +319,12 @@ describe("DocumentImport", () => {
                         hasRequestedType: true,
                         isVirtual: true,
                     },
-                ])
+                ]),
             )
 
             // Mock direct copy failure
             ;(FileSystem.copyAsync as jest.Mock).mockImplementation(() =>
-                Promise.reject(new Error("Copy failed"))
+                Promise.reject(new Error("Copy failed")),
             )
 
             // Mock keepLocalCopy failure
@@ -334,7 +334,7 @@ describe("DocumentImport", () => {
                         status: "error",
                         copyError: "Failed to copy file",
                     },
-                ])
+                ]),
             )
 
             const results = await documentImport.importVirtualDocument()
@@ -371,7 +371,7 @@ describe("DocumentImport", () => {
         it("should get file extension from name", () => {
             expect(documentImport.getFileExtension("document.pdf")).toBe("pdf")
             expect(
-                documentImport.getFileExtension("file.name.with.dots.txt")
+                documentImport.getFileExtension("file.name.with.dots.txt"),
             ).toBe("txt")
             expect(documentImport.getFileExtension("filename")).toBe("")
             expect(documentImport.getFileExtension("document.PDF")).toBe("pdf")
@@ -380,8 +380,8 @@ describe("DocumentImport", () => {
         it("should extract filename from URI", () => {
             expect(
                 documentImport.getFileNameFromUri(
-                    "file:///path/to/document.pdf"
-                )
+                    "file:///path/to/document.pdf",
+                ),
             ).toBe("document.pdf")
 
             // Should generate a name if not present
@@ -404,7 +404,7 @@ describe("DocumentImport", () => {
                         hasRequestedType: true,
                         isVirtual: false,
                     },
-                ])
+                ]),
             )
 
             let results = await documentImport.importDocument()
@@ -420,7 +420,7 @@ describe("DocumentImport", () => {
                         hasRequestedType: true,
                         isVirtual: false,
                     },
-                ])
+                ]),
             )
 
             results = await documentImport.importDocument()
@@ -436,7 +436,7 @@ describe("DocumentImport", () => {
                         hasRequestedType: true,
                         isVirtual: false,
                     },
-                ])
+                ]),
             )
 
             results = await documentImport.importDocument()
@@ -452,7 +452,7 @@ describe("DocumentImport", () => {
                         hasRequestedType: true,
                         isVirtual: false,
                     },
-                ])
+                ]),
             )
 
             results = await documentImport.importDocument()

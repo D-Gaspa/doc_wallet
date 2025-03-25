@@ -171,8 +171,8 @@ export const useAuthStore = create<IAuthState>((set) => ({
                 new Error(
                     `Auth check error: ${
                         error instanceof Error ? error.message : String(error)
-                    }`
-                )
+                    }`,
+                ),
             )
             set({ user: null, isAuthenticated: false })
             PerformanceMonitoringService.endMeasure("auth_status_check")

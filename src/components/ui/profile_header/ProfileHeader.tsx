@@ -7,7 +7,7 @@ import {
     Image,
     ImageSourcePropType,
 } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 import DefaultProfile from "../../ui/assets/images/default-avatar.png" // Importing local asset
 
 export interface ProfileHeaderProps {
@@ -21,7 +21,7 @@ export function ProfileHeader({
     profileImage,
     onPressEdit,
 }: ProfileHeaderProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
 
     // Resolve the correct ImageSourcePropType
     const resolvedImage: ImageSourcePropType = profileImage

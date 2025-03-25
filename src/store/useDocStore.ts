@@ -31,7 +31,7 @@ export const useDocStore = create<IDocState>()(
 
                     if (isEncrypted) {
                         logger.debug(
-                            `Document ${id} is encrypted, preparing for decryption`
+                            `Document ${id} is encrypted, preparing for decryption`,
                         )
 
                         const encryptedId = document.content.split(":")[1]
@@ -40,7 +40,7 @@ export const useDocStore = create<IDocState>()(
                             ...document,
                             _getDecryptedContent: async () => {
                                 return await docEncryption.decryptDocument(
-                                    encryptedId
+                                    encryptedId,
                                 )
                             },
                         }
@@ -50,12 +50,12 @@ export const useDocStore = create<IDocState>()(
                 return document
             },
             fetchDocument: async (
-                id: string
+                id: string,
             ): Promise<{ document: IDocument; previewUri: string } | null> => {
                 try {
                     logger.debug(`Fetching document ${id} for viewing`)
                     const document = get().documents.find(
-                        (doc) => doc.id === id
+                        (doc) => doc.id === id,
                     )
 
                     if (!document) {
@@ -67,11 +67,11 @@ export const useDocStore = create<IDocState>()(
                     if (document.sourceUri.startsWith("encrypted:")) {
                         const storage = await documentStorage
                         const previewUri = await storage.getDocumentTempUri(
-                            document
+                            document,
                         )
 
                         logger.debug(
-                            `Created preview for encrypted document ${id}: ${previewUri}`
+                            `Created preview for encrypted document ${id}: ${previewUri}`,
                         )
                         return {
                             document,
@@ -80,7 +80,7 @@ export const useDocStore = create<IDocState>()(
                     }
 
                     logger.debug(
-                        `Using direct path for unencrypted document ${id}: ${document.sourceUri}`
+                        `Using direct path for unencrypted document ${id}: ${document.sourceUri}`,
                     )
                     return {
                         document,
@@ -106,7 +106,7 @@ export const useDocStore = create<IDocState>()(
                             id,
                         },
                         documentData.sourceUri,
-                        true
+                        true,
                     )
 
                     set((state) => ({
@@ -114,7 +114,7 @@ export const useDocStore = create<IDocState>()(
                         isLoading: false,
                     }))
                     logger.info(
-                        `Document with file added successfully with ID: ${id}`
+                        `Document with file added successfully with ID: ${id}`,
                     )
                     PerformanceMonitoringService.endMeasure("add_document")
                     return storedDocument
@@ -138,7 +138,7 @@ export const useDocStore = create<IDocState>()(
                     set({ isLoading: true, error: null })
 
                     const existingDoc = get().documents.find(
-                        (doc) => doc.id === id
+                        (doc) => doc.id === id,
                     )
                     if (!existingDoc) {
                         throw new Error(`Document with ID ${id} not found`)
@@ -164,7 +164,7 @@ export const useDocStore = create<IDocState>()(
                             updates.sourceUri,
                             id,
                             shouldEncrypt,
-                            filename
+                            filename,
                         )
 
                         processedUpdates.content = shouldEncrypt
@@ -191,29 +191,29 @@ export const useDocStore = create<IDocState>()(
                         processedUpdates.sourceUri = existingDoc.sourceUri
 
                         logger.debug(
-                            `File for document ${id} updated successfully`
+                            `File for document ${id} updated successfully`,
                         )
                     }
                     // Handle text content updates
                     else if (updates.content) {
                         logger.debug(
-                            `Encrypting updated content for document ${id}`
+                            `Encrypting updated content for document ${id}`,
                         )
                         const encryptionSuccess =
                             await docEncryption.encryptDocument(
                                 id,
-                                updates.content
+                                updates.content,
                             )
 
                         if (encryptionSuccess) {
                             // Replace it with reference to encrypted content
                             processedUpdates.content = `encrypted:${id}`
                             logger.debug(
-                                `Updated content encrypted successfully for document ${id}`
+                                `Updated content encrypted successfully for document ${id}`,
                             )
                         } else {
                             logger.error(
-                                `Failed to encrypt updated content for document ${id}`
+                                `Failed to encrypt updated content for document ${id}`,
                             )
                         }
                     }
@@ -230,7 +230,7 @@ export const useDocStore = create<IDocState>()(
                                           updatedAt: new Date().toISOString(),
                                       },
                                   }
-                                : doc
+                                : doc,
                         ),
                         selectedDocument:
                             state.selectedDocument?.id === id
@@ -270,7 +270,7 @@ export const useDocStore = create<IDocState>()(
 
                     // First find the document to check if it has encrypted content
                     const document = get().documents.find(
-                        (doc) => doc.id === id
+                        (doc) => doc.id === id,
                     )
 
                     if (!document) {
@@ -286,18 +286,18 @@ export const useDocStore = create<IDocState>()(
                         const deleted = await storage.deleteFile(id, filename)
                         if (!deleted) {
                             logger.warn(
-                                `Could not delete file for document ${id}`
+                                `Could not delete file for document ${id}`,
                             )
                         } else {
                             logger.debug(
-                                `File for document ${id} deleted successfully`
+                                `File for document ${id} deleted successfully`,
                             )
                         }
                     }
                     // If document had encrypted content, delete it from secure storage
                     else if (document.content?.startsWith("encrypted:")) {
                         logger.debug(
-                            `Deleting encrypted content for document ${id}`
+                            `Deleting encrypted content for document ${id}`,
                         )
                         await docEncryption.deleteEncryptedDocument(id)
                     }
@@ -305,7 +305,7 @@ export const useDocStore = create<IDocState>()(
                     // Delete the document from the store
                     set((state) => ({
                         documents: state.documents.filter(
-                            (doc) => doc.id !== id
+                            (doc) => doc.id !== id,
                         ),
                         selectedDocument:
                             state.selectedDocument?.id === id
@@ -341,12 +341,12 @@ export const useDocStore = create<IDocState>()(
             },
 
             getDocumentPreview: async (
-                id: string
+                id: string,
             ): Promise<IDocument | null> => {
                 try {
                     logger.debug(`Getting preview for document ${id}`)
                     const document = get().documents.find(
-                        (doc) => doc.id === id
+                        (doc) => doc.id === id,
                     )
 
                     if (!document) {
@@ -358,11 +358,11 @@ export const useDocStore = create<IDocState>()(
 
                     try {
                         const previewUri = await storage.getDocumentTempUri(
-                            document
+                            document,
                         )
 
                         logger.debug(
-                            `Preview URI generated for document ${id}: ${previewUri}`
+                            `Preview URI generated for document ${id}: ${previewUri}`,
                         )
 
                         // Return a new document object with the preview URI as the sourceUri
@@ -374,14 +374,14 @@ export const useDocStore = create<IDocState>()(
                     } catch (error) {
                         logger.error(
                             `Error getting preview for document ${id}:`,
-                            error
+                            error,
                         )
                         return null
                     }
                 } catch (error) {
                     logger.error(
                         `Error getting preview for document ${id}:`,
-                        error
+                        error,
                     )
                     return null
                 }
@@ -389,17 +389,17 @@ export const useDocStore = create<IDocState>()(
 
             getDecryptedContent: async (id: string) => {
                 PerformanceMonitoringService.startMeasure(
-                    `get_decrypted_content_${id}`
+                    `get_decrypted_content_${id}`,
                 )
                 try {
                     logger.debug(`Getting decrypted content for document ${id}`)
                     const document = get().documents.find(
-                        (doc) => doc.id === id
+                        (doc) => doc.id === id,
                     )
                     if (!document) {
                         logger.warn(`Document ${id} not found`)
                         PerformanceMonitoringService.endMeasure(
-                            `get_decrypted_content_${id}`
+                            `get_decrypted_content_${id}`,
                         )
                         return null
                     }
@@ -407,18 +407,18 @@ export const useDocStore = create<IDocState>()(
                     // Check if content is encrypted
                     if (document.content?.startsWith("encrypted:")) {
                         logger.debug(
-                            `Document ${id} is encrypted, decrypting content`
+                            `Document ${id} is encrypted, decrypting content`,
                         )
                         const content = await docEncryption.decryptDocument(id)
                         if (content) {
                             logger.debug(
-                                `Document ${id} decrypted successfully`
+                                `Document ${id} decrypted successfully`,
                             )
                         } else {
                             logger.warn(`Failed to decrypt document ${id}`)
                         }
                         PerformanceMonitoringService.endMeasure(
-                            `get_decrypted_content_${id}`
+                            `get_decrypted_content_${id}`,
                         )
                         return content
                     }
@@ -426,16 +426,16 @@ export const useDocStore = create<IDocState>()(
                     // If not encrypted, return the content directly
                     logger.debug(`Document ${id} is not encrypted`)
                     PerformanceMonitoringService.endMeasure(
-                        `get_decrypted_content_${id}`
+                        `get_decrypted_content_${id}`,
                     )
                     return document.content
                 } catch (error) {
                     logger.error(
                         `Error getting decrypted content for document ${id}:`,
-                        error
+                        error,
                     )
                     PerformanceMonitoringService.endMeasure(
-                        `get_decrypted_content_${id}`
+                        `get_decrypted_content_${id}`,
                     )
                     return null
                 }
@@ -464,6 +464,6 @@ export const useDocStore = create<IDocState>()(
                 documents: state.documents,
                 // We only persist documents, not loading states or errors
             }),
-        }
-    )
+        },
+    ),
 )

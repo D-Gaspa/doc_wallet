@@ -29,10 +29,10 @@ jest.mock("expo-modules-core", () => {
     const NativeModulesProxy = {
         ExponentFileSystem: {
             downloadAsync: jest.fn(() =>
-                Promise.resolve({ uri: "file://download" })
+                Promise.resolve({ uri: "file://download" }),
             ),
             getInfoAsync: jest.fn(() =>
-                Promise.resolve({ exists: true, uri: "file://test" })
+                Promise.resolve({ exists: true, uri: "file://test" }),
             ),
             readAsStringAsync: jest.fn(() => Promise.resolve("test content")),
             writeAsStringAsync: jest.fn(() => Promise.resolve()),
@@ -41,11 +41,11 @@ jest.mock("expo-modules-core", () => {
             copyAsync: jest.fn(() => Promise.resolve()),
             makeDirectoryAsync: jest.fn(() => Promise.resolve()),
             readDirectoryAsync: jest.fn(() =>
-                Promise.resolve(["file1", "file2"])
+                Promise.resolve(["file1", "file2"]),
             ),
             createDownloadResumable: jest.fn(() => ({
                 downloadAsync: jest.fn(() =>
-                    Promise.resolve({ uri: "file://download" })
+                    Promise.resolve({ uri: "file://download" }),
                 ),
                 pauseAsync: jest.fn(() => Promise.resolve()),
                 resumeAsync: jest.fn(() => Promise.resolve()),
@@ -70,10 +70,10 @@ jest.mock("expo-file-system", () => {
         cacheDirectory: "file:///cache/",
         bundleDirectory: "file:///bundle/",
         downloadAsync: jest.fn(() =>
-            Promise.resolve({ uri: "file://download" })
+            Promise.resolve({ uri: "file://download" }),
         ),
         getInfoAsync: jest.fn(() =>
-            Promise.resolve({ exists: true, uri: "file://test", size: 100 })
+            Promise.resolve({ exists: true, uri: "file://test", size: 100 }),
         ),
         readAsStringAsync: jest.fn(() => Promise.resolve("test content")),
         writeAsStringAsync: jest.fn(() => Promise.resolve()),
@@ -84,7 +84,7 @@ jest.mock("expo-file-system", () => {
         readDirectoryAsync: jest.fn(() => Promise.resolve(["file1", "file2"])),
         createDownloadResumable: jest.fn(() => ({
             downloadAsync: jest.fn(() =>
-                Promise.resolve({ uri: "file://download" })
+                Promise.resolve({ uri: "file://download" }),
             ),
             pauseAsync: jest.fn(() => Promise.resolve()),
             resumeAsync: jest.fn(() => Promise.resolve()),
@@ -112,7 +112,7 @@ jest.mock("buffer", () => ({
 jest.mock("react-native-keychain", () => ({
     setGenericPassword: jest.fn(() => Promise.resolve(true)),
     getGenericPassword: jest.fn(() =>
-        Promise.resolve({ username: "user", password: "pass" })
+        Promise.resolve({ username: "user", password: "pass" }),
     ),
     resetGenericPassword: jest.fn(() => Promise.resolve(true)),
     ACCESSIBLE: {
@@ -142,13 +142,13 @@ jest.mock("@react-native-documents/picker", () => ({
                 hasRequestedType: true,
                 isVirtual: false,
             },
-        ])
+        ]),
     ),
     pickDirectory: jest.fn(() =>
         Promise.resolve({
             uri: "file:///selected/directory",
             name: "directory",
-        })
+        }),
     ),
     keepLocalCopy: jest.fn(() =>
         Promise.resolve([
@@ -156,7 +156,7 @@ jest.mock("@react-native-documents/picker", () => ({
                 status: "success",
                 localUri: "file:///cache/document.pdf",
             },
-        ])
+        ]),
     ),
     isErrorWithCode: (error) =>
         error !== null && typeof error === "object" && "code" in error,

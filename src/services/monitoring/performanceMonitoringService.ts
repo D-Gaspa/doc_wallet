@@ -53,7 +53,7 @@ export class PerformanceMonitoringService {
     // End timing and record the measurement
     static endMeasure(
         operationName: string,
-        metadata?: IPerformanceMetadata
+        metadata?: IPerformanceMetadata,
     ): number | null {
         if (!this.isEnabled) return null
 
@@ -65,7 +65,7 @@ export class PerformanceMonitoringService {
                 performance.measure(
                     operationName,
                     `${operationName}_start`,
-                    `${operationName}_end`
+                    `${operationName}_end`,
                 )
 
                 const entries = performance.getEntriesByName(operationName)
@@ -101,7 +101,7 @@ export class PerformanceMonitoringService {
                 // Log if in development
                 if (isDevelopment) {
                     this.logger.debug(
-                        `${operationName} took ${duration.toFixed(2)}ms`
+                        `${operationName} took ${duration.toFixed(2)}ms`,
                     )
                 }
 
@@ -184,7 +184,7 @@ export class PerformanceMonitoringService {
         try {
             // Get existing metrics
             const existingMetricsJson = await AsyncStorage.getItem(
-                PERF_METRICS_KEY
+                PERF_METRICS_KEY,
             )
             const existingMetrics: IPerformanceMetric[] = existingMetricsJson
                 ? JSON.parse(existingMetricsJson)
@@ -199,7 +199,7 @@ export class PerformanceMonitoringService {
             // Save updated metrics
             await AsyncStorage.setItem(
                 PERF_METRICS_KEY,
-                JSON.stringify(updatedMetrics)
+                JSON.stringify(updatedMetrics),
             )
 
             // Clear the buffer

@@ -37,7 +37,7 @@ export class PinAuthService {
 
             if (attempts >= this.maxAttempts) {
                 this.logger.warn(
-                    `Maximum PIN attempts (${this.maxAttempts}) reached`
+                    `Maximum PIN attempts (${this.maxAttempts}) reached`,
                 )
             }
 
@@ -63,7 +63,7 @@ export class PinAuthService {
                 await this.incrementAttempts()
                 const attempts = await this.getAttempts()
                 this.logger.warn(
-                    `Invalid PIN attempt. Attempts: ${attempts}/${this.maxAttempts}`
+                    `Invalid PIN attempt. Attempts: ${attempts}/${this.maxAttempts}`,
                 )
                 PerformanceMonitoringService.endMeasure("pin_verification")
                 return false
@@ -110,7 +110,7 @@ export class PinAuthService {
             await Keychain.setGenericPassword(
                 "attempts",
                 (attempts + 1).toString(),
-                { service: this.attemptsKey }
+                { service: this.attemptsKey },
             )
             this.logger.debug(`PIN attempts incremented to ${attempts + 1}`)
         } catch (error) {

@@ -49,19 +49,19 @@ describe("LoggingService", () => {
 
         expect(console.log).toHaveBeenCalledWith(
             expect.stringContaining("[DEBUG]"),
-            "Debug message"
+            "Debug message",
         )
         expect(console.info).toHaveBeenCalledWith(
             expect.stringContaining("[INFO]"),
-            "Info message"
+            "Info message",
         )
         expect(console.warn).toHaveBeenCalledWith(
             expect.stringContaining("[WARN]"),
-            "Warning message"
+            "Warning message",
         )
         expect(console.error).toHaveBeenCalledWith(
             expect.stringContaining("[ERROR]"),
-            "Error message"
+            "Error message",
         )
 
         // Restore original config
@@ -101,7 +101,7 @@ describe("LoggingService", () => {
             expect.stringContaining("[DEBUG]"),
             "Debug message",
             { test: "value" },
-            123
+            123,
         )
 
         // Restore original config
@@ -119,7 +119,7 @@ describe("LoggingService", () => {
 
         expect(console.info).toHaveBeenCalledWith(
             expect.stringContaining("[INFO]"),
-            "[TestComponent] Test message"
+            "[TestComponent] Test message",
         )
 
         // Restore original config

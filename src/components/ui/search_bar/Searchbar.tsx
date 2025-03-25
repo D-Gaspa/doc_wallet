@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import { TextInput, TouchableOpacity, View, StyleSheet } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 import SearchIcon from "../assets/svg/search.svg"
 
 export interface SearchBarProps {
@@ -10,11 +10,11 @@ export interface SearchBarProps {
 }
 
 export function SearchBar({
-    placeholder = "Buscar...",
+    placeholder = "Search...",
     onSearch,
     testID,
 }: SearchBarProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
     const [query, setQuery] = useState("")
 
     return (

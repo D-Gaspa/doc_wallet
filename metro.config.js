@@ -13,7 +13,7 @@ const config = {
     resolver: {
         ...defaultConfig.resolver,
         assetExts: defaultConfig.resolver.assetExts.filter(
-            (ext) => ext !== "svg"
+            (ext) => ext !== "svg",
         ),
         sourceExts: [...defaultConfig.resolver.sourceExts, "svg"],
     },

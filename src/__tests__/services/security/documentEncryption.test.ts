@@ -100,7 +100,7 @@ describe("DocumentEncryptionService", () => {
             const result = await encryptionService.encryptDocument(
                 docId,
                 undefined,
-                content
+                content,
             )
 
             expect(result).toBe(true)
@@ -110,13 +110,13 @@ describe("DocumentEncryptionService", () => {
                 expect.objectContaining({
                     service: `com.doc_wallet.doc.${docId}`,
                     accessible: "WHEN_UNLOCKED_THIS_DEVICE_ONLY",
-                })
+                }),
             )
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith(`encrypt_doc_${docId}`)
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith(`encrypt_doc_${docId}`)
         })
 
@@ -128,15 +128,15 @@ describe("DocumentEncryptionService", () => {
                 Promise.resolve({
                     exists: true,
                     uri: fileUri,
-                })
+                }),
             )
             ;(FileSystem.readAsStringAsync as jest.Mock).mockImplementation(
-                () => Promise.resolve("file-content-base64")
+                () => Promise.resolve("file-content-base64"),
             )
 
             const result = await encryptionService.encryptDocument(
                 docId,
-                fileUri
+                fileUri,
             )
 
             expect(result).toBe(true)
@@ -146,17 +146,17 @@ describe("DocumentEncryptionService", () => {
                 expect.objectContaining({
                     service: `com.doc_wallet.doc.${docId}`,
                     accessible: "WHEN_UNLOCKED_THIS_DEVICE_ONLY",
-                })
+                }),
             )
             expect(FileSystem.writeAsStringAsync).toHaveBeenCalledWith(
                 fileUri,
-                expect.stringContaining("DWENC2:")
+                expect.stringContaining("DWENC2:"),
             )
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith(`encrypt_doc_${docId}`)
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith(`encrypt_doc_${docId}`)
         })
 
@@ -169,12 +169,12 @@ describe("DocumentEncryptionService", () => {
                 Promise.resolve({
                     exists: false,
                     uri: fileUri,
-                })
+                }),
             )
 
             const result = await encryptionService.encryptDocument(
                 docId,
-                fileUri
+                fileUri,
             )
 
             expect(result).toBe(false)
@@ -203,23 +203,23 @@ describe("DocumentEncryptionService", () => {
                 Promise.resolve({
                     username: docId,
                     password: "encryption-key-base64",
-                })
+                }),
             )
             ;(FileSystem.readAsStringAsync as jest.Mock).mockImplementation(
-                () => Promise.resolve("DWENC2:iv-base64:encrypted-content")
+                () => Promise.resolve("DWENC2:iv-base64:encrypted-content"),
             )
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementation(() =>
                 Promise.resolve({
                     exists: true,
                     uri: tempUri,
                     size: 1024,
-                })
+                }),
             )
 
             const result = await encryptionService.decryptFileForPreview(
                 docId,
                 fileUri,
-                tempUri
+                tempUri,
             )
 
             expect(result).toBe(true)
@@ -232,13 +232,13 @@ describe("DocumentEncryptionService", () => {
                 expect.anything(),
                 expect.objectContaining({
                     encoding: FileSystem.EncodingType.Base64,
-                })
+                }),
             )
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith(`decrypt_preview_${docId}`)
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith(`decrypt_preview_${docId}`)
         })
 
@@ -248,13 +248,13 @@ describe("DocumentEncryptionService", () => {
             const tempUri = "file:///cache/preview_test.pdf"
 
             ;(Keychain.getGenericPassword as jest.Mock).mockImplementation(() =>
-                Promise.resolve(null)
+                Promise.resolve(null),
             )
 
             const result = await encryptionService.decryptFileForPreview(
                 docId,
                 fileUri,
-                tempUri
+                tempUri,
             )
 
             expect(result).toBe(false)
@@ -272,13 +272,13 @@ describe("DocumentEncryptionService", () => {
                 password: "encryption-key-base64",
             })
             ;(FileSystem.readAsStringAsync as jest.Mock).mockImplementation(
-                () => Promise.resolve("INVALID-FORMAT")
+                () => Promise.resolve("INVALID-FORMAT"),
             )
 
             const result = await encryptionService.decryptFileForPreview(
                 docId,
                 fileUri,
-                tempUri
+                tempUri,
             )
 
             expect(result).toBe(false)
@@ -295,19 +295,19 @@ describe("DocumentEncryptionService", () => {
                 password: "encryption-key-base64",
             })
             ;(FileSystem.readAsStringAsync as jest.Mock).mockResolvedValue(
-                "DWENC2:iv-base64:encrypted-content"
+                "DWENC2:iv-base64:encrypted-content",
             )
             ;(FileSystem.getInfoAsync as jest.Mock).mockImplementation(() =>
                 Promise.resolve({
                     exists: false,
                     uri: tempUri,
-                })
+                }),
             )
 
             const result = await encryptionService.decryptFileForPreview(
                 docId,
                 fileUri,
-                tempUri
+                tempUri,
             )
 
             expect(result).toBe(false)
@@ -323,7 +323,7 @@ describe("DocumentEncryptionService", () => {
                 Promise.resolve({
                     username: docId,
                     password: content,
-                })
+                }),
             )
 
             const result = await encryptionService.decryptDocument(docId)
@@ -333,10 +333,10 @@ describe("DocumentEncryptionService", () => {
                 service: `com.doc_wallet.doc.${docId}`,
             })
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith(`decrypt_doc_${docId}`)
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith(`decrypt_doc_${docId}`)
         })
 
@@ -349,10 +349,10 @@ describe("DocumentEncryptionService", () => {
 
             expect(result).toBeNull()
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith(`decrypt_doc_${docId}`)
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith(`decrypt_doc_${docId}`)
         })
 
@@ -360,17 +360,17 @@ describe("DocumentEncryptionService", () => {
             const docId = "doc123"
 
             ;(Keychain.getGenericPassword as jest.Mock).mockImplementation(() =>
-                Promise.reject(new Error("Keychain error"))
+                Promise.reject(new Error("Keychain error")),
             )
 
             const result = await encryptionService.decryptDocument(docId)
 
             expect(result).toBeNull()
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith(`decrypt_doc_${docId}`)
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith(`decrypt_doc_${docId}`)
         })
     })
@@ -380,7 +380,7 @@ describe("DocumentEncryptionService", () => {
             const docId = "doc123"
 
             const result = await encryptionService.deleteEncryptedDocument(
-                docId
+                docId,
             )
 
             expect(result).toBe(true)
@@ -393,11 +393,11 @@ describe("DocumentEncryptionService", () => {
             const docId = "doc123"
 
             ;(Keychain.resetGenericPassword as jest.Mock).mockImplementation(
-                () => Promise.reject(new Error("Deletion error"))
+                () => Promise.reject(new Error("Deletion error")),
             )
 
             const result = await encryptionService.deleteEncryptedDocument(
-                docId
+                docId,
             )
 
             expect(result).toBe(false)

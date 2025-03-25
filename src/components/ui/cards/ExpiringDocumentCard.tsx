@@ -1,6 +1,6 @@
 import React from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 import ExpiringIcon from "../assets/svg/ExclamationIcon.svg"
 
 export interface ExpiringDocumentCardProps {
@@ -16,7 +16,7 @@ export function ExpiringDocumentCard({
     onPress,
     testID,
 }: ExpiringDocumentCardProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
 
     return (
         <TouchableOpacity

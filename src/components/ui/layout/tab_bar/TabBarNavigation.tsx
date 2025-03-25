@@ -1,6 +1,6 @@
 import React from "react"
 import { View, TouchableOpacity } from "react-native"
-import { useThemeContext } from "../../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../../hooks/useTheme.ts"
 import { StyleSheet } from "react-native"
 
 // Import icons
@@ -25,7 +25,7 @@ export function TabBarNavigation({
     onTabChange,
     testID,
 }: TabbarNavigationProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
 
     return (
         <View style={styles.container} testID={testID ?? "tabbar-navigation"}>

@@ -90,7 +90,7 @@ describe("DocumentPreview", () => {
                 "preview_123.pdf",
                 "preview_456.jpg",
                 "regular_file.txt",
-            ])
+            ]),
         )
     })
 
@@ -112,10 +112,10 @@ describe("DocumentPreview", () => {
             })
 
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith("view_document")
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith("view_document")
         })
 
@@ -130,7 +130,7 @@ describe("DocumentPreview", () => {
                     uri,
                     mimeType: "application/pdf",
                     grantPermissions: "read",
-                })
+                }),
             )
         })
 
@@ -144,7 +144,7 @@ describe("DocumentPreview", () => {
                 expect.objectContaining({
                     uri,
                     mimeType: "text/plain",
-                })
+                }),
             )
         })
 
@@ -156,7 +156,7 @@ describe("DocumentPreview", () => {
 
             expect(AppState.addEventListener).toHaveBeenCalledWith(
                 "change",
-                expect.any(Function)
+                expect.any(Function),
             )
         })
 
@@ -166,14 +166,14 @@ describe("DocumentPreview", () => {
             const mockSubscription = { remove: jest.fn() }
 
             ;(AppState.addEventListener as jest.Mock).mockReturnValue(
-                mockSubscription
+                mockSubscription,
             )
             ;(viewDocument as jest.Mock).mockImplementationOnce(() =>
-                Promise.reject(new Error("Test error"))
+                Promise.reject(new Error("Test error")),
             )
 
             await expect(
-                documentPreview.viewDocumentByUri(uri, undefined, onClose)
+                documentPreview.viewDocumentByUri(uri, undefined, onClose),
             ).rejects.toThrow()
 
             expect(mockSubscription.remove).toHaveBeenCalled()
@@ -192,10 +192,10 @@ describe("DocumentPreview", () => {
             })
 
             expect(
-                PerformanceMonitoringService.startMeasure
+                PerformanceMonitoringService.startMeasure,
             ).toHaveBeenCalledWith("view_document_bookmark")
             expect(
-                PerformanceMonitoringService.endMeasure
+                PerformanceMonitoringService.endMeasure,
             ).toHaveBeenCalledWith("view_document_bookmark")
         })
 
@@ -209,7 +209,7 @@ describe("DocumentPreview", () => {
                 expect.objectContaining({
                     bookmark,
                     mimeType,
-                })
+                }),
             )
         })
     })
@@ -217,28 +217,28 @@ describe("DocumentPreview", () => {
     describe("getMimeTypeForDocumentType", () => {
         it("should return correct mime type for PDF", () => {
             const result = documentPreview.getMimeTypeForDocumentType(
-                DocumentType.PDF
+                DocumentType.PDF,
             )
             expect(result).toBe("application/pdf")
         })
 
         it("should return correct mime type for JPEG image", () => {
             const result = documentPreview.getMimeTypeForDocumentType(
-                DocumentType.IMAGE
+                DocumentType.IMAGE,
             )
             expect(result).toBe("image/jpeg")
         })
 
         it("should return correct mime type for PNG image", () => {
             const result = documentPreview.getMimeTypeForDocumentType(
-                DocumentType.IMAGE_PNG
+                DocumentType.IMAGE_PNG,
             )
             expect(result).toBe("image/png")
         })
 
         it("should return undefined for unknown document type", () => {
             const result = documentPreview.getMimeTypeForDocumentType(
-                DocumentType.UNKNOWN
+                DocumentType.UNKNOWN,
             )
             expect(result).toBeUndefined()
         })
@@ -247,21 +247,21 @@ describe("DocumentPreview", () => {
     describe("canPreviewFileType", () => {
         it("should return true for supported file types", () => {
             expect(documentPreview.canPreviewFileType("document.pdf")).toBe(
-                true
+                true,
             )
             expect(documentPreview.canPreviewFileType("image.jpg")).toBe(true)
             expect(
-                documentPreview.canPreviewFileType("presentation.pptx")
+                documentPreview.canPreviewFileType("presentation.pptx"),
             ).toBe(true)
             expect(documentPreview.canPreviewFileType("spreadsheet.xlsx")).toBe(
-                true
+                true,
             )
         })
 
         it("should return false for unsupported file types", () => {
             expect(documentPreview.canPreviewFileType("file.xyz")).toBe(false)
             expect(documentPreview.canPreviewFileType("archive.zip")).toBe(
-                false
+                false,
             )
         })
 
@@ -272,7 +272,7 @@ describe("DocumentPreview", () => {
         it("should return false for empty or null input", () => {
             expect(documentPreview.canPreviewFileType("")).toBe(false)
             expect(
-                documentPreview.canPreviewFileType(null as unknown as string)
+                documentPreview.canPreviewFileType(null as unknown as string),
             ).toBe(false)
         })
     })
@@ -282,7 +282,7 @@ describe("DocumentPreview", () => {
             const sourceUri = "file:///document/test.pdf"
 
             const tempUri = await documentPreview.createTemporaryPreviewFile(
-                sourceUri
+                sourceUri,
             )
 
             expect(FileSystem.copyAsync).toHaveBeenCalledWith({
@@ -300,7 +300,7 @@ describe("DocumentPreview", () => {
 
             const tempUri = await documentPreview.createTemporaryPreviewFile(
                 sourceUri,
-                preferredExtension
+                preferredExtension,
             )
 
             expect(FileSystem.copyAsync).toHaveBeenCalledWith({
@@ -315,11 +315,11 @@ describe("DocumentPreview", () => {
             const sourceUri = "file:///document/test.pdf"
 
             ;(FileSystem.copyAsync as jest.Mock).mockImplementationOnce(() =>
-                Promise.reject(new Error("Copy failed"))
+                Promise.reject(new Error("Copy failed")),
             )
 
             await expect(
-                documentPreview.createTemporaryPreviewFile(sourceUri)
+                documentPreview.createTemporaryPreviewFile(sourceUri),
             ).rejects.toThrow(/Failed to prepare file/)
         })
     })
@@ -332,11 +332,11 @@ describe("DocumentPreview", () => {
             expect(FileSystem.deleteAsync).toHaveBeenCalledTimes(2)
             expect(FileSystem.deleteAsync).toHaveBeenCalledWith(
                 "file:///cache/preview_123.pdf",
-                { idempotent: true }
+                { idempotent: true },
             )
             expect(FileSystem.deleteAsync).toHaveBeenCalledWith(
                 "file:///cache/preview_456.jpg",
-                { idempotent: true }
+                { idempotent: true },
             )
         })
 
@@ -344,11 +344,11 @@ describe("DocumentPreview", () => {
             ;(
                 FileSystem.readDirectoryAsync as jest.Mock
             ).mockImplementationOnce(() =>
-                Promise.reject(new Error("Read error"))
+                Promise.reject(new Error("Read error")),
             )
 
             await expect(
-                documentPreview.cleanupTemporaryPreviewFiles()
+                documentPreview.cleanupTemporaryPreviewFiles(),
             ).resolves.not.toThrow()
 
             expect(ErrorTrackingService.handleError).toHaveBeenCalled()

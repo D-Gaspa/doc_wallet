@@ -30,7 +30,7 @@ export class DocumentPreview {
     async viewDocumentByUri(
         uri: string,
         mimeType?: string,
-        onClose?: () => void
+        onClose?: () => void,
     ): Promise<void> {
         PerformanceMonitoringService.startMeasure("view_document")
 
@@ -71,7 +71,7 @@ export class DocumentPreview {
                             subscription.remove()
                             onClose()
                         }
-                    }
+                    },
                 )
 
                 this._currentAppStateSubscription = subscription
@@ -96,11 +96,11 @@ export class DocumentPreview {
                     logger.warn("Unable to open file type", error)
                     PerformanceMonitoringService.endMeasure("view_document")
                     throw new Error(
-                        "This file type cannot be previewed by the system"
+                        "This file type cannot be previewed by the system",
                     )
                 } else if (error.code === errorCodes.IN_PROGRESS) {
                     logger.warn(
-                        "Another document preview is already in progress"
+                        "Another document preview is already in progress",
                     )
                     PerformanceMonitoringService.endMeasure("view_document")
                     throw new Error("Another document preview is already open")
@@ -122,7 +122,7 @@ export class DocumentPreview {
      */
     async viewDocumentByBookmark(
         bookmark: string,
-        mimeType?: string
+        mimeType?: string,
     ): Promise<void> {
         PerformanceMonitoringService.startMeasure("view_document_bookmark")
 
@@ -150,13 +150,13 @@ export class DocumentPreview {
                 if (error.code === errorCodes.OPERATION_CANCELED) {
                     logger.debug("User canceled document preview")
                     PerformanceMonitoringService.endMeasure(
-                        "view_document_bookmark"
+                        "view_document_bookmark",
                     )
                     return
                 }
                 logger.error(
                     `Bookmark document preview error: ${error.code}`,
-                    error
+                    error,
                 )
             } else {
                 logger.error("Bookmark document preview error:", error)
@@ -259,7 +259,7 @@ export class DocumentPreview {
      */
     async createTemporaryPreviewFile(
         sourceUri: string,
-        preferredExtension?: string
+        preferredExtension?: string,
     ): Promise<string> {
         try {
             const fileInfo = await FileSystem.getInfoAsync(sourceUri)
@@ -301,11 +301,11 @@ export class DocumentPreview {
             }
 
             const files = await FileSystem.readDirectoryAsync(
-                FileSystem.cacheDirectory
+                FileSystem.cacheDirectory,
             )
 
             const previewFiles = files.filter((filename) =>
-                filename.startsWith("preview_")
+                filename.startsWith("preview_"),
             )
 
             for (const filename of previewFiles) {
@@ -315,7 +315,7 @@ export class DocumentPreview {
             }
 
             logger.info(
-                `Cleaned up ${previewFiles.length} temporary preview files`
+                `Cleaned up ${previewFiles.length} temporary preview files`,
             )
         } catch (error) {
             logger.error("Failed to cleanup temporary preview files", error)

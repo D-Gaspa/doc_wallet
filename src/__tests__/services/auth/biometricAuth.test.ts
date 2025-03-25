@@ -17,10 +17,10 @@ describe("BiometricAuthService", () => {
 
     test("isBiometricsAvailable should return true when hardware and enrollment available", async () => {
         ;(LocalAuthentication.hasHardwareAsync as jest.Mock).mockResolvedValue(
-            true
+            true,
         )
         ;(LocalAuthentication.isEnrolledAsync as jest.Mock).mockResolvedValue(
-            true
+            true,
         )
 
         const result = await biometricAuthService.isBiometricsAvailable()
@@ -32,10 +32,10 @@ describe("BiometricAuthService", () => {
 
     test("isBiometricsAvailable should return false when hardware not available", async () => {
         ;(LocalAuthentication.hasHardwareAsync as jest.Mock).mockResolvedValue(
-            false
+            false,
         )
         ;(LocalAuthentication.isEnrolledAsync as jest.Mock).mockResolvedValue(
-            true
+            true,
         )
 
         const result = await biometricAuthService.isBiometricsAvailable()
@@ -45,10 +45,10 @@ describe("BiometricAuthService", () => {
 
     test("isBiometricsAvailable should return false when not enrolled", async () => {
         ;(LocalAuthentication.hasHardwareAsync as jest.Mock).mockResolvedValue(
-            true
+            true,
         )
         ;(LocalAuthentication.isEnrolledAsync as jest.Mock).mockResolvedValue(
-            false
+            false,
         )
 
         const result = await biometricAuthService.isBiometricsAvailable()
@@ -58,7 +58,7 @@ describe("BiometricAuthService", () => {
 
     test("authenticateWithBiometrics should return true on successful authentication", async () => {
         ;(LocalAuthentication.authenticateAsync as jest.Mock).mockResolvedValue(
-            { success: true }
+            { success: true },
         )
 
         const result = await biometricAuthService.authenticateWithBiometrics()
@@ -73,7 +73,7 @@ describe("BiometricAuthService", () => {
 
     test("authenticateWithBiometrics should return false on failed authentication", async () => {
         ;(LocalAuthentication.authenticateAsync as jest.Mock).mockResolvedValue(
-            { success: false }
+            { success: false },
         )
 
         const result = await biometricAuthService.authenticateWithBiometrics()

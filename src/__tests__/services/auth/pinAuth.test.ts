@@ -29,7 +29,7 @@ describe("PinAuthService", () => {
 
     const mockGetGenericPassword = (
         pin: string | null,
-        attempts: string = "0"
+        attempts: string = "0",
     ) => {
         ;(Keychain.getGenericPassword as jest.Mock).mockImplementation(
             ({ service }: { service: string }) => {
@@ -45,7 +45,7 @@ describe("PinAuthService", () => {
                     username: "attempts",
                     password: attempts,
                 })
-            }
+            },
         )
     }
 
@@ -55,12 +55,12 @@ describe("PinAuthService", () => {
         expect(Keychain.setGenericPassword).toHaveBeenCalledWith(
             "pin_auth",
             expect.not.stringContaining("1234"),
-            expect.any(Object)
+            expect.any(Object),
         )
         expect(Keychain.setGenericPassword).toHaveBeenCalledWith(
             "attempts",
             "0",
-            expect.any(Object)
+            expect.any(Object),
         )
     })
 
@@ -82,7 +82,7 @@ describe("PinAuthService", () => {
         expect(Keychain.setGenericPassword).toHaveBeenCalledWith(
             "attempts",
             "1",
-            expect.any(Object)
+            expect.any(Object),
         )
     })
 

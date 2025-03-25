@@ -20,7 +20,7 @@ export const TokenService = {
                         Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
                     accessible:
                         Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-                }
+                },
             )
             logger.debug("Tokens stored successfully")
             PerformanceMonitoringService.endMeasure("store_tokens")
@@ -79,7 +79,7 @@ export const TokenService = {
             logger.debug("Token validity checked", {
                 isValid,
                 expiresInMinutes: Math.floor(
-                    (tokens.expiresAt - currentTime) / 60000
+                    (tokens.expiresAt - currentTime) / 60000,
                 ),
             })
             return isValid
@@ -121,7 +121,7 @@ export const TokenService = {
                     service: "com.doc_wallet.auth.user_data",
                     accessible:
                         Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-                }
+                },
             )
             logger.debug("User data stored successfully")
             return true

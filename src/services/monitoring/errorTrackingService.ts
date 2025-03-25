@@ -48,21 +48,21 @@ export class ErrorTrackingService {
                                 : new Error(
                                       typeof reason === "string"
                                           ? reason
-                                          : "Unhandled Promise rejection"
+                                          : "Unhandled Promise rejection",
                                   )
 
                         this.handleError(error).then((r) => r)
                     } catch (processingError) {
                         // If we can't properly process the event, create a generic error
                         this.handleError(
-                            new Error("Failed to process unhandled rejection")
+                            new Error("Failed to process unhandled rejection"),
                         ).then((r) => r)
                         this.logger.error(
                             "Error processing unhandled rejection event",
-                            processingError
+                            processingError,
                         )
                     }
-                }
+                },
             )
         }
 
@@ -86,7 +86,7 @@ export class ErrorTrackingService {
         // Log the error
         this.logger.error(
             `${isFatal ? "FATAL " : ""}ERROR: ${error.message}`,
-            errorRecord
+            errorRecord,
         )
 
         // Store critical/fatal errors for future reporting
@@ -136,13 +136,13 @@ export class ErrorTrackingService {
             // Add new error and limit the number stored
             const updatedErrors = [errorRecord, ...existingErrors].slice(
                 0,
-                MAX_STORED_ERRORS
+                MAX_STORED_ERRORS,
             )
 
             // Store updated list
             await AsyncStorage.setItem(
                 ERROR_STORAGE_KEY,
-                JSON.stringify(updatedErrors)
+                JSON.stringify(updatedErrors),
             )
         } catch (storageError) {
             // If we can't store the error, at least log it

@@ -25,14 +25,14 @@ export function useNavigationPersistence() {
                 if (initialUrl) {
                     logger.debug(
                         "Deep link detected, skipping state restoration",
-                        { initialUrl }
+                        { initialUrl },
                     )
                 }
 
                 // Only restore if there's no deep link
                 if (Platform.OS !== "web" && initialUrl == null) {
                     const savedState = await AsyncStorage.getItem(
-                        NAVIGATION_STATE_KEY
+                        NAVIGATION_STATE_KEY,
                     )
 
                     if (savedState) {
@@ -60,7 +60,7 @@ export function useNavigationPersistence() {
         if (Platform.OS !== "web") {
             AsyncStorage.setItem(
                 NAVIGATION_STATE_KEY,
-                JSON.stringify(state)
+                JSON.stringify(state),
             ).catch((error) => {
                 logger.warn("Failed to save navigation state:", error)
             })

@@ -1,6 +1,6 @@
 import React from "react"
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 import ArrowIcon from "../assets/svg/Arrow 1.svg"
 
 export interface DocumentCardProps {
@@ -16,7 +16,7 @@ export function DocumentCard({
     onPress,
     testID,
 }: DocumentCardProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
 
     return (
         <TouchableOpacity

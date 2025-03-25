@@ -40,7 +40,7 @@ describe("ThemeContext", () => {
         const { getByTestId } = render(
             <ThemeProvider>
                 <TestComponent />
-            </ThemeProvider>
+            </ThemeProvider>,
         )
         await act(async () => {}) // Ensures re-render after state update
 
@@ -56,7 +56,7 @@ describe("ThemeContext", () => {
         const { getByTestId } = render(
             <ThemeProvider>
                 <TestComponent />
-            </ThemeProvider>
+            </ThemeProvider>,
         )
         await act(async () => {}) // Ensures re-render after state update
         // Ensures state is updated
@@ -70,7 +70,7 @@ describe("ThemeContext", () => {
         const { getByTestId } = render(
             <ThemeProvider>
                 <TestComponent />
-            </ThemeProvider>
+            </ThemeProvider>,
         )
         await act(async () => {}) // Ensures re-render after state update
 
@@ -109,7 +109,7 @@ describe("ThemeContext", () => {
         const { getByTestId } = render(
             <ThemeProvider>
                 <TestComponent />
-            </ThemeProvider>
+            </ThemeProvider>,
         )
 
         const themeText = getByTestId("themeType")
@@ -136,7 +136,7 @@ describe("ThemeContext", () => {
 
         const revertedThemeText = await waitFor(
             () => getByTestId("themeType"),
-            { timeout: 2000 }
+            { timeout: 2000 },
         )
         expect(revertedThemeText.props.children).toBe("light")
 
