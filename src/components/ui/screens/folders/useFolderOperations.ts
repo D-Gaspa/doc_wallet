@@ -18,7 +18,7 @@ interface Logger {
 
 interface UseFolderOperationsProps {
     folders: Folder[]
-    setFolders: React.Dispatch<React.SetStateAction<Folder[]>>
+    setFolders: (folders: Folder[]) => void
     currentFolderId: string | null
     setAlert: React.Dispatch<React.SetStateAction<AlertState>>
     setFolderModalMode: React.Dispatch<React.SetStateAction<"create" | "edit">>

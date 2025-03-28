@@ -13,15 +13,19 @@ import { FolderMainView } from "./components/ui/screens/folders/FolderMainView.t
 import { TabBar } from "./components/ui/layout/tab_bar/TabBar.tsx"
 import { Button } from "./components/ui/button"
 import { Toast } from "./components/ui/feedback"
+import { FilesScreen } from "./components/ui/screens/screens/FilesScreen.tsx"
+import { TagProvider } from "./components/ui/tag_functionality/TagContext.tsx"
 
 const Tab = createBottomTabNavigator()
 
 // Placeholder Components for "Files" and "Profile"
+/*
 const FilesScreen = () => (
     <View style={styles.screenContainer}>
         <Text style={styles.text}>Files Screen (Coming Soon)</Text>
     </View>
 )
+*/
 
 // Define the types for navigation
 type TabParamList = {
@@ -131,10 +135,12 @@ function MainTabsContent() {
 export default function App() {
     return (
         <ThemeProvider>
-            <NavigationContainer>
-                {/* Use a direct Tab Navigator instead of nesting it in a Stack */}
-                <MainTabsContent />
-            </NavigationContainer>
+            <TagProvider>
+                <NavigationContainer>
+                    {/* Use a direct Tab Navigator instead of nesting it in a Stack */}
+                    <MainTabsContent />
+                </NavigationContainer>
+            </TagProvider>
         </ThemeProvider>
     )
 }
@@ -147,9 +153,5 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-    },
-    text: {
-        fontSize: 18,
-        fontWeight: "bold",
     },
 })
