@@ -10,9 +10,10 @@ import { documentStorage } from "../../../../services/document/storage.ts"
 import { DocumentType, IDocument } from "../../../../types/document.ts"
 import { AddDocumentDetailsSheet } from "./AddDocumentDetailsSheet.tsx"
 import { Folder } from "../folders/types.ts"
-import { LoadingOverlay } from "../../feedback/LoadingOverlay"
+import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
+import { useTagContext } from "../../tag_functionality/TagContext.tsx"
 
-export const FilesScreen = () => {
+export const DocumentsScreen = () => {
     const { colors } = useThemeContext()
     const [pendingDocument, setPendingDocument] = useState<IDocument | null>(
         null,
@@ -20,6 +21,7 @@ export const FilesScreen = () => {
     const [showAddSheet, setShowAddSheet] = useState(false)
     const [folders, setFolders] = useState<Folder[]>([])
     const [isLoading, setLoading] = useState(false)
+    const tagContext = useTagContext()
 
     const handleAddSingleDocument = async () => {
         setLoading(true)
@@ -129,10 +131,28 @@ export const FilesScreen = () => {
                 visible={showAddSheet}
                 document={pendingDocument}
                 onClose={() => setShowAddSheet(false)}
-                onSave={(doc) => {
-                    console.log("Updated doc after tagging and foldering:", doc)
-                    setPendingDocument(null)
+                onSave={async (doc) => {
                     setShowAddSheet(false)
+                    setLoading(true)
+
+                    // Delay 100ms to let tag associations register
+                    setTimeout(() => {
+                        const hydratedTags = tagContext.getTagsForItem(
+                            doc.id,
+                            "document",
+                        )
+                        console.log(
+                            "✅ Hydrated tags after tagging:",
+                            hydratedTags,
+                        )
+
+                        setPendingDocument({
+                            ...doc,
+                            tags: hydratedTags.map((tag) => tag.id),
+                        })
+
+                        setLoading(false)
+                    }, 100)
                 }}
                 folders={folders}
                 setFolders={setFolders}

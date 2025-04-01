@@ -15,6 +15,7 @@ import * as FileSystem from "expo-file-system"
 export interface DocumentCardProps {
     document: IDocument
     onPress: () => void
+    onLongPress?: () => void
     testID?: string
     showAddTagButton?: boolean
     maxTags?: number
@@ -23,6 +24,7 @@ export interface DocumentCardProps {
 export function DocumentCard({
     document,
     onPress,
+    onLongPress,
     testID,
     maxTags = 3,
     showAddTagButton = true,
@@ -76,6 +78,7 @@ export function DocumentCard({
 
     return (
         <TouchableOpacity
+            onLongPress={onLongPress}
             style={[
                 styles.container,
                 {

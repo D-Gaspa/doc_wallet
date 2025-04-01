@@ -13,7 +13,7 @@ type FolderState = {
 const defaultFolders: Folder[] = [
     {
         id: "1",
-        title: "Travel Documents",
+        title: "Travel documents",
         parentId: null,
         type: "travel",
         isShared: false,
@@ -36,7 +36,7 @@ const defaultFolders: Folder[] = [
     },
     {
         id: "3",
-        title: "Vehicle Documents",
+        title: "Vehicle documents",
         parentId: null,
         type: "car",
         isShared: false,

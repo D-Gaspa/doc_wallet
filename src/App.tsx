@@ -14,12 +14,13 @@ import { TabBar } from "./components/ui/layout/tab_bar/TabBar.tsx"
 import { Button } from "./components/ui/button"
 import { Toast } from "./components/ui/feedback"
 import { TagProvider } from "./components/ui/tag_functionality/TagContext.tsx"
+import { DocumentsScreen } from "./components/ui/screens/documents/DocumentsScreen.tsx"
 
 const Tab = createBottomTabNavigator()
 
 // Placeholder Components for "Files" and "Profile"
 /*
-const FilesScreen = () => (
+const DocumentsScreen = () => (
     <View style={styles.screenContainer}>
         <Text style={styles.text}>Files Screen (Coming Soon)</Text>
     </View>
@@ -118,7 +119,7 @@ function MainTabsContent() {
                 }}
             >
                 <Tab.Screen name="Home" component={FolderMainView} />
-                <Tab.Screen name="Files" component={FilesScreen} />
+                <Tab.Screen name="Files" component={DocumentsScreen} />
                 <Tab.Screen name="Profile" component={ProfileScreen} />
             </Tab.Navigator>
 

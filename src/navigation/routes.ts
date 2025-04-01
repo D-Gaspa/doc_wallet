@@ -39,7 +39,7 @@ export const SETTINGS_ROUTES = {
 
 // Main Tab Routes
 export const TAB_ROUTES = {
-    DOCUMENTS: "Documents",
+    DOCUMENTS: "documents",
     PROFILES: "Profiles",
     NOTIFICATIONS: "Notifications",
     SETTINGS: "Settings",

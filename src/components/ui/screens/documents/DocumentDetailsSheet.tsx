@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, Modal } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { Button } from "../../button"
 import { FolderCard } from "../../cards"
-import { TagList } from "../../tag_functionality/TagList"
-import { useThemeContext } from "../../../../context/ThemeContext"
-import { useTagContext } from "../../tag_functionality/TagContext"
+import { TagList } from "../../tag_functionality/TagList.tsx"
+import { useThemeContext } from "../../../../context/ThemeContext.tsx"
+import { useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
-import { Folder } from "../folders/types"
-import { LoadingOverlay } from "../../feedback/LoadingOverlay"
+import { Folder } from "../folders/types.ts"
+import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
 
 interface Props {
     visible: boolean

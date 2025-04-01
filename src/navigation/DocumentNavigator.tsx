@@ -26,7 +26,7 @@ export function DocumentNavigator() {
             <Stack.Screen
                 name={DOCUMENT_ROUTES.DOCUMENTS_HOME}
                 component={DocumentsHomeScreen}
-                options={{ title: "My Documents" }}
+                options={{ title: "My documents" }}
             />
             <Stack.Screen
                 name={DOCUMENT_ROUTES.DOCUMENT_DETAILS}

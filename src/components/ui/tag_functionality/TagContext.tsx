@@ -128,13 +128,13 @@ export function TagProvider({ children }: { children: ReactNode }) {
         const mockAssociations: TagAssociation[] = [
             {
                 tagId: "tag-1",
-                itemId: "1", // Travel Documents folder
+                itemId: "1", // Travel documents folder
                 itemType: "folder",
                 createdAt: new Date(),
             },
             {
                 tagId: "tag-2",
-                itemId: "1", // Travel Documents folder
+                itemId: "1", // Travel documents folder
                 itemType: "folder",
                 createdAt: new Date(),
             },
@@ -146,7 +146,7 @@ export function TagProvider({ children }: { children: ReactNode }) {
             },
             {
                 tagId: "tag-4",
-                itemId: "3", // Vehicle Documents folder
+                itemId: "3", // Vehicle documents folder
                 itemType: "folder",
                 createdAt: new Date(),
             },

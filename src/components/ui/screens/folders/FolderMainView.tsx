@@ -23,6 +23,7 @@ import { DocumentType } from "../../../../types/document.ts"
 import * as FileSystem from "expo-file-system"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
 import { DocumentCard } from "../../cards"
+import { showDocumentOptions } from "../documents/useDocumentOperations.ts"
 
 function FolderMainViewContent() {
     const logger = LoggingService.getLogger
@@ -93,7 +94,7 @@ function FolderMainViewContent() {
         try {
             const docStore = useDocStore.getState()
 
-            // Give encryption time to finish (same as FilesScreen)
+            // Give encryption time to finish (same as DocumentsScreen)
             await new Promise((resolve) => setTimeout(resolve, 200))
 
             // Get the preview file URI (decrypted)
@@ -277,7 +278,7 @@ function FolderMainViewContent() {
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
                     />
-                    {/* Documents in current folder */}
+                    {/* documents in current folder */}
                     {currentFolderId && (
                         <>
                             <Spacer size={16} />
@@ -286,6 +287,7 @@ function FolderMainViewContent() {
                                     key={doc.id}
                                     document={doc}
                                     onPress={() => handleDocumentPress(doc)}
+                                    onLongPress={() => showDocumentOptions(doc)}
                                     testID={`document-${doc.id}`}
                                     showAddTagButton={false}
                                     maxTags={3}
