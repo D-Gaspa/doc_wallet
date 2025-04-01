@@ -65,6 +65,11 @@ interface TagContextType {
         itemIds: string[],
         itemType: "folder" | "document",
     ) => boolean
+    syncTagsForItem: (
+        itemId: string,
+        itemType: "folder" | "document",
+        newTagIds: string[],
+    ) => void
 }
 
 const TagContext = createContext<TagContextType | undefined>(undefined)
@@ -238,6 +243,12 @@ export function TagProvider({ children }: { children: ReactNode }) {
         itemType: "folder" | "document",
         newlyCreatedTag: Tag | null = null,
     ): boolean => {
+        // If full tag metadata is provided and missing, inject it
+        if (newlyCreatedTag && !tags.some((tag) => tag.id === tagId)) {
+            setTags((prev) => [...prev, newlyCreatedTag])
+            logger.debug("Injected newly created tag into tag list", { tagId })
+        }
+
         // Check if tag exists in current state OR is the newly created tag passed in
         const tagExists =
             tags.some((tag) => tag.id === tagId) ||
@@ -320,14 +331,37 @@ export function TagProvider({ children }: { children: ReactNode }) {
         itemId: string,
         itemType: "folder" | "document",
     ): Tag[] => {
-        const tagIds = associations
+        const associatedTagIds = associations
             .filter(
                 (assoc) =>
                     assoc.itemId === itemId && assoc.itemType === itemType,
             )
             .map((assoc) => assoc.tagId)
 
-        return tags.filter((tag) => tagIds.includes(tag.id))
+        const foundTags: Tag[] = []
+        const missingTagIds: string[] = []
+
+        associatedTagIds.forEach((tagId) => {
+            const tag = tags.find((t) => t.id === tagId)
+            if (tag) {
+                foundTags.push(tag)
+            } else {
+                missingTagIds.push(tagId)
+            }
+        })
+
+        if (missingTagIds.length > 0) {
+            logger.debug?.(
+                "⚠️ Some associated tag IDs were not found in `tags[]`",
+                {
+                    itemId,
+                    itemType,
+                    missingTagIds,
+                },
+            )
+        }
+
+        return foundTags
     }
 
     const getItemsWithTag = (
@@ -475,6 +509,22 @@ export function TagProvider({ children }: { children: ReactNode }) {
         return true
     }
 
+    const syncTagsForItem = (
+        itemId: string,
+        itemType: "folder" | "document",
+        newTagIds: string[],
+    ) => {
+        const currentTagIds = associations
+            .filter((a) => a.itemId === itemId && a.itemType === itemType)
+            .map((a) => a.tagId)
+
+        const toAdd = newTagIds.filter((id) => !currentTagIds.includes(id))
+        const toRemove = currentTagIds.filter((id) => !newTagIds.includes(id))
+
+        toAdd.forEach((tagId) => associateTag(tagId, itemId, itemType))
+        toRemove.forEach((tagId) => disassociateTag(tagId, itemId, itemType))
+    }
+
     const batchDisassociateTags = (
         tagIds: string[],
         itemIds: string[],
@@ -530,6 +580,7 @@ export function TagProvider({ children }: { children: ReactNode }) {
                 getSuggestedTags,
                 batchAssociateTags,
                 batchDisassociateTags,
+                syncTagsForItem,
             }}
         >
             {children}

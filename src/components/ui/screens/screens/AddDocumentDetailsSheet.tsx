@@ -83,17 +83,22 @@ export const AddDocumentDetailsSheet = ({
 
         setLoading(true)
         try {
-            await docStore.updateDocument(document.id, {
+            console.log("Saving document with tags:", selectedTagIds)
+            console.log("Saving document to folder:", selectedFolderId)
+
+            const updatedDoc = await docStore.updateDocument(document.id, {
                 ...document,
                 tags: selectedTagIds,
             })
 
             selectedTagIds.forEach((tagId) => {
-                console.log(
-                    `🔗 Associating tag ${tagId} with document ${document.id}`,
-                )
-                tagContext.associateTag(tagId, document.id, "document")
+                const tag = tags.find((t) => t.id === tagId)
+                if (tag) {
+                    tagContext.associateTag(tagId, document.id, "document", tag)
+                }
             })
+
+            tagContext.syncTagsForItem(document.id, "document", selectedTagIds)
 
             setFolders(
                 folders.map((folder) =>
@@ -110,7 +115,10 @@ export const AddDocumentDetailsSheet = ({
                         : folder,
                 ),
             )
-            onSave(document)
+
+            if (!updatedDoc)
+                throw new Error("Failed to retrieve updated document")
+            onSave(updatedDoc)
             onClose()
         } catch (error) {
             console.error("Error saving document details", error)

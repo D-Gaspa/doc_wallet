@@ -61,7 +61,7 @@ export function TagManagerSection({
             const newTag = createTag(name, color)
             if (newTag) {
                 // Automatically associate new tag with current folder
-                associateTag(newTag.id, folderId, "folder")
+                associateTag(newTag.id, folderId, "folder", newTag)
                 setAlert({
                     visible: true,
                     message: "Tag created and added to folder",

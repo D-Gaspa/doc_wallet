@@ -1,6 +1,7 @@
 import { create } from "zustand"
-import { persist } from "zustand/middleware"
+import { createJSONStorage, persist } from "zustand/middleware"
 import type { Folder } from "../components/ui/screens/folders/types"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 
 type FolderState = {
     folders: Folder[]
@@ -116,6 +117,7 @@ export const useFolderStore = create<FolderState>()(
         }),
         {
             name: "folder-store",
+            storage: createJSONStorage(() => AsyncStorage),
         },
     ),
 )

@@ -129,7 +129,8 @@ export const FilesScreen = () => {
                 visible={showAddSheet}
                 document={pendingDocument}
                 onClose={() => setShowAddSheet(false)}
-                onSave={() => {
+                onSave={(doc) => {
+                    console.log("Updated doc after tagging and foldering:", doc)
                     setPendingDocument(null)
                     setShowAddSheet(false)
                 }}

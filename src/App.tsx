@@ -13,7 +13,6 @@ import { FolderMainView } from "./components/ui/screens/folders/FolderMainView.t
 import { TabBar } from "./components/ui/layout/tab_bar/TabBar.tsx"
 import { Button } from "./components/ui/button"
 import { Toast } from "./components/ui/feedback"
-import { FilesScreen } from "./components/ui/screens/screens/FilesScreen.tsx"
 import { TagProvider } from "./components/ui/tag_functionality/TagContext.tsx"
 
 const Tab = createBottomTabNavigator()
