@@ -4,7 +4,11 @@ import { Modal } from "react-native"
 import { Button } from "../../button"
 import { IDocument } from "../../../../types/document.ts"
 import { useDocStore } from "../../../../store"
-import { useTagContext } from "../../tag_functionality/TagContext.tsx"
+import {
+    Tag,
+    TagAssociation,
+    useTagContext,
+} from "../../tag_functionality/TagContext.tsx"
 import { TagList } from "../../tag_functionality/TagList.tsx"
 import { useThemeContext } from "../../../../context/ThemeContext.tsx"
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -40,13 +44,22 @@ export const AddDocumentDetailsSheet = ({
     const setFolders = useFolderStore((s) => s.setFolders)
     const [isLoading, setLoading] = useState(false)
 
+    const [, setHydratedTags] = useState<Tag[]>([])
+
     useEffect(() => {
         if (!visible) {
-            // Clear folder and tag selections when sheet is closed
             setSelectedFolderId(null)
             setSelectedTagIds([])
         }
     }, [visible])
+
+    useEffect(() => {
+        if (document?.id) {
+            const tags = tagContext.getTagsForItem(document.id, "document")
+            console.log("📦 useEffect hydration:", tags)
+            setHydratedTags(tags)
+        }
+    }, [tagContext.associations.length, document?.id])
 
     const renderFolderTree = (
         folders: Folder[],
@@ -77,29 +90,127 @@ export const AddDocumentDetailsSheet = ({
                 : [...prev, tagId],
         )
     }
-
+    {
+        /*
     const handleSave = async () => {
         if (!document || !selectedFolderId) return
 
         setLoading(true)
+
         try {
+            console.log("📝 Saving document")
             console.log("Saving document with tags:", selectedTagIds)
             console.log("Saving document to folder:", selectedFolderId)
 
+            // Step 1: First update the document in the store with tags
             const updatedDoc = await docStore.updateDocument(document.id, {
                 ...document,
                 tags: selectedTagIds,
             })
 
-            selectedTagIds.forEach((tagId) => {
-                const tag = tags.find((t) => t.id === tagId)
-                if (tag) {
-                    tagContext.associateTag(tagId, document.id, "document", tag)
-                }
+            if (!updatedDoc) {
+                throw new Error("Failed to retrieve updated document")
+            }
+
+            // Step 2: Directly update tag associations (skip syncTagsForItem to avoid stale reads)
+            tagContext.setAssociations((prev: TagAssociation[]) => {
+                const filtered = prev.filter(
+                    (a) => !(a.itemId === document.id && a.itemType === "document")
+                )
+
+                const newOnes: TagAssociation[] = selectedTagIds.map((tagId) => ({
+                    tagId,
+                    itemId: document.id,
+                    itemType: "document",
+                    createdAt: new Date(),
+                }))
+
+                return [...filtered, ...newOnes]
             })
 
-            tagContext.syncTagsForItem(document.id, "document", selectedTagIds)
 
+            // Step 2.5: Hydrate after associations are flushed
+            await new Promise<void>((resolve) => {
+                setTimeout(() => {
+                    const hydratedTags = tagContext.getTagsForItem(document.id, "document")
+                    console.log("✅ Hydrated tags after direct set:", hydratedTags)
+                    resolve()
+                }, 50) // or tweak if needed
+            })
+
+
+            // Step 3: Update folder association
+            setFolders(
+                folders.map((folder) =>
+                    folder.id === selectedFolderId
+                        ? {
+                            ...folder,
+                            documentIds: [
+                                ...new Set([
+                                    ...(folder.documentIds || []),
+                                    document.id,
+                                ]),
+                            ],
+                        }
+                        : folder,
+                ),
+            )
+
+            // Step 4: Notify parent component and close sheet
+            onSave(updatedDoc)
+            onClose()
+        } catch (error) {
+            console.error("Error saving document details", error)
+        } finally {
+            setLoading(false)
+        }
+    }
+*/
+    }
+    const handleSave = async () => {
+        if (!document || !selectedFolderId) return
+
+        setLoading(true)
+
+        try {
+            console.log("📝 Saving document")
+            console.log("📂 Folder selected:", selectedFolderId)
+            console.log("🏷️ Selected tags:", selectedTagIds)
+
+            // Step 1: Update the document in the docStore
+            const updatedDoc = await docStore.updateDocument(document.id, {
+                ...document,
+                tags: selectedTagIds,
+            })
+
+            if (!updatedDoc) {
+                throw new Error("❌ Failed to update or retrieve document")
+            }
+
+            const newAssociations: TagAssociation[] = selectedTagIds.map(
+                (tagId) => ({
+                    tagId,
+                    itemId: document.id,
+                    itemType: "document",
+                    createdAt: new Date(),
+                }),
+            )
+
+            console.log("🔁 New tag associations being saved:", newAssociations)
+
+            // Step 3: Replace associations for this document
+            tagContext.setAssociations((prev) => [
+                ...prev.filter(
+                    (a) =>
+                        !(
+                            a.itemId === document.id &&
+                            a.itemType === "document"
+                        ),
+                ),
+                ...newAssociations,
+            ])
+
+            // Step 5: Update folder association
             setFolders(
                 folders.map((folder) =>
                     folder.id === selectedFolderId
@@ -116,12 +227,11 @@ export const AddDocumentDetailsSheet = ({
                 ),
             )
 
-            if (!updatedDoc)
-                throw new Error("Failed to retrieve updated document")
+            // Step 6: Notify parent and close
             onSave(updatedDoc)
             onClose()
         } catch (error) {
-            console.error("Error saving document details", error)
+            console.error("❌ Error in handleSave:", error)
         } finally {
             setLoading(false)
         }

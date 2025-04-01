@@ -11,7 +11,7 @@ import { DocumentType, IDocument } from "../../../../types/document.ts"
 import { AddDocumentDetailsSheet } from "./AddDocumentDetailsSheet.tsx"
 import { Folder } from "../folders/types.ts"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
-import { useTagContext } from "../../tag_functionality/TagContext.tsx"
+import { Tag, useTagContext } from "../../tag_functionality/TagContext.tsx"
 
 export const DocumentsScreen = () => {
     const { colors } = useThemeContext()
@@ -135,24 +135,25 @@ export const DocumentsScreen = () => {
                     setShowAddSheet(false)
                     setLoading(true)
 
-                    // Delay 100ms to let tag associations register
-                    setTimeout(() => {
-                        const hydratedTags = tagContext.getTagsForItem(
-                            doc.id,
-                            "document",
-                        )
-                        console.log(
-                            "✅ Hydrated tags after tagging:",
-                            hydratedTags,
-                        )
+                    // ✅ Wait for tags to actually appear
+                    let hydrated: Tag[] = []
+                    for (let i = 0; i < 5; i++) {
+                        hydrated = tagContext.getTagsForItem(doc.id, "document")
+                        if (hydrated.length) break
+                        await new Promise((res) => setTimeout(res, 100))
+                    }
 
-                        setPendingDocument({
-                            ...doc,
-                            tags: hydratedTags.map((tag) => tag.id),
-                        })
+                    console.log(
+                        "✅ Hydrated tags after tagging (delayed wait):",
+                        hydrated,
+                    )
 
-                        setLoading(false)
-                    }, 100)
+                    setPendingDocument({
+                        ...doc,
+                        tags: hydrated.map((tag) => tag.id),
+                    })
+
+                    setLoading(false)
                 }}
                 folders={folders}
                 setFolders={setFolders}

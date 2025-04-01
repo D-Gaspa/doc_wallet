@@ -70,6 +70,8 @@ interface TagContextType {
         itemType: "folder" | "document",
         newTagIds: string[],
     ) => void
+    setAssociations: React.Dispatch<React.SetStateAction<TagAssociation[]>>
+    setTags: React.Dispatch<React.SetStateAction<Tag[]>>
 }
 
 const TagContext = createContext<TagContextType | undefined>(undefined)
@@ -241,40 +243,11 @@ export function TagProvider({ children }: { children: ReactNode }) {
         tagId: string,
         itemId: string,
         itemType: "folder" | "document",
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         newlyCreatedTag: Tag | null = null,
+        onComplete?: () => void,
     ): boolean => {
-        // If full tag metadata is provided and missing, inject it
-        if (newlyCreatedTag && !tags.some((tag) => tag.id === tagId)) {
-            setTags((prev) => [...prev, newlyCreatedTag])
-            logger.debug("Injected newly created tag into tag list", { tagId })
-        }
-
-        // Check if tag exists in current state OR is the newly created tag passed in
-        const tagExists =
-            tags.some((tag) => tag.id === tagId) ||
-            (newlyCreatedTag && newlyCreatedTag.id === tagId)
-
-        if (!tagExists) {
-            logger.error("Cannot associate: Tag not found", { tagId })
-            return false
-        }
-
-        const associationExists = associations.some(
-            (assoc) =>
-                assoc.tagId === tagId &&
-                assoc.itemId === itemId &&
-                assoc.itemType === itemType,
-        )
-
-        if (associationExists) {
-            logger.debug("Tag association already exists", {
-                tagId,
-                itemId,
-                itemType,
-            })
-            return false
-        }
-
+        // ...
         const newAssociation: TagAssociation = {
             tagId,
             itemId,
@@ -282,10 +255,15 @@ export function TagProvider({ children }: { children: ReactNode }) {
             createdAt: new Date(),
         }
 
-        setAssociations((prevAssociations) => [
-            ...prevAssociations,
-            newAssociation,
-        ])
+        setAssociations((prevAssociations) => {
+            const updated = [...prevAssociations, newAssociation]
+            // ✅ After state is applied, run the callback in the next tick
+            setTimeout(() => {
+                onComplete?.()
+            }, 0)
+            return updated
+        })
+
         logger.debug("Created tag association", { tagId, itemId, itemType })
         return true
     }
@@ -509,20 +487,35 @@ export function TagProvider({ children }: { children: ReactNode }) {
         return true
     }
 
-    const syncTagsForItem = (
+    // In TagContext.tsx
+    const syncTagsForItem = async (
         itemId: string,
         itemType: "folder" | "document",
         newTagIds: string[],
     ) => {
-        const currentTagIds = associations
-            .filter((a) => a.itemId === itemId && a.itemType === itemType)
-            .map((a) => a.tagId)
+        return new Promise<void>((resolve) => {
+            const currentTagIds = associations
+                .filter((a) => a.itemId === itemId && a.itemType === itemType)
+                .map((a) => a.tagId)
 
-        const toAdd = newTagIds.filter((id) => !currentTagIds.includes(id))
-        const toRemove = currentTagIds.filter((id) => !newTagIds.includes(id))
+            const toAdd = newTagIds.filter((id) => !currentTagIds.includes(id))
+            const toRemove = currentTagIds.filter(
+                (id) => !newTagIds.includes(id),
+            )
 
-        toAdd.forEach((tagId) => associateTag(tagId, itemId, itemType))
-        toRemove.forEach((tagId) => disassociateTag(tagId, itemId, itemType))
+            // Process removals first
+            toRemove.forEach((tagId) =>
+                disassociateTag(tagId, itemId, itemType),
+            )
+
+            // Then process additions
+            toAdd.forEach((tagId) => associateTag(tagId, itemId, itemType))
+
+            // Wait for state to update
+            setTimeout(() => {
+                resolve()
+            }, 50)
+        })
     }
 
     const batchDisassociateTags = (
@@ -581,6 +574,8 @@ export function TagProvider({ children }: { children: ReactNode }) {
                 batchAssociateTags,
                 batchDisassociateTags,
                 syncTagsForItem,
+                setAssociations,
+                setTags,
             }}
         >
             {children}

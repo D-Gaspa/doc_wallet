@@ -1,9 +1,9 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native"
 import { useTheme } from "../../../hooks/useTheme.ts"
 import ArrowIcon from "../assets/svg/Arrow 1.svg"
 import { IDocument } from "../../../types/document.ts"
-import { useTagContext } from "../tag_functionality/TagContext.tsx"
+import { Tag, useTagContext } from "../tag_functionality/TagContext.tsx"
 import { ItemTagsManager } from "../tag_functionality/ItemTagsManager.tsx"
 import { documentPreview } from "../../../services/document/preview.ts"
 import { documentStorage } from "../../../services/document/storage"
@@ -31,8 +31,23 @@ export function DocumentCard({
 }: DocumentCardProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
-    const tags = tagContext.getTagsForItem(document.id, "document")
+    //const tags = tagContext.getTagsForItem(document.id, "document")
     const [isLoading, setLoading] = useState(false)
+    const [tags, setTags] = useState<Tag[]>([])
+
+    useEffect(() => {
+        const fetchedTags = tagContext.getTagsForItem(document.id, "document")
+        console.log("[DocumentCard] Fetched tags for", document.id, fetchedTags)
+        console.log(
+            "[DocumentCard] Associations at fetch time:",
+            tagContext.associations,
+        )
+        setTags(fetchedTags)
+    }, [
+        document.id,
+        tagContext.associations.length, // Triggers re-run when associations update
+        tagContext.tags.length,
+    ])
 
     const handleOpenPreview = async () => {
         if (onPress) {
