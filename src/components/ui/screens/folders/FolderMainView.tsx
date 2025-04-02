@@ -101,7 +101,12 @@ function FolderMainViewContent() {
             const previewResult = await docStore.getDocumentPreview(doc.id)
 
             if (!previewResult || !previewResult.sourceUri) {
-                throw new Error("Document preview could not be generated")
+                setAlert({
+                    visible: true,
+                    message: "No preview available for this document.",
+                    type: "error",
+                })
+                return
             }
 
             // Determine MIME type based on metadata
@@ -114,7 +119,12 @@ function FolderMainViewContent() {
                 previewResult.sourceUri,
             )
             if (!fileInfo.exists || fileInfo.size === 0) {
-                throw new Error("Preview file is missing or empty")
+                setAlert({
+                    visible: true,
+                    message: "Preview file is missing or empty.",
+                    type: "error",
+                })
+                return
             }
 
             // Preview the decrypted file using its URI
@@ -286,6 +296,10 @@ function FolderMainViewContent() {
                                 <DocumentCard
                                     key={doc.id}
                                     document={doc}
+                                    tags={tagContext.getTagsForItem(
+                                        doc.id,
+                                        "document",
+                                    )}
                                     onPress={() => handleDocumentPress(doc)}
                                     onLongPress={() => showDocumentOptions(doc)}
                                     testID={`document-${doc.id}`}

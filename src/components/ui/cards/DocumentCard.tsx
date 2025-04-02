@@ -19,6 +19,7 @@ export interface DocumentCardProps {
     testID?: string
     showAddTagButton?: boolean
     maxTags?: number
+    tags?: Tag[]
 }
 
 export function DocumentCard({
@@ -28,6 +29,7 @@ export function DocumentCard({
     testID,
     maxTags = 3,
     showAddTagButton = true,
+    tags: incomingTags,
 }: DocumentCardProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
@@ -35,19 +37,24 @@ export function DocumentCard({
     const [isLoading, setLoading] = useState(false)
     const [tags, setTags] = useState<Tag[]>([])
 
+    console.log("💡 DocumentCard rendering with tags:", tags)
+
     useEffect(() => {
-        const fetchedTags = tagContext.getTagsForItem(document.id, "document")
-        console.log("[DocumentCard] Fetched tags for", document.id, fetchedTags)
-        console.log(
-            "[DocumentCard] Associations at fetch time:",
-            tagContext.associations,
-        )
-        setTags(fetchedTags)
-    }, [
-        document.id,
-        tagContext.associations.length, // Triggers re-run when associations update
-        tagContext.tags.length,
-    ])
+        if (incomingTags) {
+            setTags(incomingTags)
+        } else {
+            const fetchedTags = tagContext.getTagsForItem(
+                document.id,
+                "document",
+            )
+            console.log(
+                "[DocumentCard] Fetched tags for",
+                document.id,
+                fetchedTags,
+            )
+            setTags(fetchedTags)
+        }
+    }, [incomingTags, tagContext.associations.length, document.id])
 
     const handleOpenPreview = async () => {
         if (onPress) {
@@ -62,7 +69,8 @@ export function DocumentCard({
 
             const previewResult = await docStore.getDocumentPreview(document.id)
             if (!previewResult || !previewResult.sourceUri) {
-                throw new Error("Preview failed")
+                console.error("Preview failed")
+                return
             }
 
             const mimeType = documentPreview.getMimeTypeForDocumentType(
@@ -73,7 +81,7 @@ export function DocumentCard({
                 previewResult.sourceUri,
             )
             if (!fileInfo.exists || fileInfo.size === 0) {
-                throw new Error("Preview file is missing or empty")
+                console.error("Preview file is missing or empty")
             }
 
             await documentPreview.viewDocumentByUri(

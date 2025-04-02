@@ -184,7 +184,7 @@ export const AddDocumentDetailsSheet = ({
             })
 
             if (!updatedDoc) {
-                throw new Error("❌ Failed to update or retrieve document")
+                throw new Error("Failed to update or retrieve document")
             }
 
             const newAssociations: TagAssociation[] = selectedTagIds.map(
@@ -199,16 +199,20 @@ export const AddDocumentDetailsSheet = ({
             console.log("🔁 New tag associations being saved:", newAssociations)
 
             // Step 3: Replace associations for this document
-            tagContext.setAssociations((prev) => [
-                ...prev.filter(
-                    (a) =>
-                        !(
-                            a.itemId === document.id &&
-                            a.itemType === "document"
-                        ),
-                ),
-                ...newAssociations,
-            ])
+            tagContext.syncTagsForItem(document.id, "document", selectedTagIds)
+
+            await new Promise((res) => setTimeout(res, 100))
+
+            // Step 4: Hydrate tags
+            const hydratedTags = tagContext.getTagsForItem(
+                document.id,
+                "document",
+            )
+            console.log(
+                "✅ Hydrated tags after tagging (delayed wait):",
+                hydratedTags,
+            )
+            setHydratedTags(hydratedTags)
 
             // Step 5: Update folder association
             setFolders(
