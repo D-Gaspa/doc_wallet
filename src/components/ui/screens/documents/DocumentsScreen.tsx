@@ -1,17 +1,15 @@
 import React, { useState } from "react"
-import { View, StyleSheet } from "react-native"
+import { StyleSheet, View } from "react-native"
 import { Button } from "../../button"
 import { useThemeContext } from "../../../../context/ThemeContext.tsx"
 import { documentImport } from "../../../../services/document/import.ts"
 import { types } from "@react-native-documents/picker"
-import { documentPreview } from "../../../../services/document/preview.ts"
 import { useDocStore } from "../../../../store"
-import { documentStorage } from "../../../../services/document/storage.ts"
 import { DocumentType, IDocument } from "../../../../types/document.ts"
 import { AddDocumentDetailsSheet } from "./AddDocumentDetailsSheet.tsx"
-import { Folder } from "../folders/types.ts"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
-import { Tag, useTagContext } from "../../tag_functionality/TagContext.tsx"
+import { useTagContext } from "../../tag_functionality/TagContext.tsx"
+import { useFolderStore } from "../../../../store/useFolderStore.ts"
 
 export const DocumentsScreen = () => {
     const { colors } = useThemeContext()
@@ -19,9 +17,12 @@ export const DocumentsScreen = () => {
         null,
     )
     const [showAddSheet, setShowAddSheet] = useState(false)
-    const [folders, setFolders] = useState<Folder[]>([])
     const [isLoading, setLoading] = useState(false)
     const tagContext = useTagContext()
+    const docStore = useDocStore()
+
+    const folders = useFolderStore((state) => state.folders)
+    const updateFolders = useFolderStore((state) => state.setFolders)
 
     const handleAddSingleDocument = async () => {
         setLoading(true)
@@ -35,85 +36,93 @@ export const DocumentsScreen = () => {
             // Check if any documents were selected (user might cancel import)
             if (importedDocuments.length > 0) {
                 const document = importedDocuments[0]
-
-                const documentTitle = document.name || "Document_${Date.now()}"
+                const documentTitle = document.name || `Document_${Date.now()}`
                 const uri = document.localUri || document.uri
                 const type = document.type || DocumentType.UNKNOWN
 
-                const docStore = useDocStore.getState()
-
-                // Add logging to debug the URI values
-                console.log("Adding document with URI: ${uri")
-
-                const storedDocument = await docStore.addDocument({
+                // Create a temporary document object to pass to the details sheet
+                // We don't store it in docStore yet - only creating a temporary object
+                const tempDocument: IDocument = {
+                    id: Date.now().toString(), // Temporary ID, which will be replaced when actually saving
                     title: documentTitle,
                     sourceUri: uri,
                     tags: [],
                     metadata: {
-                        createdAt: Date.now().toString(),
-                        updatedAt: Date.now().toString(),
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
                         type: type,
                     },
-                })
-
-                console.log("Document stored successfully:", storedDocument)
-
-                docStore.selectDocument(storedDocument.id)
-
-                // Give a short delay to ensure encryption is complete
-                await new Promise((resolve) => setTimeout(resolve, 200))
-
-                const previewResult = await docStore.getDocumentPreview(
-                    storedDocument.id,
-                )
-
-                if (!previewResult) {
-                    console.error("Failed to get document preview")
-                    throw new Error("Document preview could not be generated")
                 }
 
-                console.log("Preview URI: ${previewResult.sourceUri}")
-                console.log("Document type: ${previewResult.metadata.type}")
-
-                setPendingDocument({
-                    ...storedDocument,
-                    sourceUri: previewResult.sourceUri, // use preview URI
-                })
-
+                setPendingDocument(tempDocument)
                 setShowAddSheet(true)
-
-                // Determine the MIME type from the document type
-                let mimeType: string | undefined
-                if (previewResult.metadata.type === DocumentType.PDF) {
-                    mimeType = "application/pdf"
-                } else if (previewResult.metadata.type === DocumentType.IMAGE) {
-                    mimeType = "image/jpeg"
-                } else if (
-                    previewResult.metadata.type === DocumentType.IMAGE_PNG
-                ) {
-                    mimeType = "image/png"
-                }
-
-                // View the document using the preview URI
-                await documentPreview.viewDocumentByUri(
-                    previewResult.sourceUri,
-                    mimeType,
-                    async () => {
-                        // Clean up after viewing
-                        const storage = await documentStorage
-                        await storage.deletePreviewFile(previewResult.sourceUri)
-                        console.log("Preview file cleaned up after viewing")
-                    },
-                )
             }
         } catch (error) {
-            console.error("Error handling document:", error)
-            // Show an error message to the user
-            // You might want to add a Toast or Alert here
+            console.error("Error selecting document:", error)
         } finally {
             setLoading(false)
         }
     }
+
+    const handleSaveDocument = async (
+        doc: IDocument,
+        selectedFolderId: string,
+        selectedTagIds: string[],
+    ) => {
+        setLoading(true)
+        try {
+            // Store the document
+            const storedDocument = await docStore.addDocument({
+                title: doc.title,
+                sourceUri: doc.sourceUri,
+                tags: selectedTagIds,
+                metadata: doc.metadata,
+            })
+
+            // Update folder association
+            if (selectedFolderId) {
+                const updatedFolders = folders.map((folder) =>
+                    folder.id === selectedFolderId
+                        ? {
+                              ...folder,
+                              documentIds: [
+                                  ...new Set([
+                                      ...(folder.documentIds || []),
+                                      storedDocument.id,
+                                  ]),
+                              ],
+                          }
+                        : folder,
+                )
+                updateFolders(updatedFolders)
+            }
+
+            // Associate tags with the document in the persistent store
+            if (selectedTagIds.length > 0) {
+                tagContext.syncTagsForItem(
+                    storedDocument.id,
+                    "document",
+                    selectedTagIds,
+                )
+
+                // Verify tags were associated (for debugging)
+                console.log(
+                    `Added tags for document ${storedDocument.id}:`,
+                    tagContext
+                        .getTagsForItem(storedDocument.id, "document")
+                        .map((t) => t.name),
+                )
+            }
+
+            setPendingDocument(null)
+            console.log("Document added successfully:", storedDocument.id)
+        } catch (error) {
+            console.error("Error saving document:", error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
     return (
         <View
             style={[styles.container, { backgroundColor: colors.background }]}
@@ -130,33 +139,16 @@ export const DocumentsScreen = () => {
             <AddDocumentDetailsSheet
                 visible={showAddSheet}
                 document={pendingDocument}
-                onClose={() => setShowAddSheet(false)}
-                onSave={async (doc) => {
+                onClose={() => {
                     setShowAddSheet(false)
-                    setLoading(true)
-
-                    // ✅ Wait for tags to actually appear
-                    let hydrated: Tag[] = []
-                    for (let i = 0; i < 5; i++) {
-                        hydrated = tagContext.getTagsForItem(doc.id, "document")
-                        if (hydrated.length) break
-                        await new Promise((res) => setTimeout(res, 100))
-                    }
-
-                    console.log(
-                        "✅ Hydrated tags after tagging (delayed wait):",
-                        hydrated,
-                    )
-
-                    setPendingDocument({
-                        ...doc,
-                        tags: hydrated.map((tag) => tag.id),
-                    })
-
-                    setLoading(false)
+                    setPendingDocument(null)
+                }}
+                onSave={(doc, folderId, tagIds) => {
+                    setShowAddSheet(false)
+                    handleSaveDocument(doc, folderId, tagIds).then((r) => r)
                 }}
                 folders={folders}
-                setFolders={setFolders}
+                setFolders={updateFolders} // Pass the global updater function
             />
             <LoadingOverlay visible={isLoading} />
         </View>

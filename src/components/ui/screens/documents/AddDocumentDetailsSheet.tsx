@@ -1,14 +1,8 @@
-import React, { useEffect, useState, JSX } from "react"
-import { View, Text, StyleSheet } from "react-native"
-import { Modal } from "react-native"
+import React, { JSX, useEffect, useState } from "react"
+import { Modal, StyleSheet, Text, View } from "react-native"
 import { Button } from "../../button"
 import { IDocument } from "../../../../types/document.ts"
-import { useDocStore } from "../../../../store"
-import {
-    Tag,
-    TagAssociation,
-    useTagContext,
-} from "../../tag_functionality/TagContext.tsx"
+import { Tag, useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { TagList } from "../../tag_functionality/TagList.tsx"
 import { useThemeContext } from "../../../../context/ThemeContext.tsx"
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -21,7 +15,7 @@ interface Props {
     visible: boolean
     document: IDocument | null
     onClose: () => void
-    onSave: (doc: IDocument) => void
+    onSave: (doc: IDocument, folderId: string, tagIds: string[]) => void
     folders: Folder[]
     setFolders: (folders: Folder[]) => void
 }
@@ -32,7 +26,6 @@ export const AddDocumentDetailsSheet = ({
     onClose,
     onSave,
 }: Props) => {
-    const docStore = useDocStore((state) => state)
     const tagContext = useTagContext()
     const tags = tagContext?.tags
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
@@ -41,7 +34,6 @@ export const AddDocumentDetailsSheet = ({
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
     const { colors } = useThemeContext()
     const folders = useFolderStore((s) => s.folders)
-    const setFolders = useFolderStore((s) => s.setFolders)
     const [isLoading, setLoading] = useState(false)
 
     const [, setHydratedTags] = useState<Tag[]>([])
@@ -76,7 +68,7 @@ export const AddDocumentDetailsSheet = ({
                         folderId={folder.id}
                         selected={selectedFolderId === folder.id}
                         onPress={() => setSelectedFolderId(folder.id)}
-                        showAddTagButton={false}
+                        showAddTagButton={true}
                     />
                     {renderFolderTree(folders, folder.id, level + 1)}
                 </View>
@@ -90,150 +82,15 @@ export const AddDocumentDetailsSheet = ({
                 : [...prev, tagId],
         )
     }
-    {
-        /*
+
     const handleSave = async () => {
         if (!document || !selectedFolderId) return
 
         setLoading(true)
 
         try {
-            console.log("📝 Saving document")
-            console.log("Saving document with tags:", selectedTagIds)
-            console.log("Saving document to folder:", selectedFolderId)
-
-            // Step 1: First update the document in the store with tags
-            const updatedDoc = await docStore.updateDocument(document.id, {
-                ...document,
-                tags: selectedTagIds,
-            })
-
-            if (!updatedDoc) {
-                throw new Error("Failed to retrieve updated document")
-            }
-
-            // Step 2: Directly update tag associations (skip syncTagsForItem to avoid stale reads)
-            tagContext.setAssociations((prev: TagAssociation[]) => {
-                const filtered = prev.filter(
-                    (a) => !(a.itemId === document.id && a.itemType === "document")
-                )
-
-                const newOnes: TagAssociation[] = selectedTagIds.map((tagId) => ({
-                    tagId,
-                    itemId: document.id,
-                    itemType: "document",
-                    createdAt: new Date(),
-                }))
-
-                return [...filtered, ...newOnes]
-            })
-
-
-            // Step 2.5: Hydrate after associations are flushed
-            await new Promise<void>((resolve) => {
-                setTimeout(() => {
-                    const hydratedTags = tagContext.getTagsForItem(document.id, "document")
-                    console.log("✅ Hydrated tags after direct set:", hydratedTags)
-                    resolve()
-                }, 50) // or tweak if needed
-            })
-
-
-            // Step 3: Update folder association
-            setFolders(
-                folders.map((folder) =>
-                    folder.id === selectedFolderId
-                        ? {
-                            ...folder,
-                            documentIds: [
-                                ...new Set([
-                                    ...(folder.documentIds || []),
-                                    document.id,
-                                ]),
-                            ],
-                        }
-                        : folder,
-                ),
-            )
-
-            // Step 4: Notify parent component and close sheet
-            onSave(updatedDoc)
-            onClose()
-        } catch (error) {
-            console.error("Error saving document details", error)
-        } finally {
-            setLoading(false)
-        }
-    }
-*/
-    }
-    const handleSave = async () => {
-        if (!document || !selectedFolderId) return
-
-        setLoading(true)
-
-        try {
-            console.log("📝 Saving document")
-            console.log("📂 Folder selected:", selectedFolderId)
-            console.log("🏷️ Selected tags:", selectedTagIds)
-
-            // Step 1: Update the document in the docStore
-            const updatedDoc = await docStore.updateDocument(document.id, {
-                ...document,
-                tags: selectedTagIds,
-            })
-
-            if (!updatedDoc) {
-                throw new Error("Failed to update or retrieve document")
-            }
-
-            const newAssociations: TagAssociation[] = selectedTagIds.map(
-                (tagId) => ({
-                    tagId,
-                    itemId: document.id,
-                    itemType: "document",
-                    createdAt: new Date(),
-                }),
-            )
-
-            console.log("🔁 New tag associations being saved:", newAssociations)
-
-            // Step 3: Replace associations for this document
-            tagContext.syncTagsForItem(document.id, "document", selectedTagIds)
-
-            await new Promise((res) => setTimeout(res, 100))
-
-            // Step 4: Hydrate tags
-            const hydratedTags = tagContext.getTagsForItem(
-                document.id,
-                "document",
-            )
-            console.log(
-                "✅ Hydrated tags after tagging (delayed wait):",
-                hydratedTags,
-            )
-            setHydratedTags(hydratedTags)
-
-            // Step 5: Update folder association
-            setFolders(
-                folders.map((folder) =>
-                    folder.id === selectedFolderId
-                        ? {
-                              ...folder,
-                              documentIds: [
-                                  ...new Set([
-                                      ...(folder.documentIds || []),
-                                      document.id,
-                                  ]),
-                              ],
-                          }
-                        : folder,
-                ),
-            )
-
-            // Step 6: Notify parent and close
-            onSave(updatedDoc)
-            onClose()
+            // Pass the relevant data to the parent component
+            onSave(document, selectedFolderId, selectedTagIds)
         } catch (error) {
             console.error("❌ Error in handleSave:", error)
         } finally {
@@ -249,7 +106,6 @@ export const AddDocumentDetailsSheet = ({
                 <View>
                     <Text style={styles.title}>Add Document Details</Text>
 
-                    {/* Folder List */}
                     <Text style={styles.subtitle}>Choose a Folder:</Text>
                     {/* eslint-disable-next-line react-native/no-inline-styles */}
                     <View style={{ marginTop: 8 }}>

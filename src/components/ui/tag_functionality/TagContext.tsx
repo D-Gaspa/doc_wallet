@@ -1,12 +1,6 @@
-// src/context/TagContext.tsx
-import React, {
-    createContext,
-    useContext,
-    useState,
-    useEffect,
-    ReactNode,
-} from "react"
+import React, { createContext, ReactNode, useContext, useEffect } from "react"
 import { LoggingService } from "../../../services/monitoring/loggingService.ts"
+import { useTagStore } from "../../../store/useTagStore"
 
 // Tag type definition
 export interface Tag {
@@ -69,9 +63,7 @@ interface TagContextType {
         itemId: string,
         itemType: "folder" | "document",
         newTagIds: string[],
-    ) => void
-    setAssociations: React.Dispatch<React.SetStateAction<TagAssociation[]>>
-    setTags: React.Dispatch<React.SetStateAction<Tag[]>>
+    ) => boolean
 }
 
 const TagContext = createContext<TagContextType | undefined>(undefined)
@@ -81,88 +73,98 @@ export function TagProvider({ children }: { children: ReactNode }) {
         ? LoggingService.getLogger("TagContext")
         : { debug: console.debug, error: console.error }
 
-    // State for tags and associations
-    const [tags, setTags] = useState<Tag[]>([])
-    const [associations, setAssociations] = useState<TagAssociation[]>([])
+    const tagStore = useTagStore()
+    const {
+        tags,
+        associations,
+        addTag,
+        updateTag: updateTagInStore,
+        removeTag,
+        addAssociation,
+        removeAssociation,
+        syncItemTags,
+    } = tagStore
 
-    // Load initial mock data
+    // Initialize default tags if none exist
     useEffect(() => {
-        // Mock tags
-        const mockTags: Tag[] = [
-            {
-                id: "tag-1",
-                name: "Important",
-                color: "#E74C3C",
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            },
-            {
-                id: "tag-2",
-                name: "Personal",
-                color: "#3498DB",
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            },
-            {
-                id: "tag-3",
-                name: "Work",
-                color: "#2ECC71",
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            },
-            {
-                id: "tag-4",
-                name: "Urgent",
-                color: "#F39C12",
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            },
-            {
-                id: "tag-5",
-                name: "Archive",
-                color: "#7F8C8D",
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            },
-        ]
+        if (tags.length === 0) {
+            logger.debug("Creating default tags")
 
-        // Mock associations
-        const mockAssociations: TagAssociation[] = [
-            {
-                tagId: "tag-1",
-                itemId: "1", // Travel documents folder
-                itemType: "folder",
-                createdAt: new Date(),
-            },
-            {
-                tagId: "tag-2",
-                itemId: "1", // Travel documents folder
-                itemType: "folder",
-                createdAt: new Date(),
-            },
-            {
-                tagId: "tag-3",
-                itemId: "2", // Medical Records folder
-                itemType: "folder",
-                createdAt: new Date(),
-            },
-            {
-                tagId: "tag-4",
-                itemId: "3", // Vehicle documents folder
-                itemType: "folder",
-                createdAt: new Date(),
-            },
-        ]
+            // Default tags that should always be available
+            const defaultTags: Omit<Tag, "id" | "createdAt" | "updatedAt">[] = [
+                {
+                    name: "Important",
+                    color: "#E74C3C",
+                },
+                {
+                    name: "Personal",
+                    color: "#3498DB",
+                },
+                {
+                    name: "Work",
+                    color: "#2ECC71",
+                },
+                {
+                    name: "Urgent",
+                    color: "#F39C12",
+                },
+                {
+                    name: "Archive",
+                    color: "#7F8C8D",
+                },
+            ]
 
-        setTags(mockTags)
-        setAssociations(mockAssociations)
-        logger.debug("Initialized mock tags and associations", {
-            tagCount: mockTags.length,
-            associationCount: mockAssociations.length,
-        })
-    }, [])
+            // Create each default tag
+            const now = new Date()
+            const createdTags: Tag[] = defaultTags.map((tag, index) => ({
+                id: `tag-default-${index + 1}`,
+                name: tag.name,
+                color: tag.color,
+                createdAt: now,
+                updatedAt: now,
+            }))
 
-    // CRUD operations
+            // Add to store
+            tagStore.setTags(createdTags)
+
+            logger.debug("Created default tags", { count: createdTags.length })
+
+            // Add some default associations for common folders
+            const defaultAssociations: TagAssociation[] = [
+                // Travel documents folder
+                {
+                    tagId: "tag-default-1", // Important
+                    itemId: "1",
+                    itemType: "folder",
+                    createdAt: now,
+                },
+                {
+                    tagId: "tag-default-2", // Personal
+                    itemId: "1",
+                    itemType: "folder",
+                    createdAt: now,
+                },
+                // Medical Records folder
+                {
+                    tagId: "tag-default-3", // Work
+                    itemId: "2",
+                    itemType: "folder",
+                    createdAt: now,
+                },
+                // Vehicle documents folder
+                {
+                    tagId: "tag-default-4", // Urgent
+                    itemId: "3",
+                    itemType: "folder",
+                    createdAt: now,
+                },
+            ]
+
+            // Add to store
+            tagStore.setAssociations(defaultAssociations)
+        }
+    }, [tags.length])
+
     const createTag = (name: string, color: string): Tag | null => {
         if (tags.some((tag) => tag.name.toLowerCase() === name.toLowerCase())) {
             logger.error("Tag already exists", { name })
@@ -177,7 +179,8 @@ export function TagProvider({ children }: { children: ReactNode }) {
             updatedAt: new Date(),
         }
 
-        setTags((prevTags) => [...prevTags, newTag])
+        addTag(newTag)
+
         logger.debug("Created new tag", { id: newTag.id, name })
         return newTag
     }
@@ -211,11 +214,7 @@ export function TagProvider({ children }: { children: ReactNode }) {
             updatedAt: new Date(),
         }
 
-        setTags((prevTags) => {
-            const newTags = [...prevTags]
-            newTags[tagIndex] = updatedTag
-            return newTags
-        })
+        updateTagInStore(id, { name, color, updatedAt: new Date() })
 
         logger.debug("Updated tag", { id, name, color })
         return updatedTag
@@ -229,39 +228,31 @@ export function TagProvider({ children }: { children: ReactNode }) {
             return false
         }
 
-        setTags((prevTags) => prevTags.filter((tag) => tag.id !== id))
-        setAssociations((prevAssociations) =>
-            prevAssociations.filter((assoc) => assoc.tagId !== id),
-        )
+        removeTag(id)
 
         logger.debug("Deleted tag", { id })
         return true
     }
 
-    // Association operations - Modified to handle newly created tags
     const associateTag = (
         tagId: string,
         itemId: string,
         itemType: "folder" | "document",
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         newlyCreatedTag: Tag | null = null,
-        onComplete?: () => void,
     ): boolean => {
-        // ...
-        const newAssociation: TagAssociation = {
+        const tagExists =
+            tags.some((tag) => tag.id === tagId) || newlyCreatedTag !== null
+
+        if (!tagExists) {
+            logger.error("Tag not found for association", { tagId })
+            return false
+        }
+
+        addAssociation({
             tagId,
             itemId,
             itemType,
             createdAt: new Date(),
-        }
-
-        setAssociations((prevAssociations) => {
-            const updated = [...prevAssociations, newAssociation]
-            // ✅ After state is applied, run the callback in the next tick
-            setTimeout(() => {
-                onComplete?.()
-            }, 0)
-            return updated
         })
 
         logger.debug("Created tag association", { tagId, itemId, itemType })
@@ -289,22 +280,28 @@ export function TagProvider({ children }: { children: ReactNode }) {
             return false
         }
 
-        setAssociations((prevAssociations) =>
-            prevAssociations.filter(
-                (assoc) =>
-                    !(
-                        assoc.tagId === tagId &&
-                        assoc.itemId === itemId &&
-                        assoc.itemType === itemType
-                    ),
-            ),
-        )
+        removeAssociation(tagId, itemId, itemType)
 
         logger.debug("Removed tag association", { tagId, itemId, itemType })
         return true
     }
 
-    // Query operations
+    const syncTagsForItem = (
+        itemId: string,
+        itemType: "folder" | "document",
+        newTagIds: string[],
+    ): boolean => {
+        logger.debug("Syncing tags for item", {
+            itemId,
+            itemType,
+            tagCount: newTagIds.length,
+        })
+
+        syncItemTags(itemId, itemType, newTagIds)
+
+        return true
+    }
+
     const getTagsForItem = (
         itemId: string,
         itemType: "folder" | "document",
@@ -316,30 +313,7 @@ export function TagProvider({ children }: { children: ReactNode }) {
             )
             .map((assoc) => assoc.tagId)
 
-        const foundTags: Tag[] = []
-        const missingTagIds: string[] = []
-
-        associatedTagIds.forEach((tagId) => {
-            const tag = tags.find((t) => t.id === tagId)
-            if (tag) {
-                foundTags.push(tag)
-            } else {
-                missingTagIds.push(tagId)
-            }
-        })
-
-        if (missingTagIds.length > 0) {
-            logger.debug?.(
-                "⚠️ Some associated tag IDs were not found in `tags[]`",
-                {
-                    itemId,
-                    itemType,
-                    missingTagIds,
-                },
-            )
-        }
-
-        return foundTags
+        return tags.filter((tag) => associatedTagIds.includes(tag.id))
     }
 
     const getItemsWithTag = (
@@ -355,7 +329,6 @@ export function TagProvider({ children }: { children: ReactNode }) {
             .map((assoc) => assoc.itemId)
     }
 
-    // Tag suggestion system
     const getFrequentlyUsedTags = (limit = 5): Tag[] => {
         // Count occurrences of each tag
         const tagCounts: Record<string, number> = {}
@@ -396,7 +369,6 @@ export function TagProvider({ children }: { children: ReactNode }) {
             .filter((tag): tag is Tag => tag !== undefined)
     }
 
-    // Suggest tags based on content (simple implementation - in a real app this would be more sophisticated)
     const getSuggestedTags = (
         itemType: "folder" | "document",
         itemName: string,
@@ -433,13 +405,11 @@ export function TagProvider({ children }: { children: ReactNode }) {
             .slice(0, 5) // Limit to 5 suggestions
     }
 
-    // Batch operations
     const batchAssociateTags = (
         tagIds: string[],
         itemIds: string[],
         itemType: "folder" | "document",
     ): boolean => {
-        // Validate all tags exist
         const allTagsExist = tagIds.every((tagId) =>
             tags.some((tag) => tag.id === tagId),
         )
@@ -448,12 +418,10 @@ export function TagProvider({ children }: { children: ReactNode }) {
             return false
         }
 
-        // Create new associations (filtering out existing ones)
         const newAssociations: TagAssociation[] = []
 
         tagIds.forEach((tagId) => {
             itemIds.forEach((itemId) => {
-                // Check if association already exists
                 const exists = associations.some(
                     (assoc) =>
                         assoc.tagId === tagId &&
@@ -477,7 +445,8 @@ export function TagProvider({ children }: { children: ReactNode }) {
             return true // Consider this a success (nothing to do)
         }
 
-        setAssociations((prev) => [...prev, ...newAssociations])
+        tagStore.addAssociations(newAssociations)
+
         logger.debug("Batch associated tags", {
             tagCount: tagIds.length,
             itemCount: itemIds.length,
@@ -487,43 +456,11 @@ export function TagProvider({ children }: { children: ReactNode }) {
         return true
     }
 
-    // In TagContext.tsx
-    const syncTagsForItem = async (
-        itemId: string,
-        itemType: "folder" | "document",
-        newTagIds: string[],
-    ) => {
-        return new Promise<void>((resolve) => {
-            const currentTagIds = associations
-                .filter((a) => a.itemId === itemId && a.itemType === itemType)
-                .map((a) => a.tagId)
-
-            const toAdd = newTagIds.filter((id) => !currentTagIds.includes(id))
-            const toRemove = currentTagIds.filter(
-                (id) => !newTagIds.includes(id),
-            )
-
-            // Process removals first
-            toRemove.forEach((tagId) =>
-                disassociateTag(tagId, itemId, itemType),
-            )
-
-            // Then process additions
-            toAdd.forEach((tagId) => associateTag(tagId, itemId, itemType))
-
-            // Wait for state to update
-            setTimeout(() => {
-                resolve()
-            }, 50)
-        })
-    }
-
     const batchDisassociateTags = (
         tagIds: string[],
         itemIds: string[],
         itemType: "folder" | "document",
     ): boolean => {
-        // Check if any associations exist
         const hasAssociations = associations.some(
             (assoc) =>
                 tagIds.includes(assoc.tagId) &&
@@ -536,17 +473,20 @@ export function TagProvider({ children }: { children: ReactNode }) {
             return false
         }
 
-        // Filter out the specified associations
-        setAssociations((prev) =>
-            prev.filter(
-                (assoc) =>
-                    !(
-                        tagIds.includes(assoc.tagId) &&
-                        itemIds.includes(assoc.itemId) &&
-                        assoc.itemType === itemType
-                    ),
-            ),
-        )
+        tagIds.forEach((tagId) => {
+            itemIds.forEach((itemId) => {
+                const exists = associations.some(
+                    (assoc) =>
+                        assoc.tagId === tagId &&
+                        assoc.itemId === itemId &&
+                        assoc.itemType === itemType,
+                )
+
+                if (exists) {
+                    tagStore.removeAssociation(tagId, itemId, itemType)
+                }
+            })
+        })
 
         logger.debug("Batch disassociated tags", {
             tagCount: tagIds.length,
@@ -574,8 +514,6 @@ export function TagProvider({ children }: { children: ReactNode }) {
                 batchAssociateTags,
                 batchDisassociateTags,
                 syncTagsForItem,
-                setAssociations,
-                setTags,
             }}
         >
             {children}
@@ -583,7 +521,6 @@ export function TagProvider({ children }: { children: ReactNode }) {
     )
 }
 
-// Custom hook for using tag context
 export function useTagContext() {
     const context = useContext(TagContext)
     if (context === undefined) {

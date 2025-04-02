@@ -69,19 +69,25 @@ const ProfileScreen: React.FC = () => {
     )
 }
 
-// Wrapper component for the tab navigator
 function MainTabsContent() {
-    // Use the properly typed navigation
     const navigation = useNavigation<NavigationProp<TabParamList>>()
 
-    // Debug the navigation state structure
+    const folderMainViewRef = React.useRef<{
+        resetToRootFolder: () => void
+    } | null>(null)
+
+    const handleTabReselect = (tab: string) => {
+        if (tab === "Home" && folderMainViewRef.current) {
+            // If Home tab is reselected, reset to root folder
+            folderMainViewRef.current.resetToRootFolder()
+        }
+    }
+
     const currentRouteName = useNavigationState((state) => {
         console.log("Navigation State:", JSON.stringify(state, null, 2))
 
         // With nested navigators, we need to check if this is a tab navigator
-        // The structure might be different from expected
         if (state?.routes?.[0]?.state?.routes) {
-            // This is likely a case of nested navigators (Stack containing Tabs)
             const tabState = state.routes[0].state
             const tabRoutes = tabState.routes || []
             const tabIndex = tabState.index ?? 0
@@ -118,15 +124,17 @@ function MainTabsContent() {
                     tabBarStyle: { display: "none" },
                 }}
             >
-                <Tab.Screen name="Home" component={FolderMainView} />
+                <Tab.Screen name="Home">
+                    {() => <FolderMainView ref={folderMainViewRef} />}
+                </Tab.Screen>
                 <Tab.Screen name="Files" component={DocumentsScreen} />
                 <Tab.Screen name="Profile" component={ProfileScreen} />
             </Tab.Navigator>
 
-            {/* Custom TabBar at the Bottom */}
             <TabBar
                 activeTab={currentRouteName}
                 onTabChange={handleTabChange}
+                onTabReselect={handleTabReselect}
             />
         </View>
     )
@@ -137,7 +145,6 @@ export default function App() {
         <ThemeProvider>
             <TagProvider>
                 <NavigationContainer>
-                    {/* Use a direct Tab Navigator instead of nesting it in a Stack */}
                     <MainTabsContent />
                 </NavigationContainer>
             </TagProvider>

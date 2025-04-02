@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { View, StyleSheet } from "react-native"
+import { StyleSheet, View } from "react-native"
 import { Button } from "../../button"
 import { useThemeContext } from "../../../../context/ThemeContext.tsx"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"

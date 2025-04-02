@@ -1,16 +1,22 @@
 import React from "react"
-import { View, StyleSheet } from "react-native"
+import { StyleSheet, View } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme.ts"
 import { TabBarNavigation } from "./TabBarNavigation.tsx"
 
 export interface TabBarProps {
     activeTab: string
     onTabChange: (tab: string) => void
+    onTabReselect?: (tab: string) => void
     onAddPress?: () => void
     testID?: string
 }
 
-export function TabBar({ activeTab, onTabChange, testID }: TabBarProps) {
+export function TabBar({
+    activeTab,
+    onTabChange,
+    onTabReselect,
+    testID,
+}: TabBarProps) {
     const { colors } = useTheme()
 
     return (
@@ -25,7 +31,11 @@ export function TabBar({ activeTab, onTabChange, testID }: TabBarProps) {
             testID={testID ?? "tabBar-root"}
         >
             {/* Bottom Navigation Tabs */}
-            <TabBarNavigation activeTab={activeTab} onTabChange={onTabChange} />
+            <TabBarNavigation
+                activeTab={activeTab}
+                onTabChange={onTabChange}
+                onTabReselect={onTabReselect}
+            />
         </View>
     )
 }

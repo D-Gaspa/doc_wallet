@@ -1,10 +1,10 @@
-import React, { useState } from "react"
+import React, { forwardRef, useImperativeHandle, useState } from "react"
 import { StyleSheet, View } from "react-native"
-import { Container, Stack, Spacer } from "../../layout"
+import { Container, Spacer, Stack } from "../../layout"
 import { Button } from "../../button"
 import { Alert as AlertComponent, AlertType } from "../../feedback/Alert"
 import { LoggingService } from "../../../../services/monitoring/loggingService"
-import { UnifiedFolderModal, FolderType } from "./FolderModal"
+import { FolderType, UnifiedFolderModal } from "./FolderModal"
 import { TagProvider, useTagContext } from "../../tag_functionality/TagContext"
 import { BatchTagManager } from "../../tag_functionality/BatchTagManager"
 import { FolderHeader } from "./FolderHeader"
@@ -16,16 +16,15 @@ import { useSelectionMode } from "./useSelectionMode"
 import { Folder } from "./types"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { useDocStore } from "../../../../store"
-import { IDocument } from "../../../../types/document.ts"
+import { DocumentType, IDocument } from "../../../../types/document.ts"
 import { documentPreview } from "../../../../services/document/preview.ts"
 import { documentStorage } from "../../../../services/document/storage.ts"
-import { DocumentType } from "../../../../types/document.ts"
 import * as FileSystem from "expo-file-system"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
 import { DocumentCard } from "../../cards"
 import { showDocumentOptions } from "../documents/useDocumentOperations.ts"
 
-function FolderMainViewContent() {
+const FolderMainViewContent = forwardRef((_, ref) => {
     const logger = LoggingService.getLogger
         ? LoggingService.getLogger("FolderMainView")
         : { debug: console.debug }
@@ -63,6 +62,13 @@ function FolderMainViewContent() {
     const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([])
     const [batchTagModalVisible, setBatchTagModalVisible] = useState(false)
 
+    useImperativeHandle(ref, () => ({
+        resetToRootFolder: () => {
+            logger.debug("Resetting to root folder view")
+            setCurrentFolderId(null)
+        },
+    }))
+
     const {
         handleCreateFolder,
         handleUpdateFolder,
@@ -88,7 +94,6 @@ function FolderMainViewContent() {
         handleFolderSelect,
     } = useSelectionMode()
 
-    // Handle opening selected document
     const handleDocumentPress = async (doc: IDocument) => {
         setLoading(true)
         try {
@@ -114,7 +119,7 @@ function FolderMainViewContent() {
                 previewResult.metadata?.type ?? DocumentType.PDF,
             )
 
-            // Optional: check if preview file actually exists
+            // Optional: check if the preview file actually exists
             const fileInfo = await FileSystem.getInfoAsync(
                 previewResult.sourceUri,
             )
@@ -156,7 +161,6 @@ function FolderMainViewContent() {
         return documents.filter((doc) => current.documentIds!.includes(doc.id))
     }
 
-    // Navigate to a folder
     const handleFolderPress = (folderId: string) => {
         if (selectionMode) {
             // In selection mode, pressing toggles selection instead of navigating
@@ -167,7 +171,6 @@ function FolderMainViewContent() {
         }
     }
 
-    // Navigate back to parent folder
     const handleBackPress = () => {
         if (selectionMode) {
             // Exit selection mode when pressing back in selection mode
@@ -187,14 +190,12 @@ function FolderMainViewContent() {
         }
     }
 
-    // Open create folder modal
     const handleCreateFolderPress = () => {
         setFolderModalMode("create")
         setFolderToEdit(null)
         setFolderModalVisible(true)
     }
 
-    // Handle saving a folder (create or update)
     const handleSaveFolder = (
         folderName: string,
         folderType: FolderType,
@@ -205,18 +206,14 @@ function FolderMainViewContent() {
             // Update existing folder
             handleUpdateFolder(folderId, folderName, folderType, customIconId)
         } else {
-            // Create new folder
             handleCreateFolder(folderName, folderType, customIconId)
         }
     }
 
-    // Handle tag filtering
     const handleTagFilterPress = (tagId: string | null) => {
         if (tagId === null) {
-            // Clear filter when null is passed
             setSelectedTagFilters([])
         } else {
-            // Toggle the tag in the filter list
             setSelectedTagFilters((prev) => {
                 if (prev.includes(tagId)) {
                     return prev.filter((id) => id !== tagId)
@@ -227,9 +224,7 @@ function FolderMainViewContent() {
         }
     }
 
-    // Handle adding a tag to a folder
     const handleAddTagToFolder = (tagId: string, folderId: string) => {
-        // Call the associate tag function from your tag context
         tagContext.associateTag(tagId, folderId, "folder")
 
         setAlert({
@@ -241,11 +236,9 @@ function FolderMainViewContent() {
         logger.debug("Added tag to folder", { tagId, folderId })
     }
 
-    // Filter folders based on search query and tags
     const filteredFolders =
         searchQuery || selectedTagFilters.length > 0
             ? folders.filter((folder) => {
-                  // Check if folder is in the current directory
                   const inCurrentDirectory = folder.parentId === currentFolderId
 
                   // Apply search filter
@@ -413,16 +406,19 @@ function FolderMainViewContent() {
             )}
         </Container>
     )
-}
+})
 
-// Wrapper component with TagProvider
-export function FolderMainView() {
+FolderMainViewContent.displayName = "FolderMainViewContent"
+
+export const FolderMainView = forwardRef((props, ref) => {
     return (
         <TagProvider>
-            <FolderMainViewContent />
+            <FolderMainViewContent ref={ref} {...props} />
         </TagProvider>
     )
-}
+})
+
+FolderMainView.displayName = "FolderMainView"
 
 const styles = StyleSheet.create({
     contentContainer: {
@@ -441,7 +437,7 @@ const styles = StyleSheet.create({
     },
     alertContainer: {
         position: "absolute",
-        bottom: 120, // Position above the create button
+        bottom: 120,
         left: 0,
         right: 0,
         zIndex: 10,
