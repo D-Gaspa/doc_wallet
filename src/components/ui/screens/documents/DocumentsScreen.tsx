@@ -10,7 +10,7 @@ import { AddDocumentDetailsSheet } from "./AddDocumentDetailsSheet.tsx"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
 import { useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
-import { Toast } from "../../feedback"
+import { Alert } from "../../feedback"
 
 export const DocumentsScreen = () => {
     const { colors } = useThemeContext()
@@ -24,7 +24,7 @@ export const DocumentsScreen = () => {
 
     const folders = useFolderStore((state) => state.folders)
     const updateFolders = useFolderStore((state) => state.setFolders)
-    const [toastVisible, setToastVisible] = useState(false)
+    const [toastVisible, settoastVisible] = useState(false)
 
     const handleAddSingleDocument = async () => {
         setLoading(true)
@@ -122,7 +122,7 @@ export const DocumentsScreen = () => {
             console.error("Error saving document:", error)
         } finally {
             setLoading(false)
-            setToastVisible(true)
+            settoastVisible(true)
         }
     }
 
@@ -154,10 +154,11 @@ export const DocumentsScreen = () => {
                 setFolders={updateFolders} // Pass the global updater function
             />
             <LoadingOverlay visible={isLoading} />
-            <Toast
+            <Alert
+                type={"success"}
                 message={"Document was successfully saved"}
                 visible={toastVisible}
-                onDismiss={() => setToastVisible(false)}
+                onClose={() => settoastVisible(false)}
             />
         </View>
     )
