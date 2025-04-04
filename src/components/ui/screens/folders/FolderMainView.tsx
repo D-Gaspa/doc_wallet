@@ -296,7 +296,7 @@ const FolderMainViewContent = forwardRef((_, ref) => {
                                     onPress={() => handleDocumentPress(doc)}
                                     onLongPress={() => showDocumentOptions(doc)}
                                     testID={`document-${doc.id}`}
-                                    showAddTagButton={false}
+                                    showAddTagButton={true}
                                     maxTags={3}
                                 />
                             ))}

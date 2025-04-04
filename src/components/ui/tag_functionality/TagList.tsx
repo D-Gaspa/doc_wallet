@@ -26,7 +26,7 @@ export interface TagListProps {
     maxTags?: number
     testID?: string
     // Props for add tag button
-    showAddButton?: boolean
+    showAddTagButton?: boolean
     onAddTagPress?: () => void
 }
 
@@ -38,13 +38,13 @@ export function TagList({
     horizontal = true,
     maxTags,
     testID,
-    showAddButton = false,
+    showAddTagButton = false,
     onAddTagPress,
 }: TagListProps) {
     const { colors } = useTheme() // Get theme colors
 
     // When no tags and no add button, return null
-    if (tags.length === 0 && !showAddButton) {
+    if (tags.length === 0 && !showAddTagButton) {
         return null
     }
 
@@ -99,7 +99,7 @@ export function TagList({
             )}
 
             {/* Add Tag Button styled as a tag */}
-            {showAddButton && onAddTagPress && (
+            {showAddTagButton && onAddTagPress && (
                 <TouchableOpacity
                     style={[
                         styles.addTagButton,

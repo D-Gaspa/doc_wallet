@@ -145,7 +145,7 @@ export function ItemTagsManager({
                 selectedTags={selectedTagIds}
                 horizontal={horizontal}
                 maxTags={maxTags}
-                showAddButton={showAddTagButton !== false}
+                showAddTagButton={showAddTagButton !== false}
                 onAddTagPress={handleShowTagMenu}
             />
 

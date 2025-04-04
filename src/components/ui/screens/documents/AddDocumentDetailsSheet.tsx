@@ -68,7 +68,7 @@ export const AddDocumentDetailsSheet = ({
                         folderId={folder.id}
                         selected={selectedFolderId === folder.id}
                         onPress={() => setSelectedFolderId(folder.id)}
-                        showAddTagButton={true}
+                        showAddTagButton={false}
                     />
                     {renderFolderTree(folders, folder.id, level + 1)}
                 </View>
@@ -104,21 +104,27 @@ export const AddDocumentDetailsSheet = ({
                 style={[styles.sheet, { backgroundColor: colors.background }]}
             >
                 <View>
-                    <Text style={styles.title}>Add Document Details</Text>
+                    <Text style={[styles.title, { color: colors.text }]}>
+                        Add Document Details
+                    </Text>
 
-                    <Text style={styles.subtitle}>Choose a Folder:</Text>
+                    <Text style={[styles.subtitle, { color: colors.text }]}>
+                        Choose a Folder:
+                    </Text>
                     {/* eslint-disable-next-line react-native/no-inline-styles */}
                     <View style={{ marginTop: 8 }}>
                         {renderFolderTree(folders)}
                     </View>
-
                     {/* Tag List */}
-                    <Text style={styles.subtitle}>Select Tags:</Text>
+                    <Text style={[styles.subtitle, { color: colors.text }]}>
+                        Select Tags:
+                    </Text>
 
                     <TagList
                         tags={tags}
                         selectedTags={selectedTagIds}
                         onTagPress={handleTagToggle}
+                        showAddTagButton={false}
                     />
 
                     {/* Save Button */}

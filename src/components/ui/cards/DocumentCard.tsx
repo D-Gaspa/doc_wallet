@@ -36,8 +36,36 @@ export function DocumentCard({
     //const tags = tagContext.getTagsForItem(document.id, "document")
     const [isLoading, setLoading] = useState(false)
     const [tags, setTags] = useState<Tag[]>([])
+    const [previewUri, setPreviewUri] = useState<string | null>(null)
 
     console.log("💡 DocumentCard rendering with tags:", tags)
+
+    useEffect(() => {
+        let isMounted = true
+
+        const fetchPreview = async () => {
+            try {
+                const docStore = useDocStore.getState()
+                const preview = await docStore.getDocumentPreview(document.id)
+
+                if (preview?.sourceUri && isMounted) {
+                    const fileInfo = await FileSystem.getInfoAsync(
+                        preview.sourceUri,
+                    )
+                    if (fileInfo.exists && fileInfo.size > 0) {
+                        setPreviewUri(preview.sourceUri)
+                    }
+                }
+            } catch (err) {
+                console.warn("Failed to load preview", err)
+            }
+        }
+
+        fetchPreview()
+        return () => {
+            isMounted = false
+        }
+    }, [document.id])
 
     useEffect(() => {
         if (incomingTags) {
@@ -112,7 +140,11 @@ export function DocumentCard({
             onPress={handleOpenPreview}
             testID={testID}
         >
-            <Image source={{ uri: document.sourceUri }} style={styles.image} />
+            <Image
+                source={{ uri: previewUri ?? document.sourceUri }}
+                style={styles.image}
+                resizeMode="cover"
+            />
 
             <View style={styles.content}>
                 <Text style={[styles.title, { color: colors.text }]}>
