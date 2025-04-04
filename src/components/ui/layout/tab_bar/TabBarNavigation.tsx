@@ -1,16 +1,15 @@
 import React from "react"
-import { View, TouchableOpacity } from "react-native"
+import { StyleSheet, TouchableOpacity, View } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme.ts"
-import { StyleSheet } from "react-native"
 
-// Import icons
 import HomeIcon from "../../assets/svg/Home.svg"
 import ProfileIcon from "../../assets/svg/Profile.svg"
 import AddFileIcon from "../../assets/svg/add-file-icon.svg"
 
-export interface TabbarNavigationProps {
+export interface TabBarNavigationProps {
     activeTab: string
     onTabChange: (tab: string) => void
+    onTabReselect?: (tab: string) => void
     testID?: string
 }
 
@@ -23,12 +22,24 @@ const tabs = [
 export function TabBarNavigation({
     activeTab,
     onTabChange,
+    onTabReselect,
     testID,
-}: TabbarNavigationProps) {
+}: TabBarNavigationProps) {
     const { colors } = useTheme()
 
+    // Handle tab press with reselection detection
+    const handleTabPress = (tab: string) => {
+        if (tab === activeTab && onTabReselect) {
+            // If we're already on this tab and have a reselect handler
+            onTabReselect(tab)
+        } else {
+            // Normal tab change
+            onTabChange(tab)
+        }
+    }
+
     return (
-        <View style={styles.container} testID={testID ?? "tabbar-navigation"}>
+        <View style={styles.container} testID={testID ?? "tab-bar-navigation"}>
             {tabs.map(({ tab, icon: Icon, useFill }) => {
                 const isActive = activeTab === tab
 
@@ -36,17 +47,15 @@ export function TabBarNavigation({
                     ? colors.tabbarIcon_active
                     : colors.tabbarIcon_inactive
 
-                // Console log the stroke colors of each tab
                 console.log(`Tab: ${tab}, Stroke Color: ${strokeColor}`)
 
                 return (
                     <TouchableOpacity
                         key={tab}
                         style={styles.tab}
-                        onPress={() => onTabChange(tab)}
+                        onPress={() => handleTabPress(tab)}
                         testID={`tab-${tab.toLowerCase()}`}
                     >
-                        {/* Active Circle Indicator */}
                         {isActive && (
                             <View
                                 style={[
@@ -60,8 +69,8 @@ export function TabBarNavigation({
                         <Icon
                             width={28}
                             height={28}
-                            stroke={!useFill ? strokeColor : "none"} // Use stroke for non-filled icons
-                            fill={useFill ? strokeColor : "none"} //
+                            stroke={!useFill ? strokeColor : "none"}
+                            fill={useFill ? strokeColor : "none"}
                             style={styles.icon}
                         />
                     </TouchableOpacity>
@@ -70,6 +79,8 @@ export function TabBarNavigation({
         </View>
     )
 }
+
+// Styles remain the same
 
 const styles = StyleSheet.create({
     container: {

@@ -24,6 +24,7 @@ export interface ItemTagsManagerProps {
     maxTags?: number
     horizontal?: boolean
     testID?: string
+    showAddTagButton?: boolean
 }
 
 export function ItemTagsManager({
@@ -36,6 +37,7 @@ export function ItemTagsManager({
     maxTags = 3,
     horizontal = true,
     testID,
+    showAddTagButton = true,
 }: ItemTagsManagerProps) {
     const { colors } = useTheme()
     const { associateTag, disassociateTag, createTag } = useTagContext()
@@ -143,7 +145,7 @@ export function ItemTagsManager({
                 selectedTags={selectedTagIds}
                 horizontal={horizontal}
                 maxTags={maxTags}
-                showAddButton={true}
+                showAddTagButton={showAddTagButton !== false}
                 onAddTagPress={handleShowTagMenu}
             />
 

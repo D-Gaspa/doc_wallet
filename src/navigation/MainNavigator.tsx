@@ -23,7 +23,7 @@ export function MainNavigator() {
                 name={TAB_ROUTES.DOCUMENTS}
                 component={DocumentNavigator}
                 options={{
-                    tabBarLabel: "Documents",
+                    tabBarLabel: "documents",
                     // We'll add icons later
                 }}
             />

@@ -13,15 +13,19 @@ import { FolderMainView } from "./components/ui/screens/folders/FolderMainView.t
 import { TabBar } from "./components/ui/layout/tab_bar/TabBar.tsx"
 import { Button } from "./components/ui/button"
 import { Toast } from "./components/ui/feedback"
+import { TagProvider } from "./components/ui/tag_functionality/TagContext.tsx"
+import { DocumentsScreen } from "./components/ui/screens/documents/DocumentsScreen.tsx"
 
 const Tab = createBottomTabNavigator()
 
 // Placeholder Components for "Files" and "Profile"
-const FilesScreen = () => (
+/*
+const DocumentsScreen = () => (
     <View style={styles.screenContainer}>
         <Text style={styles.text}>Files Screen (Coming Soon)</Text>
     </View>
 )
+*/
 
 // Define the types for navigation
 type TabParamList = {
@@ -65,19 +69,25 @@ const ProfileScreen: React.FC = () => {
     )
 }
 
-// Wrapper component for the tab navigator
 function MainTabsContent() {
-    // Use the properly typed navigation
     const navigation = useNavigation<NavigationProp<TabParamList>>()
 
-    // Debug the navigation state structure
+    const folderMainViewRef = React.useRef<{
+        resetToRootFolder: () => void
+    } | null>(null)
+
+    const handleTabReselect = (tab: string) => {
+        if (tab === "Home" && folderMainViewRef.current) {
+            // If Home tab is reselected, reset to root folder
+            folderMainViewRef.current.resetToRootFolder()
+        }
+    }
+
     const currentRouteName = useNavigationState((state) => {
         console.log("Navigation State:", JSON.stringify(state, null, 2))
 
         // With nested navigators, we need to check if this is a tab navigator
-        // The structure might be different from expected
         if (state?.routes?.[0]?.state?.routes) {
-            // This is likely a case of nested navigators (Stack containing Tabs)
             const tabState = state.routes[0].state
             const tabRoutes = tabState.routes || []
             const tabIndex = tabState.index ?? 0
@@ -114,15 +124,17 @@ function MainTabsContent() {
                     tabBarStyle: { display: "none" },
                 }}
             >
-                <Tab.Screen name="Home" component={FolderMainView} />
-                <Tab.Screen name="Files" component={FilesScreen} />
+                <Tab.Screen name="Home">
+                    {() => <FolderMainView ref={folderMainViewRef} />}
+                </Tab.Screen>
+                <Tab.Screen name="Files" component={DocumentsScreen} />
                 <Tab.Screen name="Profile" component={ProfileScreen} />
             </Tab.Navigator>
 
-            {/* Custom TabBar at the Bottom */}
             <TabBar
                 activeTab={currentRouteName}
                 onTabChange={handleTabChange}
+                onTabReselect={handleTabReselect}
             />
         </View>
     )
@@ -131,10 +143,11 @@ function MainTabsContent() {
 export default function App() {
     return (
         <ThemeProvider>
-            <NavigationContainer>
-                {/* Use a direct Tab Navigator instead of nesting it in a Stack */}
-                <MainTabsContent />
-            </NavigationContainer>
+            <TagProvider>
+                <NavigationContainer>
+                    <MainTabsContent />
+                </NavigationContainer>
+            </TagProvider>
         </ThemeProvider>
     )
 }
@@ -147,9 +160,5 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-    },
-    text: {
-        fontSize: 18,
-        fontWeight: "bold",
     },
 })

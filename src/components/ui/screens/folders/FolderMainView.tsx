@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react"
+import React, { forwardRef, useImperativeHandle, useState } from "react"
 import { StyleSheet, View } from "react-native"
-import { Container, Stack, Spacer } from "../../layout"
+import { Container, Spacer, Stack } from "../../layout"
 import { Button } from "../../button"
 import { Alert as AlertComponent, AlertType } from "../../feedback/Alert"
 import { LoggingService } from "../../../../services/monitoring/loggingService"
-import { UnifiedFolderModal, FolderType } from "./FolderModal"
+import { FolderType, UnifiedFolderModal } from "./FolderModal"
 import { TagProvider, useTagContext } from "../../tag_functionality/TagContext"
 import { BatchTagManager } from "../../tag_functionality/BatchTagManager"
 import { FolderHeader } from "./FolderHeader"
@@ -13,14 +13,18 @@ import { FolderSelectionControls } from "./FolderSelectionControls.tsx"
 import { TagManagerSection } from "../../tag_functionality/TagManagerSection"
 import { useFolderOperations } from "./useFolderOperations"
 import { useSelectionMode } from "./useSelectionMode"
-import { Folder, Document } from "./types"
+import { Folder } from "./types"
+import { useFolderStore } from "../../../../store/useFolderStore.ts"
+import { useDocStore } from "../../../../store"
+import { DocumentType, IDocument } from "../../../../types/document.ts"
+import { documentPreview } from "../../../../services/document/preview.ts"
+import { documentStorage } from "../../../../services/document/storage.ts"
+import * as FileSystem from "expo-file-system"
+import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
+import { DocumentCard } from "../../cards"
+import { showDocumentOptions } from "../documents/useDocumentOperations.ts"
 
-export interface FolderMainViewProps {
-    initialFolders?: Folder[]
-    initialDocuments?: Document[]
-}
-
-function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
+const FolderMainViewContent = forwardRef((_, ref) => {
     const logger = LoggingService.getLogger
         ? LoggingService.getLogger("FolderMainView")
         : { debug: console.debug }
@@ -29,9 +33,13 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
     const tagContext = useTagContext()
 
     // State for folders
-    const [folders, setFolders] = useState<Folder[]>(initialFolders)
+    const folders = useFolderStore((state) => state.folders)
+    const setFolders = useFolderStore((state) => state.setFolders)
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
+    const [isLoading, setLoading] = useState(false)
+
+    const documents = useDocStore((state) => state.documents)
 
     // State for the unified modal
     const [folderModalVisible, setFolderModalVisible] = useState(false)
@@ -53,6 +61,13 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
 
     const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([])
     const [batchTagModalVisible, setBatchTagModalVisible] = useState(false)
+
+    useImperativeHandle(ref, () => ({
+        resetToRootFolder: () => {
+            logger.debug("Resetting to root folder view")
+            setCurrentFolderId(null)
+        },
+    }))
 
     const {
         handleCreateFolder,
@@ -79,101 +94,73 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
         handleFolderSelect,
     } = useSelectionMode()
 
-    // Initialize mock data
-    useEffect(() => {
-        if (folders.length === 0) {
-            const mockFolders: Folder[] = [
-                {
-                    id: "1",
-                    title: "Travel Documents",
-                    parentId: null,
-                    type: "travel",
-                    isShared: false,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    childFolderIds: ["5", "6"],
-                    documentIds: [],
-                },
-                {
-                    id: "2",
-                    title: "Medical Records",
-                    parentId: null,
-                    type: "medical",
-                    isShared: true,
-                    sharedWith: ["user123", "user456"],
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    childFolderIds: [],
-                    documentIds: [],
-                },
-                {
-                    id: "3",
-                    title: "Vehicle Documents",
-                    parentId: null,
-                    type: "car",
-                    isShared: false,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    childFolderIds: [],
-                    documentIds: [],
-                },
-                {
-                    id: "4",
-                    title: "Education Certificates",
-                    parentId: null,
-                    type: "education",
-                    isShared: false,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    childFolderIds: [],
-                    documentIds: [],
-                },
-                {
-                    id: "5",
-                    title: "Passport",
-                    parentId: "1",
-                    type: "custom",
-                    customIconId: "file",
-                    isShared: false,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    childFolderIds: [],
-                    documentIds: [],
-                },
-                {
-                    id: "6",
-                    title: "Visas",
-                    parentId: "1",
-                    type: "custom",
-                    customIconId: "check",
-                    isShared: true,
-                    sharedWith: ["user789"],
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    childFolderIds: [],
-                    documentIds: [],
-                },
-                {
-                    id: "7",
-                    title: "Important Notes",
-                    parentId: null,
-                    type: "custom",
-                    customIconId: "warning",
-                    isShared: false,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    childFolderIds: [],
-                    documentIds: [],
-                },
-            ]
-            setFolders(mockFolders)
-            logger.debug("Initialized mock folders", {
-                count: mockFolders.length,
-            })
-        }
-    }, [])
+    const handleDocumentPress = async (doc: IDocument) => {
+        setLoading(true)
+        try {
+            const docStore = useDocStore.getState()
 
-    // Navigate to a folder
+            // Give encryption time to finish (same as DocumentsScreen)
+            await new Promise((resolve) => setTimeout(resolve, 200))
+
+            // Get the preview file URI (decrypted)
+            const previewResult = await docStore.getDocumentPreview(doc.id)
+
+            if (!previewResult || !previewResult.sourceUri) {
+                setAlert({
+                    visible: true,
+                    message: "No preview available for this document.",
+                    type: "error",
+                })
+                return
+            }
+
+            // Determine MIME type based on metadata
+            const mimeType = documentPreview.getMimeTypeForDocumentType(
+                previewResult.metadata?.type ?? DocumentType.PDF,
+            )
+
+            // Optional: check if the preview file actually exists
+            const fileInfo = await FileSystem.getInfoAsync(
+                previewResult.sourceUri,
+            )
+            if (!fileInfo.exists || fileInfo.size === 0) {
+                setAlert({
+                    visible: true,
+                    message: "Preview file is missing or empty.",
+                    type: "error",
+                })
+                return
+            }
+
+            // Preview the decrypted file using its URI
+            await documentPreview.viewDocumentByUri(
+                previewResult.sourceUri,
+                mimeType,
+                async () => {
+                    const storage = await documentStorage
+                    await storage.deletePreviewFile(previewResult.sourceUri)
+                    logger.debug("Cleaned up preview file after viewing")
+                },
+            )
+        } catch (err) {
+            logger.debug("Error opening document", err)
+            setAlert({
+                visible: true,
+                message: documentPreview.getErrorMessage(err),
+                type: "error",
+            })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const getDocumentsForCurrentFolder = (): IDocument[] => {
+        const current = folders.find((f) => f.id === currentFolderId)
+        if (!current || !current.documentIds) return []
+
+        return documents.filter((doc) => current.documentIds!.includes(doc.id))
+    }
+
     const handleFolderPress = (folderId: string) => {
         if (selectionMode) {
             // In selection mode, pressing toggles selection instead of navigating
@@ -184,7 +171,6 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
         }
     }
 
-    // Navigate back to parent folder
     const handleBackPress = () => {
         if (selectionMode) {
             // Exit selection mode when pressing back in selection mode
@@ -204,14 +190,12 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
         }
     }
 
-    // Open create folder modal
     const handleCreateFolderPress = () => {
         setFolderModalMode("create")
         setFolderToEdit(null)
         setFolderModalVisible(true)
     }
 
-    // Handle saving a folder (create or update)
     const handleSaveFolder = (
         folderName: string,
         folderType: FolderType,
@@ -222,18 +206,14 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
             // Update existing folder
             handleUpdateFolder(folderId, folderName, folderType, customIconId)
         } else {
-            // Create new folder
             handleCreateFolder(folderName, folderType, customIconId)
         }
     }
 
-    // Handle tag filtering
     const handleTagFilterPress = (tagId: string | null) => {
         if (tagId === null) {
-            // Clear filter when null is passed
             setSelectedTagFilters([])
         } else {
-            // Toggle the tag in the filter list
             setSelectedTagFilters((prev) => {
                 if (prev.includes(tagId)) {
                     return prev.filter((id) => id !== tagId)
@@ -244,9 +224,7 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
         }
     }
 
-    // Handle adding a tag to a folder
     const handleAddTagToFolder = (tagId: string, folderId: string) => {
-        // Call the associate tag function from your tag context
         tagContext.associateTag(tagId, folderId, "folder")
 
         setAlert({
@@ -258,11 +236,9 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
         logger.debug("Added tag to folder", { tagId, folderId })
     }
 
-    // Filter folders based on search query and tags
     const filteredFolders =
         searchQuery || selectedTagFilters.length > 0
             ? folders.filter((folder) => {
-                  // Check if folder is in the current directory
                   const inCurrentDirectory = folder.parentId === currentFolderId
 
                   // Apply search filter
@@ -305,6 +281,27 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
                     />
+                    {/* documents in current folder */}
+                    {currentFolderId && (
+                        <>
+                            <Spacer size={16} />
+                            {getDocumentsForCurrentFolder().map((doc) => (
+                                <DocumentCard
+                                    key={doc.id}
+                                    document={doc}
+                                    tags={tagContext.getTagsForItem(
+                                        doc.id,
+                                        "document",
+                                    )}
+                                    onPress={() => handleDocumentPress(doc)}
+                                    onLongPress={() => showDocumentOptions(doc)}
+                                    testID={`document-${doc.id}`}
+                                    showAddTagButton={true}
+                                    maxTags={3}
+                                />
+                            ))}
+                        </>
+                    )}
 
                     {/* Selection Controls */}
                     <FolderSelectionControls
@@ -392,6 +389,8 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
                 />
             </View>
 
+            <LoadingOverlay visible={isLoading} />
+
             {/* Alert notification */}
             {alert.visible && (
                 <View style={styles.alertContainer}>
@@ -407,16 +406,19 @@ function FolderMainViewContent({ initialFolders = [] }: FolderMainViewProps) {
             )}
         </Container>
     )
-}
+})
 
-// Wrapper component with TagProvider
-export function FolderMainView(props: FolderMainViewProps) {
+FolderMainViewContent.displayName = "FolderMainViewContent"
+
+export const FolderMainView = forwardRef((props, ref) => {
     return (
         <TagProvider>
-            <FolderMainViewContent {...props} />
+            <FolderMainViewContent ref={ref} {...props} />
         </TagProvider>
     )
-}
+})
+
+FolderMainView.displayName = "FolderMainView"
 
 const styles = StyleSheet.create({
     contentContainer: {
@@ -435,7 +437,7 @@ const styles = StyleSheet.create({
     },
     alertContainer: {
         position: "absolute",
-        bottom: 120, // Position above the create button
+        bottom: 120,
         left: 0,
         right: 0,
         zIndex: 10,

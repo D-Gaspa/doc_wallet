@@ -1,6 +1,5 @@
 import React from "react"
-import { FlatList, StyleSheet, View } from "react-native"
-import { Text } from "../../typography"
+import { FlatList, StyleSheet } from "react-native"
 import { FolderCard } from "../../cards"
 import { useTheme } from "../../../../hooks/useTheme"
 import { Folder } from "./types"
@@ -72,15 +71,6 @@ export function FoldersList({
             renderItem={renderFolderItem}
             contentContainerStyle={styles.content}
             testID="folder-list"
-            ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                    <Text style={{ color: colors.secondaryText }}>
-                        {selectedTagFilters.length > 0
-                            ? "No folders match the selected tag filters."
-                            : "No folders or documents found. Create a new folder to get started."}
-                    </Text>
-                </View>
-            }
         />
     )
 }
@@ -88,10 +78,5 @@ export function FoldersList({
 const styles = StyleSheet.create({
     content: {
         paddingBottom: 100, // Leave space for the button and TabBar
-    },
-    emptyContainer: {
-        padding: 20,
-        alignItems: "center",
-        justifyContent: "center",
     },
 })

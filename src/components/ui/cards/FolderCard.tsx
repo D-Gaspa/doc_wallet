@@ -23,6 +23,7 @@ export interface FolderCardProps {
     onTagPress?: (tagId: string) => void
     selectedTagIds?: string[]
     testID?: string
+    showAddTagButton?: boolean
 }
 
 export function FolderCard({
@@ -37,6 +38,7 @@ export function FolderCard({
     onTagPress,
     selectedTagIds = [],
     testID,
+    showAddTagButton = true,
 }: FolderCardProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
@@ -109,6 +111,7 @@ export function FolderCard({
                         selectedTagIds={selectedTagIds}
                         maxTags={3}
                         horizontal={true}
+                        showAddTagButton={showAddTagButton}
                     />
                 </View>
             )}

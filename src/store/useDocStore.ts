@@ -218,6 +218,18 @@ export const useDocStore = create<IDocState>()(
                         }
                     }
 
+                    logger.debug(
+                        `Tags being updated for document ${id}:`,
+                        updates.tags,
+                    )
+
+                    if (updates.tags) {
+                        logger.debug(
+                            `Tags being updated for document ${id}: ${updates.tags}`,
+                        )
+                        processedUpdates.tags = updates.tags
+                    }
+
                     set((state) => ({
                         documents: state.documents.map((doc) =>
                             doc.id === id
