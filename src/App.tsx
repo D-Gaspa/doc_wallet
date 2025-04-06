@@ -13,15 +13,12 @@ import { FolderMainView } from "./components/ui/screens/folders/FolderMainView.t
 import { TabBar } from "./components/ui/layout/tab_bar/TabBar.tsx"
 import { Button } from "./components/ui/button"
 import { Toast } from "./components/ui/feedback"
+import { DocumentScannerScreen } from "./navigation/DocumentNavigator.tsx"
 
 const Tab = createBottomTabNavigator()
 
 // Placeholder Components for "Files" and "Profile"
-const FilesScreen = () => (
-    <View style={styles.screenContainer}>
-        <Text style={styles.text}>Files Screen (Coming Soon)</Text>
-    </View>
-)
+const FilesScreen = () => <DocumentScannerScreen />
 
 // Define the types for navigation
 type TabParamList = {
@@ -147,9 +144,5 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-    },
-    text: {
-        fontSize: 18,
-        fontWeight: "bold",
     },
 })

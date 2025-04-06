@@ -72,3 +72,8 @@ export interface ImportFileResult {
     mimeType: string | null
     localUri?: string // Only present when we needed to make a local copy
 }
+
+export interface ICapturedPhoto {
+    id: string
+    uri: string
+}

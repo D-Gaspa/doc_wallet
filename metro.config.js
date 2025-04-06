@@ -15,7 +15,13 @@ const config = {
         assetExts: defaultConfig.resolver.assetExts.filter(
             (ext) => ext !== "svg",
         ),
-        sourceExts: [...defaultConfig.resolver.sourceExts, "svg"],
+        sourceExts: [
+            ...(process.env.RN_SRC_EXT
+                ? process.env.RN_SRC_EXT.split(",")
+                : []),
+            ...defaultConfig.resolver.sourceExts,
+            "svg",
+        ],
     },
 }
 
