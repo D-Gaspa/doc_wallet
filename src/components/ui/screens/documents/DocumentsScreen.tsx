@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { StyleSheet, View } from "react-native"
+import { Image, StyleSheet, View } from "react-native"
 import { Button } from "../../button"
 import { useThemeContext } from "../../../../context/ThemeContext.tsx"
 import { documentImport } from "../../../../services/document/import.ts"
@@ -11,6 +11,10 @@ import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
 import { useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { Alert } from "../../feedback"
+import DocumentScanner, {
+    ResponseType,
+} from "react-native-document-scanner-plugin"
+import { generateUniqueId } from "../../../../utils"
 
 export const DocumentsScreen = () => {
     const { colors } = useThemeContext()
@@ -24,7 +28,78 @@ export const DocumentsScreen = () => {
 
     const folders = useFolderStore((state) => state.folders)
     const updateFolders = useFolderStore((state) => state.setFolders)
-    const [toastVisible, settoastVisible] = useState(false)
+    const [toastVisible, setToastVisible] = useState(false)
+
+    const [scannedImage] = useState(null)
+
+    const handleMultipleScannedImages = async (imagePaths: string[]) => {
+        try {
+            const mainImageUri = imagePaths[0]
+
+            // TODO: Create merged pdf file and then store it
+            const newDocument: Partial<IDocument> = {
+                title: `Multi-page Scan ${new Date().toLocaleDateString()}`,
+                sourceUri: mainImageUri,
+                metadata: {
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    type: DocumentType.IMAGE,
+                    mimeType: "image/jpeg",
+                },
+            }
+
+            setPendingDocument(newDocument as IDocument)
+            setShowAddSheet(true)
+        } catch (error) {
+            console.error("Error processing multiple images:", error)
+        }
+    }
+
+    const handleScanDocument = async () => {
+        try {
+            const { scannedImages, status } =
+                await DocumentScanner.scanDocument({
+                    croppedImageQuality: 100,
+                    maxNumDocuments: undefined,
+                    responseType: ResponseType.ImageFilePath,
+                })
+
+            if (
+                status == "success" &&
+                scannedImages &&
+                scannedImages.length > 0
+            ) {
+                console.debug("Scanned Document process: ", status)
+
+                if (scannedImages.length === 1) {
+                    const sourceUri = scannedImages[0]
+                    const filename =
+                        sourceUri.split("/").pop() ||
+                        `Scan_${generateUniqueId()}.jpg`
+                    const newDocument: Partial<IDocument> = {
+                        title: filename,
+                        sourceUri,
+                        metadata: {
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
+                            type: DocumentType.IMAGE,
+                        },
+                    }
+                    setPendingDocument(newDocument as IDocument)
+                    setShowAddSheet(true)
+                } else {
+                    console.debug("Scanned Set of Images", scannedImages)
+                    await handleMultipleScannedImages(scannedImages)
+                }
+            }
+
+            if (status == "cancel") {
+                console.warn("Scanned Document process: ", status)
+            }
+        } catch (error) {
+            console.error("Error scanning document:", error)
+        }
+    }
 
     const handleAddSingleDocument = async () => {
         setLoading(true)
@@ -122,7 +197,7 @@ export const DocumentsScreen = () => {
             console.error("Error saving document:", error)
         } finally {
             setLoading(false)
-            settoastVisible(true)
+            setToastVisible(true)
         }
     }
 
@@ -130,8 +205,21 @@ export const DocumentsScreen = () => {
         <View
             style={[styles.container, { backgroundColor: colors.background }]}
         >
-            {/* Fake Scanner Frame / Placeholder */}
-            <View style={[styles.frame, { borderColor: colors.border }]} />
+            {scannedImage ? (
+                <Image resizeMode="contain" source={{ uri: scannedImage }} />
+            ) : (
+                <>
+                    {/* Fake Scanner Frame / Placeholder */}
+                    <View
+                        style={[styles.frame, { borderColor: colors.border }]}
+                    />
+                </>
+            )}
+            <Button
+                title="Escanear documento"
+                onPress={handleScanDocument}
+                style={styles.scanButton}
+            />
 
             <Button
                 title="Subir documento"
@@ -158,7 +246,7 @@ export const DocumentsScreen = () => {
                 type={"success"}
                 message={"Document was successfully saved"}
                 visible={toastVisible}
-                onClose={() => settoastVisible(false)}
+                onClose={() => setToastVisible(false)}
             />
         </View>
     )
@@ -181,6 +269,12 @@ const styles = StyleSheet.create({
     uploadButton: {
         position: "absolute",
         bottom: 120, // push it above the tab bar
+        width: 220,
+        alignSelf: "center",
+    },
+    scanButton: {
+        position: "absolute",
+        bottom: 180,
         width: 220,
         alignSelf: "center",
     },
