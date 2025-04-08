@@ -53,6 +53,7 @@ export function DocumentCardCarousel({
 const styles = StyleSheet.create({
     container: {
         paddingHorizontal: 20,
+        paddingVertical: 10,
         marginBottom: 20,
         marginTop: 10,
     },
