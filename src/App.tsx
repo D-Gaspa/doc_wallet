@@ -1,5 +1,5 @@
-import React, { useState } from "react"
-import { StyleSheet, Text, View } from "react-native"
+import React from "react"
+import { StyleSheet, View } from "react-native"
 import { ThemeProvider } from "./context/ThemeContext.tsx"
 import {
     NavigationContainer,
@@ -8,13 +8,11 @@ import {
     useNavigationState,
 } from "@react-navigation/native"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
-import { useTheme } from "./hooks/useTheme.ts"
 import { FolderMainView } from "./components/ui/screens/folders/FolderMainView.tsx"
 import { TabBar } from "./components/ui/layout/tab_bar/TabBar.tsx"
-import { Button } from "./components/ui/button"
-import { Toast } from "./components/ui/feedback"
 import { TagProvider } from "./components/ui/tag_functionality/TagContext.tsx"
 import { DocumentsScreen } from "./components/ui/screens/documents/DocumentsScreen.tsx"
+import { ProfileScreen } from "./components/ui/screens/ProfileScreen.tsx"
 
 const Tab = createBottomTabNavigator()
 
@@ -32,41 +30,6 @@ type TabParamList = {
     Home: undefined
     Files: undefined
     Profile: undefined
-}
-const ProfileScreen: React.FC = () => {
-    const { colors, toggleTheme } = useTheme()
-    const [toastVisible, setToastVisible] = useState<boolean>(false)
-
-    // Handler for toggling theme
-    const handleToggleTheme = () => {
-        toggleTheme()
-        setToastVisible(true)
-    }
-
-    return (
-        <View
-            style={[
-                styles.screenContainer,
-                { backgroundColor: colors.background },
-            ]}
-        >
-            <Text>Profile</Text>
-
-            {/* Theme toggle button */}
-            <Button
-                title="Toggle Theme"
-                onPress={handleToggleTheme}
-                testID="toggle-theme-button"
-            />
-            {toastVisible && (
-                <Toast
-                    message="Theme updated successfully"
-                    visible={toastVisible}
-                    onDismiss={() => setToastVisible(false)}
-                />
-            )}
-        </View>
-    )
 }
 
 function MainTabsContent() {
@@ -155,10 +118,5 @@ export default function App() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    screenContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
     },
 })
