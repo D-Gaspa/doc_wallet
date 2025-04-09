@@ -13,20 +13,12 @@ import { TabBar } from "./components/ui/layout/tab_bar/TabBar.tsx"
 import { TagProvider } from "./components/ui/tag_functionality/TagContext.tsx"
 import { DocumentsScreen } from "./components/ui/screens/documents/DocumentsScreen.tsx"
 import { ProfileScreen } from "./components/ui/screens/ProfileScreen.tsx"
+import { FolderMainViewRef } from "./navigation"
 
 const Tab = createBottomTabNavigator()
 
-// Placeholder Components for "Files" and "Profile"
-/*
-const DocumentsScreen = () => (
-    <View style={styles.screenContainer}>
-        <Text style={styles.text}>Files Screen (Coming Soon)</Text>
-    </View>
-)
-*/
-
 // Define the types for navigation
-type TabParamList = {
+export type TabParamList = {
     Home: undefined
     Files: undefined
     Profile: undefined
@@ -35,9 +27,7 @@ type TabParamList = {
 function MainTabsContent() {
     const navigation = useNavigation<NavigationProp<TabParamList>>()
 
-    const folderMainViewRef = React.useRef<{
-        resetToRootFolder: () => void
-    } | null>(null)
+    const folderMainViewRef = React.useRef<FolderMainViewRef>(null!)
 
     const handleTabReselect = (tab: string) => {
         if (tab === "Home" && folderMainViewRef.current) {
@@ -91,7 +81,11 @@ function MainTabsContent() {
                     {() => <FolderMainView ref={folderMainViewRef} />}
                 </Tab.Screen>
                 <Tab.Screen name="Files" component={DocumentsScreen} />
-                <Tab.Screen name="Profile" component={ProfileScreen} />
+                <Tab.Screen name="Profile">
+                    {() => (
+                        <ProfileScreen folderMainViewRef={folderMainViewRef} />
+                    )}
+                </Tab.Screen>
             </Tab.Navigator>
 
             <TabBar

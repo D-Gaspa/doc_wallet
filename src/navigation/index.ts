@@ -23,3 +23,8 @@ export function navigate(name: keyof RootStackParamList, params?: any) {
         navigationRef.navigate(name, params)
     }
 }
+
+export type FolderMainViewRef = {
+    resetToRootFolder: () => void
+    navigateToFolder: (folderId: string) => void
+}
