@@ -67,6 +67,10 @@ const FolderMainViewContent = forwardRef((_, ref) => {
             logger.debug("Resetting to root folder view")
             setCurrentFolderId(null)
         },
+        navigateToFolder: (folderId: string) => {
+            logger.debug("Navigating to folder from external ref:", folderId)
+            setCurrentFolderId(folderId)
+        },
     }))
 
     const {
@@ -410,7 +414,13 @@ const FolderMainViewContent = forwardRef((_, ref) => {
 
 FolderMainViewContent.displayName = "FolderMainViewContent"
 
-export const FolderMainView = forwardRef((props, ref) => {
+export const FolderMainView = forwardRef<
+    {
+        resetToRootFolder: () => void
+        navigateToFolder: (folderId: string) => void
+    },
+    object
+>((props, ref) => {
     return (
         <TagProvider>
             <FolderMainViewContent ref={ref} {...props} />

@@ -13,6 +13,7 @@ export interface IDocument {
     title?: string
     content?: string
     tags?: string[]
+    parameters?: IDocumentParameters[]
 }
 
 export interface IDocumentMetadata {

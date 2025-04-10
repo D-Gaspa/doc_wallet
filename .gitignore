@@ -83,4 +83,5 @@ yarn-error.log
 # Expo
 .expo
 dist/
-web-build/
+web-build/ios/Podfile.lock
+ios/doc_wallet.xcworkspace/
