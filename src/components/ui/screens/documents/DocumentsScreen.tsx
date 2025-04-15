@@ -148,12 +148,25 @@ export const DocumentsScreen = () => {
     ) => {
         setLoading(true)
         try {
+            const tenDaysFromNow = new Date()
+            tenDaysFromNow.setDate(tenDaysFromNow.getDate() + 10)
             // Store the document
             const storedDocument = await docStore.addDocument({
                 title: doc.title,
                 sourceUri: doc.sourceUri,
                 tags: selectedTagIds,
                 metadata: doc.metadata,
+                parameters: [
+                    {
+                        id: `${Date.now()}`,
+                        documentId: "temp", // if you don’t have an id yet
+                        key: "expiration_date",
+                        value: tenDaysFromNow.toISOString(),
+                        type: "date",
+                        isSearchable: true,
+                        isSystem: true,
+                    },
+                ],
             })
 
             // Update folder association
