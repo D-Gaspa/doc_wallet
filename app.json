@@ -1,4 +1,18 @@
 {
   "name": "doc_wallet",
-  "displayName": "doc_wallet"
+  "displayName": "doc_wallet",
+  "plugins": [
+    [
+      "expo-sqlite",
+      {
+        "enableFTS": true,
+        "android": {
+          "enableFTS": false
+        },
+        "ios": {
+          "customBuildFlags": ["-DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_ENABLE_SNAPSHOT=1"]
+        }
+      }
+    ]
+  ]
 }
