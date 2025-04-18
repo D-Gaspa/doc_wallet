@@ -3,8 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { ItemTagsManager } from "../tag_functionality/ItemTagsManager.tsx"
 import { useTagContext } from "../tag_functionality/TagContext.tsx"
-
-// Import predefined folder icons
 import TravelIcon from "../assets/svg/airplane.svg"
 import MedicalIcon from "../assets/svg/medical.svg"
 import CarIcon from "../assets/svg/car.svg"
@@ -24,6 +22,7 @@ export interface FolderCardProps {
     selectedTagIds?: string[]
     testID?: string
     showAddTagButton?: boolean
+    handleMoveFolders?: (folderIds: string[], targetId: string) => void
 }
 
 export function FolderCard({

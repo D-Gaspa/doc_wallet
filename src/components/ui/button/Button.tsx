@@ -1,6 +1,6 @@
 import React from "react"
 import { TouchableOpacity, Text, StyleSheet, ViewStyle } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../hooks/useTheme.ts"
 
 export interface ButtonProps {
     title: string
@@ -10,7 +10,7 @@ export interface ButtonProps {
 }
 
 export function Button({ title, onPress, style, testID }: ButtonProps) {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
 
     return (
         <TouchableOpacity

@@ -238,6 +238,98 @@ export function useFolderOperations({
         }
     }
 
+    // Move folders to a new parent
+    const handleMoveFolders = (
+        folderIds: string[],
+        targetParentId: string | null,
+    ) => {
+        if (folderIds.length === 0) return
+
+        // Verify we're not creating circular references
+        const wouldCreateCircularReference = (
+            folderId: string,
+            targetParentId: string | null,
+        ): boolean => {
+            if (targetParentId === null) return false
+            if (folderId === targetParentId) return true
+
+            const targetFolder = folders.find((f) => f.id === targetParentId)
+            if (!targetFolder) return false
+
+            // Check if the target is a descendant of the folder being moved
+            return wouldCreateCircularReference(folderId, targetFolder.parentId)
+        }
+
+        // Check if any folder would create a circular reference
+        const anyCircularReference = folderIds.some((id) =>
+            wouldCreateCircularReference(id, targetParentId),
+        )
+        if (anyCircularReference) {
+            setAlert({
+                visible: true,
+                message: "Cannot move folder into its own subfolder",
+                type: "error",
+            })
+            return
+        }
+
+        // Store original parents to update childFolderIds
+        const originalParents = new Map<string, string>()
+        folderIds.forEach((id) => {
+            const folder = folders.find((f) => f.id === id)
+            if (folder && folder.parentId !== null) {
+                originalParents.set(id, folder.parentId)
+            }
+        })
+
+        // Update all folders
+        const updatedFolders = folders.map((folder) => {
+            // Update moved folders
+            if (folderIds.includes(folder.id)) {
+                return {
+                    ...folder,
+                    parentId: targetParentId,
+                    updatedAt: new Date(),
+                }
+            }
+
+            // Update original parent folders (remove from childFolderIds)
+            if (Array.from(originalParents.values()).includes(folder.id)) {
+                const updatedChildFolderIds = (
+                    folder.childFolderIds || []
+                ).filter((id) => !folderIds.includes(id))
+                return {
+                    ...folder,
+                    childFolderIds: updatedChildFolderIds,
+                    updatedAt: new Date(),
+                }
+            }
+
+            // Update target parent folder (add to childFolderIds)
+            if (folder.id === targetParentId) {
+                const updatedChildFolderIds = [
+                    ...(folder.childFolderIds || []),
+                    ...folderIds,
+                ]
+                return {
+                    ...folder,
+                    childFolderIds: updatedChildFolderIds,
+                    updatedAt: new Date(),
+                }
+            }
+
+            return folder
+        })
+
+        setFolders(updatedFolders)
+        setAlert({
+            visible: true,
+            message: `${folderIds.length} folder(s) moved successfully`,
+            type: "success",
+        })
+        logger.debug("Moved folders", { folderIds, targetParentId })
+    }
+
     // Show folder options menu
     const showFolderOptions = (
         folder: Folder,
@@ -276,6 +368,7 @@ export function useFolderOperations({
         ])
     }
 
+    // Return all operations
     return {
         getCurrentFolders,
         getCurrentFolderName,
@@ -283,6 +376,7 @@ export function useFolderOperations({
         handleUpdateFolder,
         handleDeleteFolder,
         handleShareFolder,
+        handleMoveFolders,
         showFolderOptions: (
             folder: Folder,
             selectionMode: boolean,

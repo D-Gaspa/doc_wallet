@@ -7,7 +7,7 @@ import { LoggingService } from "../../../../services/monitoring/loggingService"
 import { FolderType, UnifiedFolderModal } from "./FolderModal"
 import { TagProvider, useTagContext } from "../../tag_functionality/TagContext"
 import { BatchTagManager } from "../../tag_functionality/BatchTagManager"
-import { FolderHeader } from "./FolderHeader"
+import { FolderHeader, FolderSortOption } from "./FolderHeader"
 import { FoldersList } from "./FolderList.tsx"
 import { FolderSelectionControls } from "./FolderSelectionControls.tsx"
 import { TagManagerSection } from "../../tag_functionality/TagManagerSection"
@@ -23,6 +23,7 @@ import * as FileSystem from "expo-file-system"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
 import { DocumentCard } from "../../cards"
 import { showDocumentOptions } from "../documents/useDocumentOperations.ts"
+import { FolderMoveModal } from "./FolderMoveModal"
 
 const FolderMainViewContent = forwardRef((_, ref) => {
     const logger = LoggingService.getLogger
@@ -38,6 +39,12 @@ const FolderMainViewContent = forwardRef((_, ref) => {
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoading, setLoading] = useState(false)
+
+    // Add sorting state
+    const [sortOption, setSortOption] = useState<FolderSortOption>("name")
+
+    // Add move modal state
+    const [moveFolderModalVisible, setMoveFolderModalVisible] = useState(false)
 
     const documents = useDocStore((state) => state.documents)
 
@@ -79,6 +86,7 @@ const FolderMainViewContent = forwardRef((_, ref) => {
         getCurrentFolders,
         getCurrentFolderName,
         showFolderOptions,
+        handleMoveFolders, // Add this to get the move folders function
     } = useFolderOperations({
         folders,
         setFolders,
@@ -97,6 +105,38 @@ const FolderMainViewContent = forwardRef((_, ref) => {
         handleSelectAll,
         handleFolderSelect,
     } = useSelectionMode()
+
+    // Function to sort folders based on the sort option
+    const sortFolders = (folders: Folder[]) => {
+        return [...folders].sort((a, b) => {
+            if (sortOption === "name") {
+                return a.title.localeCompare(b.title)
+            } else if (sortOption === "date") {
+                // Safely get timestamps or use 0 as fallback
+                const timeA = a.updatedAt?.getTime() ?? 0
+                const timeB = b.updatedAt?.getTime() ?? 0
+                return timeB - timeA // newest first
+            } else if (sortOption === "type") {
+                if (a.type && b.type) {
+                    return a.type.localeCompare(b.type)
+                } else if (a.type) {
+                    return -1
+                } else if (b.type) {
+                    return 1
+                }
+                return 0
+            }
+            return 0
+        })
+    }
+
+    // Add handler for moving folders
+    const handleMoveSelectedFolders = (targetFolderId: string | null) => {
+        if (selectedFolderIds.length === 0) return
+
+        handleMoveFolders(selectedFolderIds, targetFolderId)
+        toggleSelectionMode() // Exit selection mode after move
+    }
 
     const handleDocumentPress = async (doc: IDocument) => {
         setLoading(true)
@@ -165,14 +205,21 @@ const FolderMainViewContent = forwardRef((_, ref) => {
         return documents.filter((doc) => current.documentIds!.includes(doc.id))
     }
 
+    // in FolderMainViewContent:
     const handleFolderPress = (folderId: string) => {
         if (selectionMode) {
-            // In selection mode, pressing toggles selection instead of navigating
             handleFolderSelect(folderId)
-        } else {
-            logger.debug("Navigating to folder", { folderId })
-            setCurrentFolderId(folderId)
+            return
         }
+
+        // if we have an active search or tag‑filter, clear them
+        if (searchQuery) {
+            setSearchQuery("")
+            setSelectedTagFilters([])
+        }
+
+        logger.debug("Navigating to folder", { folderId })
+        setCurrentFolderId(folderId)
     }
 
     const handleBackPress = () => {
@@ -240,35 +287,60 @@ const FolderMainViewContent = forwardRef((_, ref) => {
         logger.debug("Added tag to folder", { tagId, folderId })
     }
 
-    const filteredFolders =
-        searchQuery || selectedTagFilters.length > 0
-            ? folders.filter((folder) => {
-                  const inCurrentDirectory = folder.parentId === currentFolderId
+    const filteredFolders = (() => {
+        // If not searching or filtering by tags, just show current directory
+        if (!searchQuery && selectedTagFilters.length === 0) {
+            return getCurrentFolders()
+        }
 
-                  // Apply search filter
-                  const matchesSearch =
-                      !searchQuery ||
-                      folder.title
-                          .toLowerCase()
-                          .includes(searchQuery.toLowerCase())
+        // Otherwise filter based on search and tags
+        return folders.filter((folder) => {
+            // Check if folder matches search
+            const matchesSearch =
+                !searchQuery ||
+                folder.title.toLowerCase().includes(searchQuery.toLowerCase())
 
-                  // Apply tag filters if any are selected
-                  let matchesTags = true
-                  if (selectedTagFilters.length > 0) {
-                      const folderTags = tagContext.getTagsForItem(
-                          folder.id,
-                          "folder",
-                      )
-                      const folderTagIds = folderTags.map((tag) => tag.id)
-                      // Folder must have ALL selected tags (AND logic)
-                      matchesTags = selectedTagFilters.every((tagId) =>
-                          folderTagIds.includes(tagId),
-                      )
-                  }
+            // Check if folder matches tag filters
+            let matchesTags = true
+            if (selectedTagFilters.length > 0) {
+                const folderTags = tagContext.getTagsForItem(
+                    folder.id,
+                    "folder",
+                )
+                const folderTagIds = folderTags.map((tag) => tag.id)
+                matchesTags = selectedTagFilters.every((tagId) =>
+                    folderTagIds.includes(tagId),
+                )
+            }
 
-                  return inCurrentDirectory && matchesSearch && matchesTags
-              })
-            : getCurrentFolders()
+            // If searching, show all matches regardless of location
+            // If not searching, only show matches in current directory
+            const inCurrentDirectory = folder.parentId === currentFolderId
+            return searchQuery
+                ? matchesSearch && matchesTags
+                : inCurrentDirectory && matchesTags
+        })
+    })()
+
+    // Apply sorting to filtered folders
+    const sortedFolders = sortFolders(filteredFolders)
+
+    const getFilteredDocuments = () => {
+        if (!searchQuery) {
+            return getDocumentsForCurrentFolder()
+        }
+
+        // When searching, find documents across all folders
+        return documents.filter(
+            (doc) =>
+                doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) ??
+                false,
+        )
+    }
+
+    const documentsToShow = searchQuery
+        ? getFilteredDocuments()
+        : getDocumentsForCurrentFolder()
 
     return (
         <Container testID="folder-main-view">
@@ -284,26 +356,44 @@ const FolderMainViewContent = forwardRef((_, ref) => {
                         setSelectedTagFilters={setSelectedTagFilters}
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
+                        sortOption={sortOption}
+                        setSortOption={setSortOption}
                     />
-                    {/* documents in current folder */}
-                    {currentFolderId && (
+                    {/* documents in current folder or search results */}
+                    {documentsToShow.length > 0 && (
                         <>
                             <Spacer size={16} />
-                            {getDocumentsForCurrentFolder().map((doc) => (
-                                <DocumentCard
-                                    key={doc.id}
-                                    document={doc}
-                                    tags={tagContext.getTagsForItem(
-                                        doc.id,
-                                        "document",
-                                    )}
-                                    onPress={() => handleDocumentPress(doc)}
-                                    onLongPress={() => showDocumentOptions(doc)}
-                                    testID={`document-${doc.id}`}
-                                    showAddTagButton={true}
-                                    maxTags={3}
-                                />
-                            ))}
+                            {documentsToShow.map((doc) => {
+                                const parent = folders.find((f) =>
+                                    f.documentIds?.includes(doc.id),
+                                )
+                                return (
+                                    <DocumentCard
+                                        key={doc.id}
+                                        document={doc}
+                                        tags={tagContext.getTagsForItem(
+                                            doc.id,
+                                            "document",
+                                        )}
+                                        // figure out onPress below
+                                        onPress={() => {
+                                            if (searchQuery && parent) {
+                                                setSearchQuery("")
+                                                setCurrentFolderId(parent.id)
+                                            } else {
+                                                // normal preview flow
+                                                handleDocumentPress(doc)
+                                            }
+                                        }}
+                                        onLongPress={() =>
+                                            showDocumentOptions(doc)
+                                        }
+                                        testID={`document-${doc.id}`}
+                                        showAddTagButton={true}
+                                        maxTags={3}
+                                    />
+                                )
+                            })}
                         </>
                     )}
 
@@ -315,13 +405,14 @@ const FolderMainViewContent = forwardRef((_, ref) => {
                         toggleSelectionMode={toggleSelectionMode}
                         handleSelectAll={handleSelectAll}
                         setBatchTagModalVisible={setBatchTagModalVisible}
+                        onMovePress={() => setMoveFolderModalVisible(true)}
                     />
 
                     <Spacer size={8} />
 
                     {/* Folder List */}
                     <FoldersList
-                        folders={filteredFolders}
+                        folders={sortedFolders}
                         selectedFolderIds={selectedFolderIds}
                         selectedTagFilters={selectedTagFilters}
                         tagContext={tagContext}
@@ -336,6 +427,10 @@ const FolderMainViewContent = forwardRef((_, ref) => {
                         }
                         selectionMode={selectionMode}
                         handleAddTagToFolder={handleAddTagToFolder}
+                        isFiltering={
+                            searchQuery !== "" || selectedTagFilters.length > 0
+                        }
+                        hasDocuments={documentsToShow.length > 0}
                     />
                 </Stack>
 
@@ -391,6 +486,16 @@ const FolderMainViewContent = forwardRef((_, ref) => {
                         toggleSelectionMode()
                     }}
                 />
+
+                {/* Folder Move Modal */}
+                <FolderMoveModal
+                    isVisible={moveFolderModalVisible}
+                    onClose={() => setMoveFolderModalVisible(false)}
+                    folders={folders}
+                    selectedFolderIds={selectedFolderIds}
+                    currentFolderId={currentFolderId}
+                    onMove={handleMoveSelectedFolders}
+                />
             </View>
 
             <LoadingOverlay visible={isLoading} />
@@ -414,6 +519,7 @@ const FolderMainViewContent = forwardRef((_, ref) => {
 
 FolderMainViewContent.displayName = "FolderMainViewContent"
 
+// Fixed the forwardRef syntax here
 export const FolderMainView = forwardRef<
     {
         resetToRootFolder: () => void

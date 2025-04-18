@@ -1,10 +1,11 @@
 import React from "react"
-import { FlatList, StyleSheet } from "react-native"
+import { FlatList, StyleSheet, View } from "react-native"
 import { FolderCard } from "../../cards"
 import { useTheme } from "../../../../hooks/useTheme"
 import { Folder } from "./types"
 import { getIconById, ThemeColors } from "./CustomIconSelector"
-import { useTagContext } from "../../tag_functionality/TagContext" // Import only exported types
+import { useTagContext } from "../../tag_functionality/TagContext"
+import { Text } from "../../typography"
 
 // Define the type using ReturnType utility to extract it from the hook
 type TagContextType = ReturnType<typeof useTagContext>
@@ -19,18 +20,21 @@ interface FoldersListProps {
     showFolderOptions: (folder: Folder) => void
     selectionMode: boolean
     handleAddTagToFolder: (tagId: string, folderId: string) => void
+    isFiltering?: boolean
+    hasDocuments?: boolean
 }
 
 export function FoldersList({
     folders,
     selectedFolderIds,
     selectedTagFilters,
-    // tagContext,
     handleFolderPress,
-    //handleFolderSelect,
+    handleFolderSelect,
     showFolderOptions,
-    //selectionMode,
+    selectionMode,
     handleAddTagToFolder,
+    isFiltering = false,
+    hasDocuments = false,
 }: FoldersListProps) {
     const { colors } = useTheme()
 
@@ -51,7 +55,11 @@ export function FoldersList({
                 customIcon={
                     item.type === "custom" ? getFolderIcon(item) : undefined
                 }
-                onPress={() => handleFolderPress(item.id)}
+                onPress={() =>
+                    selectionMode
+                        ? handleFolderSelect(item.id)
+                        : handleFolderPress(item.id)
+                }
                 onLongPress={() => showFolderOptions(item)}
                 testID={`folder-${item.id}`}
                 selected={selectedFolderIds.includes(item.id)}
@@ -64,13 +72,52 @@ export function FoldersList({
         )
     }
 
+    // Render empty state
+    const renderEmptyState = () => {
+        return (
+            <View style={styles.emptyContainer}>
+                {isFiltering ? (
+                    <>
+                        <Text
+                            variant="md"
+                            weight="medium"
+                            style={styles.emptyTitle}
+                        >
+                            No matching folders
+                        </Text>
+                        <Text variant="sm" style={styles.emptyText}>
+                            Try adjusting your search or filter criteria
+                        </Text>
+                    </>
+                ) : (
+                    <>
+                        <Text
+                            variant="md"
+                            weight="medium"
+                            style={styles.emptyTitle}
+                        >
+                            No folders yet
+                        </Text>
+                        <Text variant="sm" style={styles.emptyText}>
+                            Create a new folder to get started
+                        </Text>
+                    </>
+                )}
+            </View>
+        )
+    }
+    const showEmpty = folders.length === 0 && !hasDocuments
     return (
         <FlatList
             data={folders}
             keyExtractor={(item) => item.id}
             renderItem={renderFolderItem}
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[
+                styles.content,
+                folders.length === 0 && styles.emptyContent,
+            ]}
             testID="folder-list"
+            ListEmptyComponent={showEmpty ? renderEmptyState : null}
         />
     )
 }
@@ -78,5 +125,22 @@ export function FoldersList({
 const styles = StyleSheet.create({
     content: {
         paddingBottom: 100, // Leave space for the button and TabBar
+    },
+    emptyContent: {
+        flex: 1,
+        justifyContent: "center",
+    },
+    emptyContainer: {
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+    },
+    emptyTitle: {
+        marginBottom: 8,
+        textAlign: "center",
+    },
+    emptyText: {
+        textAlign: "center",
+        opacity: 0.7,
     },
 })

@@ -1,7 +1,7 @@
 import React from "react"
 import { FlatList, StyleSheet } from "react-native"
 import { ExpiringDocumentCard } from "./ExpiringDocumentCard"
-import { FavoriteDocumentCard } from "./FavoriteDocuementCard"
+import { FavoriteDocumentCard } from "./FavoriteDocumentCard.tsx"
 
 export interface DocumentItem {
     type: "favorite" | "expiring"

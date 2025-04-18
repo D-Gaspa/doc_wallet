@@ -12,6 +12,8 @@ interface FolderSelectionControlsProps {
     toggleSelectionMode: () => void
     handleSelectAll: (folders: Folder[]) => void
     setBatchTagModalVisible: (visible: boolean) => void
+    onMovePress?: () => void
+    testID?: string
 }
 
 export function FolderSelectionControls({
@@ -21,9 +23,14 @@ export function FolderSelectionControls({
     toggleSelectionMode,
     handleSelectAll,
     setBatchTagModalVisible,
+    onMovePress,
+    testID,
 }: FolderSelectionControlsProps) {
     return (
-        <View style={styles.container}>
+        <View
+            style={styles.container}
+            testID={testID ?? "folder-selection-controls"}
+        >
             {selectionMode ? (
                 <Row justify="space-between" align="center" style={styles.row}>
                     <View style={styles.infoContainer}>
@@ -40,12 +47,24 @@ export function FolderSelectionControls({
 
                     <View style={styles.buttonsContainer}>
                         {selectedFolderIds.length > 0 && (
-                            <Button
-                                title="+ Tags"
-                                onPress={() => setBatchTagModalVisible(true)}
-                                style={styles.actionButton}
-                                testID="batch-tags-button"
-                            />
+                            <>
+                                {onMovePress && (
+                                    <Button
+                                        title="Move"
+                                        onPress={onMovePress}
+                                        style={styles.actionButton}
+                                        testID="move-folders-button"
+                                    />
+                                )}
+                                <Button
+                                    title="+ Tags"
+                                    onPress={() =>
+                                        setBatchTagModalVisible(true)
+                                    }
+                                    style={styles.actionButton}
+                                    testID="batch-tags-button"
+                                />
+                            </>
                         )}
 
                         <Button

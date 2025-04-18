@@ -97,8 +97,7 @@ const defaultFolders: Folder[] = [
 
 export const useFolderStore = create<FolderState>()(
     persist(
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        (set, get) => ({
+        (set) => ({
             folders: defaultFolders,
 
             setFolders: (folders) => set({ folders }),
@@ -118,6 +117,15 @@ export const useFolderStore = create<FolderState>()(
         {
             name: "folder-store",
             storage: createJSONStorage(() => AsyncStorage),
+            onRehydrateStorage: () => (state) => {
+                if (!state) return
+
+                state.folders = state.folders.map((f) => ({
+                    ...f,
+                    createdAt: new Date(f.createdAt),
+                    updatedAt: new Date(f.updatedAt),
+                }))
+            },
         },
     ),
 )

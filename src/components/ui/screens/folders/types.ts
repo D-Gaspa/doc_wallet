@@ -28,5 +28,3 @@ export interface Folder {
     childFolderIds?: string[] // Array of child folder IDs
     documentIds?: string[] // Array of document IDs contained in this folder
 }
-
-// Note: AlertState is now imported from Alert.tsx where needed instead of defined here
