@@ -25,7 +25,12 @@ import { DocumentCard } from "../../cards"
 import { showDocumentOptions } from "../documents/useDocumentOperations.ts"
 import { FolderMoveModal } from "./FolderMoveModal"
 
-const FolderMainViewContent = forwardRef((_, ref) => {
+export interface FolderMainViewRef {
+    resetToRootFolder(): void
+    navigateToFolder(folderId: string): void
+}
+
+const FolderMainViewContent = forwardRef((_props, ref) => {
     const logger = LoggingService.getLogger
         ? LoggingService.getLogger("FolderMainView")
         : { debug: console.debug }
@@ -519,20 +524,13 @@ const FolderMainViewContent = forwardRef((_, ref) => {
 
 FolderMainViewContent.displayName = "FolderMainViewContent"
 
-// Fixed the forwardRef syntax here
-export const FolderMainView = forwardRef<
-    {
-        resetToRootFolder: () => void
-        navigateToFolder: (folderId: string) => void
-    },
-    object
->((props, ref) => {
-    return (
+export const FolderMainView = forwardRef<FolderMainViewRef, unknown>(
+    (_props, ref) => (
         <TagProvider>
-            <FolderMainViewContent ref={ref} {...props} />
+            <FolderMainViewContent ref={ref} />
         </TagProvider>
-    )
-})
+    ),
+)
 
 FolderMainView.displayName = "FolderMainView"
 

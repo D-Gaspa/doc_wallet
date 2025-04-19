@@ -1,21 +1,21 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useRef } from "react"
 import { StyleSheet, Animated, Dimensions, StatusBar } from "react-native"
 import { useTheme } from "../../../hooks/useTheme.ts"
 import { DocWalletLogo } from "../../common/DocWalletLogo.tsx"
 const { width, height } = Dimensions.get("window")
 
 interface SplashScreenProps {
-    onFinish: () => void
+    onFinish?: () => void
     duration?: number
 }
 
 export function SplashScreen({ onFinish, duration = 2500 }: SplashScreenProps) {
     const { colors } = useTheme()
-    const logoScale = new Animated.Value(0.8)
-    const logoOpacity = new Animated.Value(0)
-    const titleOpacity = new Animated.Value(0)
-    const taglineOpacity = new Animated.Value(0)
-    const containerOpacity = new Animated.Value(1)
+    const logoScale = useRef(new Animated.Value(0.8)).current
+    const logoOpacity = useRef(new Animated.Value(0)).current
+    const titleOpacity = useRef(new Animated.Value(0)).current
+    const taglineOpacity = useRef(new Animated.Value(0)).current
+    const containerOpacity = useRef(new Animated.Value(1)).current
 
     useEffect(() => {
         // Animation sequence
@@ -55,10 +55,20 @@ export function SplashScreen({ onFinish, duration = 2500 }: SplashScreenProps) {
                 useNativeDriver: true,
             }),
         ]).start(() => {
-            // Call onFinish when animation completes
-            onFinish()
+            // Use setTimeout to schedule the callback outside the animation context
+            if (onFinish) {
+                setTimeout(onFinish, 0)
+            }
         })
-    }, [])
+    }, [
+        duration,
+        logoOpacity,
+        logoScale,
+        titleOpacity,
+        taglineOpacity,
+        containerOpacity,
+        onFinish,
+    ])
 
     return (
         <Animated.View

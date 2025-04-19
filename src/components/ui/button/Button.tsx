@@ -1,34 +1,71 @@
-import React from "react"
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from "react-native"
+import React, { ReactNode } from "react"
+import {
+    Pressable,
+    Text,
+    StyleSheet,
+    ActivityIndicator,
+    ViewStyle,
+} from "react-native"
 import { useTheme } from "../../../hooks/useTheme.ts"
 
 export interface ButtonProps {
-    title: string
+    title?: string // ahora opcional
     onPress: () => void
+    loading?: boolean
+    disabled?: boolean
     style?: ViewStyle
     testID?: string
+    children?: ReactNode // permitimos children
 }
 
-export function Button({ title, onPress, style, testID }: ButtonProps) {
+export function Button({
+    title,
+    onPress,
+    loading = false,
+    disabled = false,
+    style,
+    testID,
+    children,
+}: ButtonProps) {
     const { colors } = useTheme()
+    const isDisabled = disabled || loading
 
     return (
-        <TouchableOpacity
-            style={[
+        <Pressable
+            onPress={onPress}
+            disabled={isDisabled}
+            style={({ pressed }) => [
                 styles.button,
                 {
                     backgroundColor: colors.primary,
                     shadowColor: colors.shadow,
+                    opacity: isDisabled ? 0.6 : pressed ? 0.8 : 1,
                 },
                 style,
             ]}
-            onPress={onPress}
+            android_ripple={{ color: colors.tabbarIcon_active + "20" }}
             testID={testID ?? "button"}
         >
-            <Text style={[styles.text, { color: colors.tabbarIcon_active }]}>
-                {title}
-            </Text>
-        </TouchableOpacity>
+            {loading ? (
+                <ActivityIndicator
+                    size="small"
+                    color={colors.tabbarIcon_active}
+                />
+            ) : children ? (
+                children
+            ) : (
+                title != null && (
+                    <Text
+                        style={[
+                            styles.text,
+                            { color: colors.tabbarIcon_active },
+                        ]}
+                    >
+                        {title}
+                    </Text>
+                )
+            )}
+        </Pressable>
     )
 }
 
