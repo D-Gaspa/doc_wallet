@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react"
-import { View, StyleSheet, Text } from "react-native"
-import { useThemeContext } from "../../../context/ThemeContext.tsx"
+import { View, StyleSheet, Text, ScrollView } from "react-native"
+import { useTheme } from "../../../hooks/useTheme"
 import { DocumentCardCarousel } from "../cards"
-import { useAlertStore } from "../../../store/useAlertStore.ts"
-import { IDocument } from "../../../types/document.ts"
+import { useAlertStore } from "../../../store/useAlertStore"
+import { IDocument } from "../../../types/document"
 import { Button } from "../button"
-import { Toast } from "../feedback"
-import { NavigationProp, useNavigation } from "@react-navigation/native"
+import { useNavigation, NavigationProp } from "@react-navigation/native"
 import { useFolderStore } from "../../../store/useFolderStore"
 import { useDocStore } from "../../../store"
-import { TabParamList } from "../../../App.tsx"
+import { TabParamList } from "../../../App"
+import { ProfileHeader } from "../profile_header"
+import { useAuthStore } from "../../../store"
 
 type Props = {
     folderMainViewRef: React.RefObject<{
@@ -19,45 +20,53 @@ type Props = {
 }
 
 export function ProfileScreen({ folderMainViewRef }: Props) {
-    const { colors, toggleTheme } = useThemeContext()
+    const { colors } = useTheme()
     const getExpiringDocuments = useAlertStore((s) => s.getExpiringDocuments)
     const [expiringDocs, setExpiringDocs] = useState<IDocument[]>([])
-    const [toastVisible, setToastVisible] = useState<boolean>(false)
     const documents = useDocStore((state) => state.documents)
-
     const folders = useFolderStore((s) => s.folders)
     const navigation = useNavigation<NavigationProp<TabParamList>>()
+    const user = useAuthStore((s) => s.user)
 
     useEffect(() => {
         const docs = getExpiringDocuments()
         setExpiringDocs(docs)
-    }, [documents]) // will rerun on every document update
-
-    const handleToggleTheme = () => {
-        toggleTheme()
-        setToastVisible(true)
-    }
+    }, [documents])
 
     const handleCardPress = (title: string) => {
         const doc = expiringDocs.find((d) => d.title === title)
         if (!doc) return
 
-        // Find folder that contains this document
         const folder = folders.find((f) => f.documentIds?.includes(doc.id))
 
         if (folder && folderMainViewRef.current?.navigateToFolder) {
             folderMainViewRef.current.navigateToFolder(folder.id)
-            navigation.navigate("Home") // tab name
+            navigation.navigate("Home")
         } else {
             console.warn("Folder not found for document:", title)
         }
     }
 
+    const handleGoToFolder = (folderId: string) => {
+        folderMainViewRef.current?.navigateToFolder(folderId)
+        navigation.navigate("Home")
+    }
+
+    if (!user) return null
+
+    const favoriteFolders = folders.filter((folder) => folder.favorite)
+
     return (
-        <View
+        <ScrollView
             style={[styles.container, { backgroundColor: colors.background }]}
         >
-            <Text style={styles.header}>Tu perfil</Text>
+            <ProfileHeader
+                username={user.name}
+                profileImage={undefined}
+                onPressEdit={() => {
+                    console.log("Editar perfil presionado")
+                }}
+            />
 
             {expiringDocs.length > 0 && (
                 <DocumentCardCarousel
@@ -73,24 +82,22 @@ export function ProfileScreen({ folderMainViewRef }: Props) {
                 />
             )}
 
-            <View style={styles.themeButtonWrapper}>
-                <Button
-                    title="Toggle Theme"
-                    onPress={handleToggleTheme}
-                    testID="toggle-theme-button"
-                />
-            </View>
-
-            {/* Theme toggle button */}
-
-            {toastVisible && (
-                <Toast
-                    message="Theme updated successfully"
-                    visible={toastVisible}
-                    onDismiss={() => setToastVisible(false)}
-                />
+            {favoriteFolders.length > 0 && (
+                <View style={styles.foldersSection}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                        Carpetas favoritas
+                    </Text>
+                    {favoriteFolders.map((folder) => (
+                        <Button
+                            key={folder.id}
+                            title={folder.title}
+                            onPress={() => handleGoToFolder(folder.id)}
+                            style={styles.folderButton}
+                        />
+                    ))}
+                </View>
             )}
-        </View>
+        </ScrollView>
     )
 }
 
@@ -99,18 +106,18 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingTop: 60,
         paddingHorizontal: 20,
-        justifyContent: "center",
-        alignItems: "center",
     },
-    header: {
-        fontSize: 24,
-        fontWeight: "bold",
-        marginBottom: 20,
+    foldersSection: {
+        width: "100%",
+        marginTop: 24,
     },
-    themeButtonWrapper: {
-        position: "absolute",
-        bottom: 110,
-        left: 20,
-        right: 20,
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: "600",
+        marginBottom: 12,
+        textAlign: "left",
+    },
+    folderButton: {
+        marginBottom: 12,
     },
 })

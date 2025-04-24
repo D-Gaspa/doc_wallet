@@ -25,6 +25,7 @@ export interface Folder {
     sharedWith?: string[]
     createdAt: Date
     updatedAt: Date
+    favorite: boolean
     childFolderIds?: string[] // Array of child folder IDs
     documentIds?: string[] // Array of document IDs contained in this folder
 }

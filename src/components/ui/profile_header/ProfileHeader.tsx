@@ -1,18 +1,22 @@
 import React from "react"
 import {
-    Pressable,
+    View,
     Text,
     StyleSheet,
-    View,
     Image,
     ImageSourcePropType,
+    Pressable,
+    TouchableOpacity,
 } from "react-native"
-import { useTheme } from "../../../hooks/useTheme.ts"
-import DefaultProfile from "../../ui/assets/images/default-avatar.png" // Importing local asset
+import { useTheme } from "../../../hooks/useTheme"
+import { useNavigation } from "@react-navigation/native"
+import SettingsIcon from "../assets/svg/settings.svg"
+import EditIcon from "../assets/svg/edit.svg"
+import DefaultProfile from "../../ui/assets/images/default-avatar.png"
 
 export interface ProfileHeaderProps {
     username: string
-    profileImage?: string // Only accept URL strings
+    profileImage?: string
     onPressEdit: () => void
 }
 
@@ -22,32 +26,43 @@ export function ProfileHeader({
     onPressEdit,
 }: ProfileHeaderProps) {
     const { colors } = useTheme()
+    const navigation = useNavigation()
 
-    // Resolve the correct ImageSourcePropType
-    const resolvedImage: ImageSourcePropType = profileImage
-        ? { uri: profileImage }
-        : (DefaultProfile as ImageSourcePropType) // Explicitly cast the static import
+    const resolvedImage: ImageSourcePropType =
+        profileImage && true ? { uri: profileImage } : DefaultProfile
+
+    const handleGoToSettings = () => {
+        navigation.navigate("Settings" as never)
+    }
 
     return (
-        <View style={styles.wrapper}>
-            {/* Avatar Container */}
-            <Pressable onPress={onPressEdit} style={styles.avatarContainer}>
-                <Image
-                    source={resolvedImage}
-                    style={[styles.avatar, { backgroundColor: colors.primary }]}
-                />
-            </Pressable>
-
-            {/* Name Container */}
-            <View
+        <View style={styles.container}>
+            {/* Top right settings */}
+            <TouchableOpacity
+                onPress={handleGoToSettings}
                 style={[
-                    styles.nameContainer,
-                    {
-                        backgroundColor: colors.card,
-                        shadowColor: colors.shadow,
-                    },
+                    styles.settingsButton,
+                    { backgroundColor: colors.card },
                 ]}
+                testID="go-to-settings"
             >
+                <SettingsIcon width={22} height={22} stroke={colors.text} />
+            </TouchableOpacity>
+
+            {/* Avatar and name */}
+            <View style={styles.profileContent}>
+                <Pressable onPress={onPressEdit} style={styles.avatarWrapper}>
+                    <Image source={resolvedImage} style={styles.avatar} />
+                    <View
+                        style={[
+                            styles.editIcon,
+                            { backgroundColor: colors.card },
+                        ]}
+                    >
+                        <EditIcon width={16} height={16} stroke={colors.text} />
+                    </View>
+                </Pressable>
+
                 <Text style={[styles.username, { color: colors.text }]}>
                     {username}
                 </Text>
@@ -57,40 +72,52 @@ export function ProfileHeader({
 }
 
 const styles = StyleSheet.create({
-    wrapper: {
+    container: {
+        width: "100%",
         alignItems: "center",
-        marginTop: 20,
+        paddingTop: 30,
+        paddingBottom: 20,
+        position: "relative",
     },
-    avatarContainer: {
-        width: 80, // Square size
-        height: 80,
-        overflow: "hidden",
+    settingsButton: {
         position: "absolute",
-        top: -25, // Slightly overlaps the name container
+        top: 16,
+        right: 16,
+        padding: 8,
+        borderRadius: 12,
         zIndex: 2,
-        justifyContent: "center",
+        elevation: 2,
+    },
+    profileContent: {
         alignItems: "center",
-        borderRadius: 10, // Square with rounded corners
+    },
+    avatarWrapper: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        overflow: "hidden",
+        elevation: 5,
+        position: "relative",
     },
     avatar: {
         width: "100%",
         height: "100%",
-        borderRadius: 10, // Match square shape
+        borderRadius: 50,
     },
-    nameContainer: {
-        width: 260, // Rectangular width
-        height: 50, // Rectangular height
-        borderRadius: 12, // Rounded rectangle
-        justifyContent: "center",
+    editIcon: {
+        position: "absolute",
+        bottom: 0,
+        right: 0,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         alignItems: "center",
-        marginTop: 50, // Creates room for avatar overlap
-        shadowOpacity: 0.15,
-        shadowOffset: { width: 0, height: 3 },
-        shadowRadius: 5,
-        elevation: 4,
+        justifyContent: "center",
+        elevation: 3,
     },
     username: {
-        fontSize: 16,
+        marginTop: 12,
+        fontSize: 20,
         fontWeight: "bold",
     },
 })

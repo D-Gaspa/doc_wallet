@@ -21,6 +21,7 @@ const defaultFolders: Folder[] = [
         updatedAt: new Date(),
         childFolderIds: ["5", "6"],
         documentIds: [],
+        favorite: false,
     },
     {
         id: "2",
@@ -33,6 +34,7 @@ const defaultFolders: Folder[] = [
         updatedAt: new Date(),
         childFolderIds: [],
         documentIds: [],
+        favorite: false,
     },
     {
         id: "3",
@@ -44,6 +46,7 @@ const defaultFolders: Folder[] = [
         updatedAt: new Date(),
         childFolderIds: [],
         documentIds: [],
+        favorite: false,
     },
     {
         id: "4",
@@ -55,6 +58,7 @@ const defaultFolders: Folder[] = [
         updatedAt: new Date(),
         childFolderIds: [],
         documentIds: [],
+        favorite: true,
     },
     {
         id: "5",
@@ -67,6 +71,7 @@ const defaultFolders: Folder[] = [
         updatedAt: new Date(),
         childFolderIds: [],
         documentIds: [],
+        favorite: false,
     },
     {
         id: "6",
@@ -80,6 +85,7 @@ const defaultFolders: Folder[] = [
         updatedAt: new Date(),
         childFolderIds: [],
         documentIds: [],
+        favorite: false,
     },
     {
         id: "7",
@@ -92,6 +98,7 @@ const defaultFolders: Folder[] = [
         updatedAt: new Date(),
         childFolderIds: [],
         documentIds: [],
+        favorite: false,
     },
 ]
 

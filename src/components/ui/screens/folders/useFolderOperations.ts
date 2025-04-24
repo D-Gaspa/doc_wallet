@@ -65,6 +65,7 @@ export function useFolderOperations({
             createdAt: new Date(),
             updatedAt: new Date(),
             childFolderIds: [],
+            favorite: false,
             documentIds: [],
         }
 
