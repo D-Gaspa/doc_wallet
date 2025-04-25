@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react"
 import {
     View,
     StyleSheet,
@@ -8,92 +8,96 @@ import {
     ActivityIndicator,
     ViewStyle, // Import ViewStyle
     StyleProp, // Import StyleProp
-} from "react-native";
-import { useTheme } from "../../../../hooks/useTheme"; // Adjust path
-import { BaseModal } from "../../../common/modal"; // Adjust path
-import { Text } from "../../typography"; // Adjust path
-import { Button } from "../../button"; // Adjust path
-import { Spacer, Row } from "../../layout"; // Adjust path
-import type { Folder } from "./types"; // Adjust path
-import { FolderCard } from "../../cards"; // Adjust path
+} from "react-native"
+import { useTheme } from "../../../../hooks/useTheme" // Adjust path
+import { BaseModal } from "../../../common/modal" // Adjust path
+import { Text } from "../../typography" // Adjust path
+import { Button } from "../../button" // Adjust path
+import { Spacer, Row } from "../../layout" // Adjust path
+import type { Folder } from "./types" // Adjust path
+import { FolderCard } from "../../cards" // Adjust path
 // Assuming you have a chevron icon
-import RightChevronIcon from "../../assets/svg/chevron-right.svg"; // Example path
+import RightChevronIcon from "../../assets/svg/chevron-right.svg" // Example path
 
 interface FolderMoveModalProps {
-    isVisible: boolean;
-    onClose: () => void;
-    folders: Folder[];
-    selectedFolderIds: string[];
+    isVisible: boolean
+    onClose: () => void
+    folders: Folder[]
+    selectedFolderIds: string[]
     // currentFolderId: string | null; // Removed as not directly used for filtering logic here
-    onMove: (targetFolderId: string | null) => void;
+    onMove: (targetFolderId: string | null) => void
 }
 
 export function FolderMoveModal({
-                                    isVisible,
-                                    onClose,
-                                    folders,
-                                    selectedFolderIds,
-                                    onMove,
-                                }: FolderMoveModalProps) {
-    const { colors } = useTheme();
-    const [targetFolderId, setTargetFolderId] = useState<string | null | undefined>(undefined);
-    const [folderPath, setFolderPath] = useState<Folder[]>([]);
-    const [currentViewFolderId, setCurrentViewFolderId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    isVisible,
+    onClose,
+    folders,
+    selectedFolderIds,
+    onMove,
+}: FolderMoveModalProps) {
+    const { colors } = useTheme()
+    const [targetFolderId, setTargetFolderId] = useState<
+        string | null | undefined
+    >(undefined)
+    const [folderPath, setFolderPath] = useState<Folder[]>([])
+    const [currentViewFolderId, setCurrentViewFolderId] = useState<
+        string | null
+    >(null)
+    const [isLoading, setIsLoading] = useState(false)
 
     // --- State Reset ---
     useEffect(() => {
         if (isVisible) {
-            setTargetFolderId(undefined);
-            setCurrentViewFolderId(null);
-            setFolderPath([]);
-            setIsLoading(false);
+            setTargetFolderId(undefined)
+            setCurrentViewFolderId(null)
+            setFolderPath([])
+            setIsLoading(false)
         }
-    }, [isVisible]);
+    }, [isVisible])
 
     // --- Navigation Logic ---
     const navigateToFolder = (folderId: string | null) => {
-        setIsLoading(true);
+        setIsLoading(true)
         if (folderId === null) {
-            setCurrentViewFolderId(null);
-            setFolderPath([]);
+            setCurrentViewFolderId(null)
+            setFolderPath([])
         } else {
-            const folder = folders.find((f) => f.id === folderId);
+            const folder = folders.find((f) => f.id === folderId)
             if (folder) {
-                setCurrentViewFolderId(folderId);
-                const path: Folder[] = [];
-                let current: Folder | undefined = folder;
+                setCurrentViewFolderId(folderId)
+                const path: Folder[] = []
+                let current: Folder | undefined = folder
                 while (current) {
-                    path.unshift(current);
-                    current = folders.find(f => f.id === current?.parentId);
+                    path.unshift(current)
+                    current = folders.find((f) => f.id === current?.parentId)
                 }
-                setFolderPath(path);
+                setFolderPath(path)
             }
         }
-        setTimeout(() => setIsLoading(false), 50);
-    };
+        setTimeout(() => setIsLoading(false), 50)
+    }
 
     // --- Data Filtering ---
     const getCurrentFolders = () => {
         return folders.filter(
             (folder) =>
                 folder.parentId === currentViewFolderId &&
-                !selectedFolderIds.includes(folder.id)
-        );
-    };
+                !selectedFolderIds.includes(folder.id),
+        )
+    }
 
     // --- Selection Handling ---
     const handleSelectTarget = (id: string | null) => {
-        setTargetFolderId(id);
-    };
+        setTargetFolderId(id)
+    }
 
     // --- Move Action ---
     const handleMove = () => {
         if (targetFolderId !== undefined) {
-            onMove(targetFolderId);
-            onClose();
+            onMove(targetFolderId)
+            onClose()
         }
-    };
+    }
 
     // --- Rendering ---
     const renderFolderItem = ({ item }: { item: Folder }) => (
@@ -111,38 +115,58 @@ export function FolderMoveModal({
                 onPress={() => navigateToFolder(item.id)}
             />
         </TouchableOpacity>
-    );
+    )
 
-    const displayedFolders = getCurrentFolders();
+    const displayedFolders = getCurrentFolders()
 
     // Pre-calculate styles for selection buttons to fix TS error [cite: 2]
-    const isCurrentSelected = targetFolderId === currentViewFolderId;
-    const isRootSelected = targetFolderId === null;
+    const isCurrentSelected = targetFolderId === currentViewFolderId
+    const isRootSelected = targetFolderId === null
 
     const selectCurrentButtonStyle: StyleProp<ViewStyle> = [
         styles.selectCurrentButton,
         { borderColor: colors.primary }, // Base border color
         isCurrentSelected && styles.selectedTargetButton, // Apply conditional border style
-        { backgroundColor: isCurrentSelected ? colors.primary + '20' : colors.card } // Apply conditional background
-    ];
+        {
+            backgroundColor: isCurrentSelected
+                ? colors.primary + "20"
+                : colors.card,
+        }, // Apply conditional background
+    ]
 
     const selectRootButtonStyle: StyleProp<ViewStyle> = [
         styles.selectRootButton,
         { borderColor: colors.border }, // Base border color
         isRootSelected && styles.selectedTargetButton, // Apply conditional border style
-        { backgroundColor: isRootSelected ? colors.primary + '20' : colors.card } // Apply conditional background
-    ];
+        {
+            backgroundColor: isRootSelected
+                ? colors.primary + "20"
+                : colors.card,
+        }, // Apply conditional background
+    ]
 
     return (
-        <BaseModal isVisible={isVisible} onClose={onClose} dismissOnBackdropPress={false}>
+        <BaseModal
+            isVisible={isVisible}
+            onClose={onClose}
+            dismissOnBackdropPress={false}
+        >
             <View style={styles.modalContainer}>
-                <Text variant="md" weight="bold" style={[styles.title, { color: colors.text }]}>
+                <Text
+                    variant="md"
+                    weight="bold"
+                    style={[styles.title, { color: colors.text }]}
+                >
                     Mover carpeta
                 </Text>
                 <Spacer size={10} />
 
                 {/* --- Breadcrumbs and Select Current --- */}
-                <Row align="center" justify="space-between" style={styles.navigationRow}>
+                <Row
+                    align="center"
+                    justify="space-between"
+                    style={styles.navigationRow}
+                >
                     {/* Breadcrumbs */}
                     <ScrollView
                         horizontal
@@ -161,8 +185,11 @@ export function FolderMoveModal({
                                     styles.breadcrumbText,
                                     // Apply active style directly based on condition
                                     currentViewFolderId === null
-                                        ? [styles.breadcrumbActive, { color: colors.text }] // Active style needs color too
-                                        : { color: colors.primary }
+                                        ? [
+                                              styles.breadcrumbActive,
+                                              { color: colors.text },
+                                          ] // Active style needs color too
+                                        : { color: colors.primary },
                                 ]}
                             >
                                 Elige una carpeta destino
@@ -171,7 +198,12 @@ export function FolderMoveModal({
                         {/* Folder Path Breadcrumbs */}
                         {folderPath.map((folder) => (
                             <Row key={folder.id} align="center">
-                                <RightChevronIcon width={12} height={12} color={colors.secondaryText} style={styles.breadcrumbSeparator} />
+                                <RightChevronIcon
+                                    width={12}
+                                    height={12}
+                                    color={colors.secondaryText}
+                                    style={styles.breadcrumbSeparator}
+                                />
                                 <TouchableOpacity
                                     style={styles.breadcrumbItem}
                                     onPress={() => navigateToFolder(folder.id)}
@@ -182,8 +214,11 @@ export function FolderMoveModal({
                                             styles.breadcrumbText,
                                             // Apply active style directly based on condition
                                             currentViewFolderId === folder.id
-                                                ? [styles.breadcrumbActive, { color: colors.text }] // Active style needs color too
-                                                : { color: colors.primary }
+                                                ? [
+                                                      styles.breadcrumbActive,
+                                                      { color: colors.text },
+                                                  ] // Active style needs color too
+                                                : { color: colors.primary },
                                         ]}
                                         numberOfLines={1}
                                     >
@@ -199,15 +234,22 @@ export function FolderMoveModal({
                         <TouchableOpacity
                             // Apply pre-calculated style array [cite: 2]
                             style={selectCurrentButtonStyle}
-                            onPress={() => handleSelectTarget(currentViewFolderId)}
+                            onPress={() =>
+                                handleSelectTarget(currentViewFolderId)
+                            }
                         >
-                            <Text style={[styles.selectButtonText, { color: colors.primary }]}>
+                            <Text
+                                style={[
+                                    styles.selectButtonText,
+                                    { color: colors.primary },
+                                ]}
+                            >
                                 Select Current
                             </Text>
                         </TouchableOpacity>
                     )}
                 </Row>
-                <Spacer size={10}/>
+                <Spacer size={10} />
 
                 {/* --- Select Root Option --- */}
                 <TouchableOpacity
@@ -215,15 +257,23 @@ export function FolderMoveModal({
                     style={selectRootButtonStyle}
                     onPress={() => handleSelectTarget(null)}
                 >
-                    <Text style={[styles.selectButtonText, { color: colors.text }]}>
+                    <Text
+                        style={[
+                            styles.selectButtonText,
+                            { color: colors.text },
+                        ]}
+                    >
                         Mover a vista general
                     </Text>
                 </TouchableOpacity>
                 <Spacer size={16} />
 
-
                 {/* --- Folder List --- */}
-                <Text variant="sm" weight="medium" style={[styles.subheading, { color: colors.secondaryText }]}>
+                <Text
+                    variant="sm"
+                    weight="medium"
+                    style={[styles.subheading, { color: colors.secondaryText }]}
+                >
                     Navega y escoge una carpeta
                 </Text>
                 <View style={styles.folderListContainer}>
@@ -236,7 +286,10 @@ export function FolderMoveModal({
                             keyExtractor={(item) => item.id}
                             ListEmptyComponent={
                                 <View style={styles.emptyContainer}>
-                                    <Text variant="sm" style={{ color: colors.secondaryText }}>
+                                    <Text
+                                        variant="sm"
+                                        style={{ color: colors.secondaryText }}
+                                    >
                                         (No hay carpetas disponibles)
                                     </Text>
                                 </View>
@@ -263,18 +316,17 @@ export function FolderMoveModal({
                     </Row>
                 </View>
                 <Spacer size={16} />
-
             </View>
         </BaseModal>
-    );
+    )
 }
 
 const styles = StyleSheet.create({
     modalContainer: {
         flexShrink: 1,
         padding: 15,
-        maxHeight: '85%',
-        width: '100%',
+        maxHeight: "85%",
+        width: "100%",
     },
     title: {
         marginBottom: 10,
@@ -287,10 +339,10 @@ const styles = StyleSheet.create({
     },
     breadcrumbsScrollView: {
         flexShrink: 1, // Allow shrinking
-        maxWidth: '70%', // Prevent breadcrumbs from taking all space
+        maxWidth: "70%", // Prevent breadcrumbs from taking all space
     },
     breadcrumbsContent: {
-        alignItems: 'center',
+        alignItems: "center",
     },
     breadcrumbItem: {
         paddingHorizontal: 4,
@@ -300,36 +352,40 @@ const styles = StyleSheet.create({
     breadcrumbText: {
         fontSize: 14,
     },
-    breadcrumbActive: { // Style for the *currently viewed* folder in breadcrumbs
+    breadcrumbActive: {
+        // Style for the *currently viewed* folder in breadcrumbs
         fontWeight: "bold",
         // color set dynamically
     },
     breadcrumbSeparator: {
         marginHorizontal: 4,
-        alignSelf: 'center', // Align chevron vertically
+        alignSelf: "center", // Align chevron vertically
     },
-    selectCurrentButton: { // Base style for the button itself
+    selectCurrentButton: {
+        // Base style for the button itself
         paddingVertical: 6,
         paddingHorizontal: 10,
         borderRadius: 6,
         borderWidth: 1, // Base border width
         marginLeft: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
     },
-    selectRootButton: { // Base style for the button itself
+    selectRootButton: {
+        // Base style for the button itself
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 6,
         borderWidth: StyleSheet.hairlineWidth,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: "center",
+        justifyContent: "center",
     },
     selectButtonText: {
         fontSize: 13,
-        fontWeight: '500',
+        fontWeight: "500",
     },
-    selectedTargetButton: { // Applied when this button represents the selected target
+    selectedTargetButton: {
+        // Applied when this button represents the selected target
         borderWidth: 2.5, // Thicker border for selected target
         // backgroundColor is applied dynamically
     },
@@ -344,7 +400,8 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         paddingLeft: 4,
     },
-    folderItemWrapper: { // Style for the touchable wrapper around FolderCard
+    folderItemWrapper: {
+        // Style for the touchable wrapper around FolderCard
         // Add padding/margin here if needed for spacing items in the list
         marginBottom: 4,
     },
@@ -352,7 +409,7 @@ const styles = StyleSheet.create({
     emptyContainer: {
         height: 80,
         alignItems: "center",
-        justifyContent: 'center',
+        justifyContent: "center",
     },
     loadingIndicator: {
         marginTop: 20,
@@ -365,4 +422,4 @@ const styles = StyleSheet.create({
         // Using Button variant="outline" handles styling
     },
     // disabledButton style removed (handled by Button's disabled prop)
-});
+})

@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode } from "react"
 import {
     Pressable,
     Text,
@@ -7,69 +7,75 @@ import {
     View, // ---> Import View
     ViewStyle,
     TextStyle, // ---> Import TextStyle
-} from "react-native";
-import { useTheme } from "../../../hooks/useTheme.ts"; // Adjust path if needed
+} from "react-native"
+import { useTheme } from "../../../hooks/useTheme.ts" // Adjust path if needed
 
 // Define Button variants
-type ButtonVariant = 'primary' | 'outline' | 'text';
+type ButtonVariant = "primary" | "outline" | "text"
 
 export interface ButtonProps {
-    title?: string; // Optional title
-    onPress: () => void;
-    loading?: boolean;
-    disabled?: boolean;
-    style?: ViewStyle; // Style for the Pressable container
-    textStyle?: TextStyle; // ---> Style specifically for the Text component
-    testID?: string;
-    children?: ReactNode; // Allow children override
-    variant?: ButtonVariant; // ---> Added variant prop
-    leftIcon?: ReactNode; // ---> Icon on the left
-    rightIcon?: ReactNode; // ---> Icon on the right
+    title?: string // Optional title
+    onPress: () => void
+    loading?: boolean
+    disabled?: boolean
+    style?: ViewStyle // Style for the Pressable container
+    textStyle?: TextStyle // ---> Style specifically for the Text component
+    testID?: string
+    children?: ReactNode // Allow children override
+    variant?: ButtonVariant // ---> Added variant prop
+    leftIcon?: ReactNode // ---> Icon on the left
+    rightIcon?: ReactNode // ---> Icon on the right
 }
 
 export function Button({
-                           title,
-                           onPress,
-                           loading = false,
-                           disabled = false,
-                           style,
-                           textStyle, // Destructure textStyle
-                           testID,
-                           children,
-                           variant = 'primary', // Default to 'primary'
-                           leftIcon, // Destructure leftIcon
-                           rightIcon, // Destructure rightIcon
-                       }: ButtonProps) {
-    const { colors } = useTheme();
-    const isDisabled = disabled || loading;
+    title,
+    onPress,
+    loading = false,
+    disabled = false,
+    style,
+    textStyle, // Destructure textStyle
+    testID,
+    children,
+    variant = "primary", // Default to 'primary'
+    leftIcon, // Destructure leftIcon
+    rightIcon, // Destructure rightIcon
+}: ButtonProps) {
+    const { colors } = useTheme()
+    const isDisabled = disabled || loading
 
     // Determine styles based on variant
     const getVariantStyles = (): { container: ViewStyle; text: TextStyle } => {
         switch (variant) {
-            case 'outline':
+            case "outline":
                 return {
                     container: {
-                        backgroundColor: 'transparent',
-                        borderColor: isDisabled ? colors.secondaryText+'80' : colors.primary,
+                        backgroundColor: "transparent",
+                        borderColor: isDisabled
+                            ? colors.secondaryText + "80"
+                            : colors.primary,
                         borderWidth: 1.5, // Slightly thicker border for outline
                     },
                     text: {
-                        color: isDisabled ? colors.secondaryText+'80' : colors.primary,
+                        color: isDisabled
+                            ? colors.secondaryText + "80"
+                            : colors.primary,
                     },
-                };
-            case 'text':
+                }
+            case "text":
                 return {
                     container: {
-                        backgroundColor: 'transparent',
+                        backgroundColor: "transparent",
                         elevation: 0, // No shadow for text buttons
                         shadowOpacity: 0,
                     },
                     text: {
-                        color: isDisabled ? colors.secondaryText+'80' : colors.primary,
-                        fontWeight: '500', // Medium weight for text buttons
+                        color: isDisabled
+                            ? colors.secondaryText + "80"
+                            : colors.primary,
+                        fontWeight: "500", // Medium weight for text buttons
                     },
-                };
-            case 'primary':
+                }
+            case "primary":
             default:
                 return {
                     container: {
@@ -80,12 +86,13 @@ export function Button({
                     text: {
                         color: colors.tabbarIcon_active, // White text on primary bg
                     },
-                };
+                }
         }
-    };
+    }
 
-    const variantStyles = getVariantStyles();
-    const loaderColor = variant === 'primary' ? colors.tabbarIcon_active : colors.primary;
+    const variantStyles = getVariantStyles()
+    const loaderColor =
+        variant === "primary" ? colors.tabbarIcon_active : colors.primary
 
     return (
         <Pressable
@@ -94,7 +101,11 @@ export function Button({
             style={({ pressed }) => [
                 styles.buttonBase, // Base layout styles
                 variantStyles.container, // Apply variant container styles
-                isDisabled ? styles.disabledState : (pressed ? styles.pressedState : {}), // Opacity states
+                isDisabled
+                    ? styles.disabledState
+                    : pressed
+                    ? styles.pressedState
+                    : {}, // Opacity states
                 style, // Apply external container styles last
             ]}
             android_ripple={{ color: loaderColor + "30" }} // Ripple based on variant color
@@ -104,7 +115,9 @@ export function Button({
         >
             <View style={styles.contentContainer}>
                 {/* Left Icon */}
-                {leftIcon && !loading && <View style={styles.iconWrapper}>{leftIcon}</View>}
+                {leftIcon && !loading && (
+                    <View style={styles.iconWrapper}>{leftIcon}</View>
+                )}
 
                 {/* Content: Loader > Children > Title */}
                 {loading ? (
@@ -127,14 +140,17 @@ export function Button({
                 )}
 
                 {/* Right Icon */}
-                {rightIcon && !loading && <View style={styles.iconWrapper}>{rightIcon}</View>}
+                {rightIcon && !loading && (
+                    <View style={styles.iconWrapper}>{rightIcon}</View>
+                )}
             </View>
         </Pressable>
-    );
+    )
 }
 
 const styles = StyleSheet.create({
-    buttonBase: { // Base styles for layout, padding, border radius
+    buttonBase: {
+        // Base styles for layout, padding, border radius
         width: "100%",
         paddingVertical: 10, // Slightly reduced padding
         paddingHorizontal: 16, // Horizontal padding
@@ -147,15 +163,17 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         borderWidth: 0, // Default no border (set by variants)
     },
-    contentContainer: { // Container for icon + text/children
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
+    contentContainer: {
+        // Container for icon + text/children
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
     },
-    textBase: { // Base styles for text
+    textBase: {
+        // Base styles for text
         fontSize: 16,
         fontWeight: "bold",
-        textAlign: 'center',
+        textAlign: "center",
     },
     iconWrapper: {
         marginHorizontal: 8, // Space between icon and text/children
@@ -168,4 +186,4 @@ const styles = StyleSheet.create({
     },
     // Specific style overrides can be added here if needed,
     // but most logic is handled in getVariantStyles now.
-});
+})
