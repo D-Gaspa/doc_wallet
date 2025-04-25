@@ -93,9 +93,9 @@ export function RegisterScreen({
         if (/[^A-Za-z0-9]/.test(password)) score += 1 // Has special chars
 
         let feedback: string
-        if (score < 3) feedback = "Weak password"
-        else if (score < 5) feedback = "Moderate password"
-        else feedback = "Strong password"
+        if (score < 3) feedback = "Contraseña débil"
+        else if (score < 5) feedback = "Contraseña moderada"
+        else feedback = "Contraseña fuerte"
 
         setPasswordStrength({ score: Math.min(score, 6), feedback })
     }, [password])
@@ -109,28 +109,29 @@ export function RegisterScreen({
 
         switch (field) {
             case "firstName":
-                if (!value) error = "First name is required"
+                if (!value) error = "El primer nombre es requerido"
                 break
             case "lastName":
-                if (!value) error = "Last name is required"
+                if (!value) error = "El apellido es requerido"
                 break
             case "email":
-                if (!value) error = "Email is required"
+                if (!value) error = "El email es requerido"
                 else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value)))
-                    error = "Please enter a valid email address"
+                    error = "Por favor, ingrese un correo válido"
                 break
             case "password":
-                if (!value) error = "Password is required"
+                if (!value) error = "La contraseña es requerida"
                 else if (String(value).length < 6)
-                    error = "Password must be at least 6 characters"
+                    error = "La contraseña debe tener al menos 6 caracteres"
                 else if (passwordStrength.score < 3)
-                    error = "Please use a stronger password"
+                    error = "Por favor, usa una contraseña más fuerte"
                 break
             case "confirmPassword":
-                if (String(value) !== password) error = "Passwords do not match"
+                if (String(value) !== password)
+                    error = "Las contraseñas no coinciden"
                 break
             case "acceptedTerms":
-                if (!value) error = "You must accept the terms and conditions"
+                if (!value) error = "Debes aceptar los términos y condiciones"
                 break
         }
 
@@ -432,7 +433,7 @@ export function RegisterScreen({
                                                         : colors.border,
                                                 },
                                             ]}
-                                            placeholder="First Name"
+                                            placeholder="Primer nombre"
                                             placeholderTextColor={
                                                 colors.secondaryText
                                             }
@@ -489,7 +490,7 @@ export function RegisterScreen({
                                                         : colors.border,
                                                 },
                                             ]}
-                                            placeholder="Last Name"
+                                            placeholder="Apellidos"
                                             placeholderTextColor={
                                                 colors.secondaryText
                                             }
@@ -548,7 +549,7 @@ export function RegisterScreen({
                                                     : colors.border,
                                             },
                                         ]}
-                                        placeholder="Email"
+                                        placeholder="Correo electrónico"
                                         placeholderTextColor={
                                             colors.secondaryText
                                         }
@@ -583,7 +584,7 @@ export function RegisterScreen({
                                         weight="medium"
                                         style={styles.inputLabel}
                                     >
-                                        Password
+                                        Contraseña
                                     </Text>
                                     <View style={styles.passwordContainer}>
                                         <TextInput
@@ -604,7 +605,7 @@ export function RegisterScreen({
                                                         : colors.border,
                                                 },
                                             ]}
-                                            placeholder="Password (at least 6 characters)"
+                                            placeholder="Contraseña (al menos 6 caracteres)"
                                             placeholderTextColor={
                                                 colors.secondaryText
                                             }
@@ -696,7 +697,7 @@ export function RegisterScreen({
                                                         : colors.border,
                                                 },
                                             ]}
-                                            placeholder="Confirm your password"
+                                            placeholder="Confirma tu contraseña"
                                             placeholderTextColor={
                                                 colors.secondaryText
                                             }

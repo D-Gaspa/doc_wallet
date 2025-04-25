@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from "react"
 import { View, StyleSheet, Text, ScrollView } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
-import { DocumentCardCarousel } from "../cards"
+import { DocumentCardCarousel, FolderCard } from "../cards" // Assuming path is correct
 import { useAlertStore } from "../../../store/useAlertStore"
 import { IDocument } from "../../../types/document"
-import { Button } from "../button"
 import { useNavigation, NavigationProp } from "@react-navigation/native"
 import { useFolderStore } from "../../../store/useFolderStore"
 import { useDocStore } from "../../../store"
-import { TabParamList } from "../../../App"
-import { ProfileHeader } from "../profile_header"
+import { TabParamList } from "../../../App" // Assuming path is correct
+import { ProfileHeader } from "../profile_header" // Assuming path is correct
 import { useAuthStore } from "../../../store"
+import { Stack, Spacer } from "../layout" // Assuming path is correct
+import { getIconById, ThemeColors } from "./folders/CustomIconSelector" // Assuming path is correct
+import type { Folder } from "./folders/types.ts" // ---> Import Folder type
+
+// Define Folder with optional favorite property locally if not updating global type yet
+type FolderWithFavorite = Folder & { favorite?: boolean }
 
 type Props = {
     folderMainViewRef: React.RefObject<{
@@ -31,7 +36,7 @@ export function ProfileScreen({ folderMainViewRef }: Props) {
     useEffect(() => {
         const docs = getExpiringDocuments()
         setExpiringDocs(docs)
-    }, [documents])
+    }, [documents, getExpiringDocuments])
 
     const handleCardPress = (title: string) => {
         const doc = expiringDocs.find((d) => d.title === title)
@@ -54,70 +59,122 @@ export function ProfileScreen({ folderMainViewRef }: Props) {
 
     if (!user) return null
 
-    const favoriteFolders = folders.filter((folder) => folder.favorite)
+    // Filter favorite folders using the local type assertion
+    // NOTE: Add 'favorite?: boolean' to the main Folder type for a better long-term solution
+    const favoriteFolders = folders.filter(
+        (folder): folder is FolderWithFavorite =>
+            (folder as FolderWithFavorite).favorite,
+    )
+
+    // Get custom icon for folder - Use the imported Folder type
+    const getFolderIcon = (folder: Folder) => {
+        // ---> Changed 'any' to 'Folder'
+        if (folder.type === "custom" && folder.customIconId) {
+            // Cast colors to ThemeColors type expected by getIconById
+            return getIconById(
+                folder.customIconId,
+                colors as unknown as ThemeColors,
+            )
+        }
+        return undefined
+    }
 
     return (
         <ScrollView
-            style={[styles.container, { backgroundColor: colors.background }]}
+            style={[styles.scrollView, { backgroundColor: colors.background }]}
+            contentContainerStyle={styles.scrollViewContent}
+            showsVerticalScrollIndicator={false}
         >
             <ProfileHeader
-                username={user.name}
+                username={user.name || "User"}
                 profileImage={undefined}
+                coverImage={undefined}
                 onPressEdit={() => {
-                    console.log("Editar perfil presionado")
+                    console.log("Edit Profile pressed")
+                }}
+                onPressNotifications={() => {
+                    console.log("Notifications pressed")
                 }}
             />
 
-            {expiringDocs.length > 0 && (
-                <DocumentCardCarousel
-                    documents={expiringDocs.map((doc) => ({
-                        type: "expiring",
-                        title: doc.title ?? "Sin título",
-                        expirationDate:
-                            doc.parameters?.find(
-                                (p) => p.key === "expiration_date",
-                            )?.value ?? "Sin fecha",
-                    }))}
-                    onPress={handleCardPress}
-                />
-            )}
+            {/* Wrap content in a View with padding */}
+            <View style={styles.contentContainer}>
+                {/* Expiring Documents Section - Ensure no raw text/whitespace */}
+                {expiringDocs.length > 0 && (
+                    <>
+                        <Stack spacing={12}>
+                            <Text
+                                style={[
+                                    styles.sectionTitle,
+                                    { color: colors.text },
+                                ]}
+                            >
+                                Expiring Soon
+                            </Text>
+                            <DocumentCardCarousel
+                                documents={expiringDocs.map((doc) => ({
+                                    type: "expiring",
+                                    title: doc.title ?? "Sin título",
+                                    expirationDate:
+                                        doc.parameters?.find(
+                                            (p) => p.key === "expiration_date",
+                                        )?.value ?? "Sin fecha",
+                                }))}
+                                onPress={handleCardPress}
+                            />
+                        </Stack>
+                        <Spacer size={16} />
+                    </>
+                )}
 
-            {favoriteFolders.length > 0 && (
-                <View style={styles.foldersSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                        Carpetas favoritas
-                    </Text>
-                    {favoriteFolders.map((folder) => (
-                        <Button
-                            key={folder.id}
-                            title={folder.title}
-                            onPress={() => handleGoToFolder(folder.id)}
-                            style={styles.folderButton}
-                        />
-                    ))}
-                </View>
-            )}
+                {/* Favorite Folders Section - Ensure no raw text/whitespace */}
+                {favoriteFolders.length > 0 && (
+                    <>
+                        <Stack spacing={12}>
+                            <Text
+                                style={[
+                                    styles.sectionTitle,
+                                    { color: colors.text },
+                                ]}
+                            >
+                                Favorite Folders
+                            </Text>
+                            {favoriteFolders.map((folder) => (
+                                <FolderCard
+                                    key={folder.id}
+                                    title={folder.title}
+                                    folderId={folder.id}
+                                    // Use nullish coalescing for optional type [cite: 488]
+                                    type={folder.type ?? "custom"}
+                                    customIcon={getFolderIcon(folder)}
+                                    showAddTagButton={false}
+                                    onPress={() => handleGoToFolder(folder.id)}
+                                />
+                            ))}
+                        </Stack>
+                        <Spacer size={20} />
+                    </>
+                )}
+            </View>
         </ScrollView>
     )
 }
 
 const styles = StyleSheet.create({
-    container: {
+    scrollView: {
         flex: 1,
-        paddingTop: 60,
-        paddingHorizontal: 20,
     },
-    foldersSection: {
-        width: "100%",
-        marginTop: 24,
+    scrollViewContent: {
+        paddingBottom: 100,
+    },
+    contentContainer: {
+        paddingHorizontal: 20,
+        marginTop: 20,
     },
     sectionTitle: {
         fontSize: 18,
         fontWeight: "600",
-        marginBottom: 12,
+        marginBottom: 8,
         textAlign: "left",
-    },
-    folderButton: {
-        marginBottom: 12,
     },
 })

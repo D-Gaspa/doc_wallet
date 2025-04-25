@@ -17,7 +17,6 @@ import { Text } from "../../typography"
 import { DocWalletLogo } from "../../../common/DocWalletLogo"
 import EyeIcon from "../../assets/svg/Eye.svg"
 import EyeOffIcon from "../../assets/svg/EyeOff.svg"
-// Import the hook from its separate file
 import { useDismissKeyboard } from "../../../../hooks/useDismissKeyboard"
 
 type LoginScreenProps = {
@@ -100,19 +99,19 @@ export function LoginScreen({
 
         // Validate form
         if (!email.trim()) {
-            setError("Please enter your email")
+            setError("Por favor, ingrese su email")
             shakeError()
             return
         }
 
         if (!isEmailValid(email.trim())) {
-            setError("Please enter a valid email address")
+            setError("Por favor, ingrese un email válido")
             shakeError()
             return
         }
 
         if (!password) {
-            setError("Please enter your password")
+            setError("Por favor, ingrese una contraseña")
             shakeError()
             return
         }
@@ -135,7 +134,7 @@ export function LoginScreen({
             setError(
                 err instanceof Error
                     ? err.message
-                    : "Login failed. Please try again.",
+                    : "Ingreso fallido, intente de nuevo.",
             )
             shakeError()
         } finally {
@@ -222,7 +221,7 @@ export function LoginScreen({
                                                 borderColor: colors.border,
                                             },
                                         ]}
-                                        placeholder="Enter your email"
+                                        placeholder="Ingresa tu correo"
                                         placeholderTextColor={
                                             colors.secondaryText
                                         }
@@ -259,7 +258,7 @@ export function LoginScreen({
                                                     borderColor: colors.border,
                                                 },
                                             ]}
-                                            placeholder="Enter your password"
+                                            placeholder="Ingresa tu contraseña"
                                             placeholderTextColor={
                                                 colors.secondaryText
                                             }
@@ -372,7 +371,7 @@ export function LoginScreen({
                                 variant="sm"
                                 style={{ color: colors.secondaryText }}
                             >
-                                Do not have an account?{" "}
+                                ¿Todavía no tienes una cuenta?{" "}
                             </Text>
                             <TouchableOpacity
                                 onPress={onGoToRegister}
@@ -389,7 +388,7 @@ export function LoginScreen({
                                     weight="bold"
                                     style={{ color: colors.primary }}
                                 >
-                                    Sign Up
+                                    Ingresar
                                 </Text>
                             </TouchableOpacity>
                         </View>

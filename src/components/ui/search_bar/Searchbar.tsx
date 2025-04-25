@@ -17,7 +17,7 @@ import { useSearchSuggestions } from "../../../hooks/useSearchSuggestions.ts"
 export interface SearchBarProps {
     placeholder?: string
     onSearch?: (query: string) => void
-    onReset?: () => void // Nueva prop para manejar el retorno a la pantalla inicial
+    onReset?: () => void
     testID?: string
 }
 
@@ -56,9 +56,7 @@ export function SearchBar({
             Keyboard.dismiss()
 
             if (!trimmed) {
-                // Si la búsqueda está vacía, llamamos a onReset para volver a la pantalla inicial
                 onReset?.()
-                // También notificamos con una búsqueda vacía por si acaso
                 onSearch?.("")
                 return
             }
@@ -103,10 +101,8 @@ export function SearchBar({
         // Dismiss keyboard
         Keyboard.dismiss()
 
-        // Volver a la pantalla inicial
         onReset?.()
 
-        // También notificamos con búsqueda vacía por compatibilidad
         onSearch?.("")
     }, [onSearch, onReset])
 

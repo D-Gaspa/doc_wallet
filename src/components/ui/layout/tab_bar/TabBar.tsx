@@ -1,7 +1,8 @@
 import React from "react"
 import { StyleSheet, View } from "react-native"
-import { useTheme } from "../../../../hooks/useTheme.ts"
-import { TabBarNavigation } from "./TabBarNavigation.tsx"
+import { useTheme } from "../../../../hooks/useTheme.ts" // Adjust path if needed
+import { TabBarNavigation } from "./TabBarNavigation.tsx" // Import INDICATOR_HEIGHT
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export interface TabBarProps {
     activeTab: string
@@ -11,6 +12,9 @@ export interface TabBarProps {
     testID?: string
 }
 
+// Define a base height for the content area (icon + label + padding)
+const TAB_BAR_CONTENT_HEIGHT = 60 // Adjust if needed based on icon/label size
+
 export function TabBar({
     activeTab,
     onTabChange,
@@ -18,19 +22,22 @@ export function TabBar({
     testID,
 }: TabBarProps) {
     const { colors } = useTheme()
+    const insets = useSafeAreaInsets()
 
     return (
         <View
             style={[
                 styles.container,
                 {
-                    backgroundColor: colors.secondary,
-                    shadowColor: colors.shadow,
+                    backgroundColor: colors.background,
+                    borderTopColor: colors.border,
+                    // Calculate total height: content + safe area bottom
+                    height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
+                    paddingBottom: insets.bottom, // Apply safe area padding
                 },
             ]}
             testID={testID ?? "tabBar-root"}
         >
-            {/* Bottom Navigation Tabs */}
             <TabBarNavigation
                 activeTab={activeTab}
                 onTabChange={onTabChange}
@@ -42,20 +49,9 @@ export function TabBar({
 
 const styles = StyleSheet.create({
     container: {
-        position: "absolute",
-        bottom: 20,
-        left: 20,
-        right: 20,
         flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingVertical: 10,
-        paddingHorizontal: 25,
-        borderRadius: 34,
-        height: 68,
-        shadowOpacity: 0.1,
-        shadowOffset: { width: 0, height: 3 },
-        shadowRadius: 5,
-        elevation: 5,
+        width: "100%",
+        borderTopWidth: StyleSheet.hairlineWidth,
+        // Height and paddingBottom are set dynamically above
     },
 })

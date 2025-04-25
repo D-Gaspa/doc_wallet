@@ -1,9 +1,9 @@
 import React from "react"
-import { View, StyleSheet } from "react-native"
+import { View, StyleSheet, TouchableOpacity } from "react-native"
 import { Row } from "../../layout"
 import { Text } from "../../typography"
-import { Button } from "../../button"
 import { Folder } from "./types"
+import { useTheme } from "../../../../hooks/useTheme"
 
 interface FolderSelectionControlsProps {
     selectionMode: boolean
@@ -26,75 +26,113 @@ export function FolderSelectionControls({
     onMovePress,
     testID,
 }: FolderSelectionControlsProps) {
+    const { colors } = useTheme()
+
+    const numSelected = selectedFolderIds.length
+    const numTotal = filteredFolders.length
+    const allSelected = numSelected === numTotal && numTotal > 0
+
+    // Helper component for tappable text buttons
+    const TextButton = ({
+        title,
+        onPress,
+        style,
+        textStyle,
+        testID,
+    }: {
+        title: string
+        onPress: () => void
+        style?: object
+        textStyle?: object
+        testID?: string
+    }) => (
+        <TouchableOpacity
+            onPress={onPress}
+            style={[styles.textButtonBase, style]} // Base style + specific overrides
+            testID={testID}
+            activeOpacity={0.6} // Feedback on press
+        >
+            <Text
+                style={[
+                    styles.textButtonText,
+                    { color: colors.primary },
+                    textStyle,
+                ]}
+            >
+                {title}
+            </Text>
+        </TouchableOpacity>
+    )
+
     return (
         <View
             style={styles.container}
             testID={testID ?? "folder-selection-controls"}
         >
             {selectionMode ? (
+                // --- Selection Mode Active ---
                 <Row justify="space-between" align="center" style={styles.row}>
+                    {/* Left side: Selection Count */}
                     <View style={styles.infoContainer}>
                         <Text
-                            style={styles.selectionText}
+                            style={[
+                                styles.selectionText,
+                                { color: colors.text },
+                            ]}
                             numberOfLines={1}
                             ellipsizeMode="tail"
                         >
-                            {selectedFolderIds.length === 0
-                                ? "None"
-                                : `${selectedFolderIds.length} selected`}
+                            {`${numSelected} selected`}
                         </Text>
                     </View>
 
+                    {/* Right side: Action Buttons (as TextButton) */}
                     <View style={styles.buttonsContainer}>
-                        {selectedFolderIds.length > 0 && (
+                        {/* Conditionally show Move and +Tags if items are selected */}
+                        {numSelected > 0 && (
                             <>
                                 {onMovePress && (
-                                    <Button
-                                        title="Move"
+                                    <TextButton
+                                        title="Mover"
                                         onPress={onMovePress}
-                                        style={styles.actionButton}
                                         testID="move-folders-button"
                                     />
                                 )}
-                                <Button
+                                <TextButton
                                     title="+ Tags"
                                     onPress={() =>
                                         setBatchTagModalVisible(true)
                                     }
-                                    style={styles.actionButton}
                                     testID="batch-tags-button"
                                 />
                             </>
                         )}
 
-                        <Button
-                            title={
-                                selectedFolderIds.length ===
-                                    filteredFolders.length &&
-                                filteredFolders.length > 0
-                                    ? "None"
-                                    : "All"
-                            }
+                        {/* Select All / None Button */}
+                        <TextButton
+                            title={allSelected ? "Ninguno" : "Todos"}
                             onPress={() => handleSelectAll(filteredFolders)}
-                            style={styles.actionButton}
                             testID="select-all-button"
                         />
 
-                        <Button
-                            title="X"
+                        {/* Cancel Button */}
+                        <TextButton
+                            title="Cancelar"
                             onPress={toggleSelectionMode}
-                            style={styles.cancelButton}
+                            // Optionally use a different color for Cancel
+                            textStyle={{ color: colors.secondaryText }}
                             testID="cancel-selection-button"
                         />
                     </View>
                 </Row>
             ) : (
-                <Button
-                    title="Select"
-                    onPress={toggleSelectionMode}
-                    style={styles.selectButton}
-                    testID="toggle-selection-button"
-                />
+                <View style={styles.selectButtonContainer}>
+                    <TextButton
+                        title="Seleccionar"
+                        onPress={toggleSelectionMode}
+                        testID="toggle-selection-button"
+                    />
+                </View>
             )}
         </View>
     )
@@ -105,18 +143,21 @@ const styles = StyleSheet.create({
         marginTop: 8,
         marginBottom: 12,
         width: "100%",
+        minHeight: 44,
+        justifyContent: "center",
+        paddingHorizontal: 4,
     },
     row: {
         width: "100%",
+        minHeight: 44,
     },
     infoContainer: {
-        flex: 0.4,
-        alignItems: "flex-start",
+        flexShrink: 1,
         justifyContent: "center",
-        paddingRight: 4,
+        paddingRight: 8,
     },
     buttonsContainer: {
-        flex: 0.6,
+        flexGrow: 1,
         flexDirection: "row",
         justifyContent: "flex-end",
         alignItems: "center",
@@ -126,25 +167,23 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "500",
     },
-    actionButton: {
-        marginLeft: 6,
-        paddingHorizontal: 8,
-        height: 42,
-        minWidth: 32,
-        maxWidth: 80,
+    // Base style for the tappable text
+    textButtonBase: {
+        paddingVertical: 8, // Vertical padding for touch area
+        paddingHorizontal: 10, // Horizontal padding for touch area and spacing
+        marginLeft: 6, // Space between buttons
+        borderRadius: 4, // Optional: slight rounding
+        justifyContent: "center",
+        alignItems: "center",
     },
-    cancelButton: {
-        marginLeft: 6,
-        paddingHorizontal: 8,
-        height: 42,
-        minWidth: 32,
-        maxWidth: 40,
+    // Style for the text inside the tappable area
+    textButtonText: {
+        fontSize: 14,
+        fontWeight: "600", // Make text bold to indicate interactivity
+        textAlign: "center",
     },
-    selectButton: {
-        marginLeft: 250,
-        paddingHorizontal: 8,
-        height: 42,
-        minWidth: 10,
-        maxWidth: 100,
+    // Container for the inactive "Select" button to align it right
+    selectButtonContainer: {
+        alignItems: "flex-end", // Align button to the right
     },
 })
