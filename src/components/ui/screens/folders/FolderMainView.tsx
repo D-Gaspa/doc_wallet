@@ -498,7 +498,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                     onClose={() => setMoveFolderModalVisible(false)}
                     folders={folders}
                     selectedFolderIds={selectedFolderIds}
-                    currentFolderId={currentFolderId}
                     onMove={handleMoveSelectedFolders}
                 />
             </View>
