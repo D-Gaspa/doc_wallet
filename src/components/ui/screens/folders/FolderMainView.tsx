@@ -1,7 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useState } from "react"
 import { StyleSheet, View } from "react-native"
 import { Container, Spacer, Stack } from "../../layout"
-import { Button } from "../../button"
 import { Alert as AlertComponent, AlertType } from "../../feedback/Alert"
 import { LoggingService } from "../../../../services/monitoring/loggingService"
 import { FolderType, UnifiedFolderModal } from "./FolderModal"
@@ -24,6 +23,9 @@ import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
 import { DocumentCard } from "../../cards"
 import { showDocumentOptions } from "../documents/useDocumentOperations.ts"
 import { FolderMoveModal } from "./FolderMoveModal"
+import { TouchableOpacity } from "react-native" // Make sure this is imported
+import AddDocumentIcon from "../../assets/svg/add_folder.svg"
+import { useTheme } from "../../../../hooks/useTheme"
 
 export interface FolderMainViewRef {
     resetToRootFolder(): void
@@ -33,11 +35,16 @@ export interface FolderMainViewRef {
 const FolderMainViewContent = forwardRef((_props, ref) => {
     const logger = LoggingService.getLogger
         ? LoggingService.getLogger("FolderMainView")
-        : { debug: console.debug }
+        : {
+              debug: console.debug,
+              info: console.info,
+              warn: console.warn,
+              error: console.error, // Added fallback for error
+          }
 
     // Access tag context
     const tagContext = useTagContext()
-
+    const { colors } = useTheme()
     // State for folders
     const folders = useFolderStore((state) => state.folders)
     const setFolders = useFolderStore((state) => state.setFolders)
@@ -139,8 +146,29 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     const handleMoveSelectedFolders = (targetFolderId: string | null) => {
         if (selectedFolderIds.length === 0) return
 
-        handleMoveFolders(selectedFolderIds, targetFolderId)
-        toggleSelectionMode() // Exit selection mode after move
+        try {
+            // Call the move function - assume it throws on error
+            handleMoveFolders(selectedFolderIds, targetFolderId)
+
+            // If it doesn't throw, assume success:
+            setAlert({
+                visible: true,
+                message: "Se ha movido exitosamente",
+                type: "success",
+            })
+            setMoveFolderModalVisible(false)
+            toggleSelectionMode()
+        } catch (error) {
+            // Log the error using the now guaranteed logger.error
+            logger.error("Error during folder move operation:", error)
+            setAlert({
+                visible: true,
+                message: "An error occurred while moving folders.", // Provide user feedback
+                type: "error",
+            })
+            // Optionally close modal on error too, or leave it open
+            // setMoveFolderModalVisible(false);
+        }
     }
 
     const handleDocumentPress = async (doc: IDocument) => {
@@ -440,13 +468,24 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 </Stack>
 
                 {/* Create Folder Button */}
-                <View style={styles.buttonContainer}>
-                    <Button
-                        title="Create new folder"
+                {!selectionMode && ( // Optionally hide FAB during selection mode
+                    <TouchableOpacity
+                        style={[
+                            styles.fab,
+                            { backgroundColor: colors.primary },
+                        ]}
                         onPress={handleCreateFolderPress}
-                        testID="create-folder-button"
-                    />
-                </View>
+                        activeOpacity={0.8} // Visual feedback on press
+                        testID="create-folder-fab"
+                    >
+                        {/* Adjust icon size and color as needed */}
+                        <AddDocumentIcon
+                            width={24}
+                            height={24}
+                            color={colors.background}
+                        />
+                    </TouchableOpacity>
+                )}
 
                 {/* Tag Manager for current folder */}
                 {currentFolderId && !selectionMode && (
@@ -550,9 +589,24 @@ const styles = StyleSheet.create({
     },
     alertContainer: {
         position: "absolute",
-        bottom: 120,
+        bottom: 90,
         left: 0,
         right: 0,
         zIndex: 10,
+    },
+    fab: {
+        position: "absolute",
+        bottom: 10, // Adjust position to be above the main TabBar (e.g., 60 height + 20 margin)
+        right: 20,
+        width: 56, // Standard FAB size
+        height: 56,
+        borderRadius: 28, // Half of width/height for circle
+        alignItems: "center",
+        justifyContent: "center",
+        elevation: 8, // Android shadow
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        zIndex: 5, // Ensure FAB is above other content except modals/alerts
     },
 })

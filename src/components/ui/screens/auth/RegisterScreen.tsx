@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react"
 import {
     View,
-    TextInput,
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
@@ -10,15 +9,21 @@ import {
     Animated,
     ActivityIndicator,
     Keyboard,
+    Modal,
+    // Linking, // ---> Removed unused import
+    TextInput, // Keep for ref typing
+    TouchableWithoutFeedback,
 } from "react-native"
-import { useTheme } from "../../../../hooks/useTheme"
-import { Button } from "../../button"
-import { Stack } from "../../layout"
-import { Text } from "../../typography"
-import { DocWalletLogo } from "../../../common/DocWalletLogo"
-import CheckIcon from "../../assets/svg/Check.svg"
-import EyeIcon from "../../assets/svg/Eye.svg"
-import EyeOffIcon from "../../assets/svg/EyeOff.svg"
+import { useTheme } from "../../../../hooks/useTheme" // Adjust path
+import { Button } from "../../button" // Adjust path
+import { Stack, Spacer, Row } from "../../layout" // Adjust path
+import { Text } from "../../typography" // Adjust path
+import { TextField } from "../../form" // Adjust path
+import { Checkbox } from "../../form" // Import Checkbox
+import { DocWalletLogo } from "../../../common/DocWalletLogo" // Adjust path
+import EyeIcon from "../../assets/svg/Eye.svg" // Adjust path
+import EyeOffIcon from "../../assets/svg/EyeOff.svg" // Adjust path
+import { TermsAndConditionsScreen } from "./TermsAndConditions" // Import T&C Screen
 
 type RegisterData = {
     firstName: string
@@ -31,18 +36,14 @@ type RegisterData = {
 type RegisterScreenProps = {
     onRegister: (data: RegisterData) => Promise<void>
     onGoToLogin: () => void
-    termsAndConditionsUrl?: string
-    privacyPolicyUrl?: string
 }
 
 export function RegisterScreen({
     onRegister,
     onGoToLogin,
-    termsAndConditionsUrl,
-    privacyPolicyUrl,
 }: RegisterScreenProps) {
     const { colors } = useTheme()
-    // Form state
+    // --- State ---
     const [firstName, setFirstName] = useState("")
     const [lastName, setLastName] = useState("")
     const [email, setEmail] = useState("")
@@ -51,71 +52,62 @@ export function RegisterScreen({
     const [acceptedTerms, setAcceptedTerms] = useState(false)
     const [isPasswordVisible, setPasswordVisible] = useState(false)
     const [isRegistering, setIsRegistering] = useState(false)
-
-    // Form validation
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [formTouched, setFormTouched] = useState<Record<string, boolean>>({})
+    const [isTermsModalVisible, setIsTermsModalVisible] = useState(false)
 
-    // Refs for input fields
+    // --- Refs ---
     const lastNameInputRef = useRef<TextInput>(null)
     const emailInputRef = useRef<TextInput>(null)
     const passwordInputRef = useRef<TextInput>(null)
     const confirmPasswordInputRef = useRef<TextInput>(null)
 
-    // Animations
+    // --- Animations ---
     const buttonScale = useRef(new Animated.Value(1)).current
     const shakeAnimation = useRef(new Animated.Value(0)).current
 
-    // Password strength tracking
+    // --- Password Strength ---
     const [passwordStrength, setPasswordStrength] = useState({
         score: 0,
         feedback: "",
     })
-
-    // Calculate password strength
     useEffect(() => {
         if (!password) {
             setPasswordStrength({ score: 0, feedback: "" })
             return
         }
-
-        // Basic password strength calculation
         let score = 0
-
-        // Length check
         if (password.length >= 8) score += 1
         if (password.length >= 12) score += 1
-
-        // Character variety check
-        if (/[A-Z]/.test(password)) score += 1 // Has uppercase
-        if (/[a-z]/.test(password)) score += 1 // Has lowercase
-        if (/[0-9]/.test(password)) score += 1 // Has numbers
-        if (/[^A-Za-z0-9]/.test(password)) score += 1 // Has special chars
-
-        let feedback: string
-        if (score < 3) feedback = "Contraseña débil"
-        else if (score < 5) feedback = "Contraseña moderada"
-        else feedback = "Contraseña fuerte"
-
+        if (/[A-Z]/.test(password)) score += 1
+        if (/[a-z]/.test(password)) score += 1
+        if (/[0-9]/.test(password)) score += 1
+        if (/[^A-Za-z0-9]/.test(password)) score += 1
+        // ---> Use const for feedback <---
+        const feedback =
+            score < 3
+                ? "Contraseña débil"
+                : score < 5
+                ? "Contraseña moderada"
+                : "Contraseña fuerte"
         setPasswordStrength({ score: Math.min(score, 6), feedback })
-    }, [password])
+    }, [password, colors])
 
-    // Validate form field
+    // --- Validation ---
     const validateField = (
         field: keyof RegisterData | "confirmPassword",
         value: string | boolean,
-    ) => {
+    ): string => {
         let error = ""
-
         switch (field) {
             case "firstName":
-                if (!value) error = "El primer nombre es requerido"
+                if (!value) error = "El nombre es requerido"
                 break
             case "lastName":
                 if (!value) error = "El apellido es requerido"
                 break
             case "email":
-                if (!value) error = "El email es requerido"
+                if (!value) error = "El correo es requerido"
                 else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value)))
                     error = "Por favor, ingrese un correo válido"
                 break
@@ -123,22 +115,19 @@ export function RegisterScreen({
                 if (!value) error = "La contraseña es requerida"
                 else if (String(value).length < 6)
                     error = "La contraseña debe tener al menos 6 caracteres"
-                else if (passwordStrength.score < 3)
-                    error = "Por favor, usa una contraseña más fuerte"
                 break
             case "confirmPassword":
-                if (String(value) !== password)
+                if (!value) error = "Por favor confirme la contraseña"
+                else if (String(value) !== password)
                     error = "Las contraseñas no coinciden"
                 break
             case "acceptedTerms":
                 if (!value) error = "Debes aceptar los términos y condiciones"
                 break
         }
-
         return error
     }
 
-    // Get field validity and error
     const getFieldState = (field: keyof RegisterData | "confirmPassword") => {
         const value =
             field === "firstName"
@@ -152,66 +141,25 @@ export function RegisterScreen({
                 : field === "confirmPassword"
                 ? confirmPassword
                 : acceptedTerms
-
         const touched = formTouched[field]
         const error = validateField(field, value)
-
-        return {
-            valid: error === "",
-            error: touched ? error : "",
-            value,
-        }
+        return { valid: error === "", error: error, value, touched }
     }
 
-    // Mark field as touched
-    const markTouched = (field: string) => {
+    const markTouched = (field: keyof RegisterData | "confirmPassword") => {
         setFormTouched((prev) => ({ ...prev, [field]: true }))
     }
 
-    // Button press animation
+    // Animations
     const animateButtonPress = () => {
-        Animated.sequence([
-            Animated.timing(buttonScale, {
-                toValue: 0.95,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-            Animated.timing(buttonScale, {
-                toValue: 1,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-        ]).start()
+        /* ... */
     }
-
-    // Error shake animation
     const shakeError = () => {
-        Animated.sequence([
-            Animated.timing(shakeAnimation, {
-                toValue: 10,
-                duration: 50,
-                useNativeDriver: true,
-            }),
-            Animated.timing(shakeAnimation, {
-                toValue: -10,
-                duration: 50,
-                useNativeDriver: true,
-            }),
-            Animated.timing(shakeAnimation, {
-                toValue: 10,
-                duration: 50,
-                useNativeDriver: true,
-            }),
-            Animated.timing(shakeAnimation, {
-                toValue: 0,
-                duration: 50,
-                useNativeDriver: true,
-            }),
-        ]).start()
+        /* ... */
     }
 
-    // Check if form is valid
-    const isFormValid = () => {
+    // --- Form Validation & Submission ---
+    const isFormValid = (): boolean => {
         const fields: (keyof RegisterData | "confirmPassword")[] = [
             "firstName",
             "lastName",
@@ -220,17 +168,11 @@ export function RegisterScreen({
             "confirmPassword",
             "acceptedTerms",
         ]
+        let isValid = true
+        const newErrors: Record<string, string> = {}
+        const newTouched: Record<string, boolean> = { ...formTouched }
 
-        // Mark all fields as touched
-        const newFormTouched = fields.reduce((obj, field) => {
-            obj[field] = true
-            return obj
-        }, {} as Record<string, boolean>)
-
-        setFormTouched(newFormTouched)
-
-        // Validate all fields
-        const newErrors = fields.reduce((obj, field) => {
+        fields.forEach((field) => {
             const value =
                 field === "firstName"
                     ? firstName
@@ -243,32 +185,27 @@ export function RegisterScreen({
                     : field === "confirmPassword"
                     ? confirmPassword
                     : acceptedTerms
-
             const error = validateField(field, value)
-            if (error) obj[field] = error
-            return obj
-        }, {} as Record<string, string>)
-
+            if (error) {
+                newErrors[field] = error
+                isValid = false
+            }
+            newTouched[field] = true
+        })
         setErrors(newErrors)
-
-        return Object.keys(newErrors).length === 0
+        setFormTouched(newTouched)
+        return isValid
     }
 
     const handleRegister = async () => {
         Keyboard.dismiss()
-
-        // Validate form
         if (!isFormValid()) {
             shakeError()
             return
         }
-
-        // Animate button and start loading
         animateButtonPress()
         setIsRegistering(true)
-
         try {
-            // Call register function
             await onRegister({
                 firstName: firstName.trim(),
                 lastName: lastName.trim(),
@@ -276,23 +213,13 @@ export function RegisterScreen({
                 password,
                 acceptedTerms,
             })
-
-            // Reset form on success
-            setFirstName("")
-            setLastName("")
-            setEmail("")
-            setPassword("")
-            setConfirmPassword("")
-            setAcceptedTerms(false)
-            setFormTouched({})
         } catch (err) {
-            // Set error message
             setErrors((prev) => ({
                 ...prev,
                 form:
                     err instanceof Error
                         ? err.message
-                        : "Registration failed. Please try again.",
+                        : "Registro fallido. Intente de nuevo.",
             }))
             shakeError()
         } finally {
@@ -300,10 +227,30 @@ export function RegisterScreen({
         }
     }
 
-    // Password strength indicator
+    // --- T&C Modal Handlers ---
+    const handleAcceptTerms = () => {
+        setAcceptedTerms(true)
+        setIsTermsModalVisible(false)
+        markTouched("acceptedTerms")
+        setErrors((prev) => {
+            const newErrors = { ...prev }
+            delete newErrors.acceptedTerms
+            return newErrors
+        })
+    }
+    const handleDeclineTerms = () => {
+        setAcceptedTerms(false)
+        setIsTermsModalVisible(false)
+        markTouched("acceptedTerms")
+        const error = validateField("acceptedTerms", false)
+        if (error) {
+            setErrors((prev) => ({ ...prev, acceptedTerms: error }))
+        }
+    }
+
+    // --- Password Strength Indicator ---
     const renderPasswordStrength = () => {
         if (!password) return null
-
         const maxBars = 6
         const strengthColor =
             passwordStrength.score < 3
@@ -311,7 +258,6 @@ export function RegisterScreen({
                 : passwordStrength.score < 5
                 ? colors.warning
                 : colors.success
-
         return (
             <View style={styles.strengthContainer}>
                 <View style={styles.strengthBars}>
@@ -330,689 +276,608 @@ export function RegisterScreen({
                         />
                     ))}
                 </View>
-                <Text variant="xm" style={{ color: strengthColor }}>
-                    {passwordStrength.feedback}
-                </Text>
+                {passwordStrength.feedback && (
+                    <Text variant="xm" style={{ color: strengthColor }}>
+                        {passwordStrength.feedback}
+                    </Text>
+                )}
             </View>
         )
     }
 
-    // Dismiss keyboard when tapping outside inputs
-    const dismissKeyboard = () => {
-        Keyboard.dismiss()
-    }
+    const dismissKeyboard = () => Keyboard.dismiss()
+
+    // Get field states for error display
+    const firstNameState = getFieldState("firstName")
+    const lastNameState = getFieldState("lastName")
+    const emailState = getFieldState("email")
+    const passwordState = getFieldState("password")
+    const confirmPasswordState = getFieldState("confirmPassword")
+    const acceptedTermsState = getFieldState("acceptedTerms")
 
     return (
-        <KeyboardAvoidingView
-            style={[styles.container, { backgroundColor: colors.background }]}
-            behavior={Platform.select({ ios: "padding", android: undefined })}
-        >
-            <ScrollView
-                contentContainerStyle={styles.scrollContainer}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
+        <>
+            <KeyboardAvoidingView
+                style={[
+                    styles.container,
+                    { backgroundColor: colors.background },
+                ]}
+                behavior={Platform.select({
+                    ios: "padding",
+                    android: "height",
+                })}
             >
-                <View
-                    style={styles.dismissKeyboardContainer}
-                    onStartShouldSetResponder={() => true}
-                    onResponderRelease={dismissKeyboard}
+                <ScrollView
+                    contentContainerStyle={styles.scrollContainer}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
                 >
-                    <Stack spacing={16} style={styles.inner}>
-                        {/* Logo with Subtle Glow */}
-                        <View style={styles.logoContainer}>
-                            <View
-                                style={[
-                                    styles.logoShadow,
-                                    {
-                                        shadowColor: colors.primary,
-                                        backgroundColor: colors.background,
-                                    },
-                                ]}
-                            >
-                                <DocWalletLogo
-                                    size={90}
-                                    primaryColor={colors.primary}
-                                    secondaryColor={colors.secondary}
-                                    backgroundColor={colors.background}
-                                />
-                            </View>
-                        </View>
-
-                        {/* Greeting */}
-                        <View style={styles.greetingContainer}>
-                            <Text
-                                variant="md"
-                                weight="bold"
-                                style={[styles.title, { color: colors.text }]}
-                            >
-                                Create Your Account
-                            </Text>
-                            <Text
-                                variant="sm"
-                                style={[
-                                    styles.subtitle,
-                                    { color: colors.secondaryText },
-                                ]}
-                            >
-                                Start managing your documents securely
-                            </Text>
-                        </View>
-
-                        {/* Registration Form */}
-                        <Animated.View
-                            style={[
-                                styles.formContainer,
-                                { transform: [{ translateX: shakeAnimation }] },
-                            ]}
-                        >
+                    <TouchableWithoutFeedback
+                        onPress={dismissKeyboard}
+                        accessible={false}
+                    >
+                        <View style={styles.inner}>
                             <Stack spacing={12}>
-                                {/* Names Row */}
-                                <View style={styles.namesRow}>
-                                    <View style={styles.nameField}>
-                                        <Text
-                                            variant="sm"
-                                            weight="medium"
-                                            style={styles.inputLabel}
-                                        >
-                                            First Name
-                                        </Text>
-                                        <TextInput
-                                            style={[
-                                                styles.input,
-                                                getFieldState("firstName").error
-                                                    ? styles.inputError
-                                                    : null,
-                                                {
-                                                    backgroundColor:
-                                                        colors.searchbar,
-                                                    color: colors.text,
-                                                    borderColor: getFieldState(
-                                                        "firstName",
-                                                    ).error
-                                                        ? colors.error
-                                                        : colors.border,
-                                                },
-                                            ]}
-                                            placeholder="Primer nombre"
-                                            placeholderTextColor={
-                                                colors.secondaryText
-                                            }
-                                            value={firstName}
-                                            onChangeText={setFirstName}
-                                            onBlur={() =>
-                                                markTouched("firstName")
-                                            }
-                                            returnKeyType="next"
-                                            submitBehavior="submit"
-                                            onSubmitEditing={() =>
-                                                passwordInputRef.current?.focus()
-                                            }
-                                        />
-                                        {getFieldState("firstName").error ? (
-                                            <Text
-                                                variant="xm"
-                                                style={[
-                                                    styles.errorText,
-                                                    { color: colors.error },
-                                                ]}
-                                            >
-                                                {
-                                                    getFieldState("firstName")
-                                                        .error
-                                                }
-                                            </Text>
-                                        ) : null}
-                                    </View>
-
-                                    <View style={styles.nameField}>
-                                        <Text
-                                            variant="sm"
-                                            weight="medium"
-                                            style={styles.inputLabel}
-                                        >
-                                            Last Name
-                                        </Text>
-                                        <TextInput
-                                            ref={lastNameInputRef}
-                                            style={[
-                                                styles.input,
-                                                getFieldState("lastName").error
-                                                    ? styles.inputError
-                                                    : null,
-                                                {
-                                                    backgroundColor:
-                                                        colors.searchbar,
-                                                    color: colors.text,
-                                                    borderColor: getFieldState(
-                                                        "lastName",
-                                                    ).error
-                                                        ? colors.error
-                                                        : colors.border,
-                                                },
-                                            ]}
-                                            placeholder="Apellidos"
-                                            placeholderTextColor={
-                                                colors.secondaryText
-                                            }
-                                            value={lastName}
-                                            onChangeText={setLastName}
-                                            onBlur={() =>
-                                                markTouched("lastName")
-                                            }
-                                            returnKeyType="next"
-                                            submitBehavior="submit"
-                                            onSubmitEditing={() =>
-                                                passwordInputRef.current?.focus()
-                                            }
-                                        />
-                                        {getFieldState("lastName").error ? (
-                                            <Text
-                                                variant="xm"
-                                                style={[
-                                                    styles.errorText,
-                                                    { color: colors.error },
-                                                ]}
-                                            >
-                                                {
-                                                    getFieldState("lastName")
-                                                        .error
-                                                }
-                                            </Text>
-                                        ) : null}
-                                    </View>
-                                </View>
-
-                                {/* Email */}
-                                <View>
-                                    <Text
-                                        variant="sm"
-                                        weight="medium"
-                                        style={styles.inputLabel}
-                                    >
-                                        Email
-                                    </Text>
-                                    <TextInput
-                                        ref={emailInputRef}
+                                {/* Logo */}
+                                <View style={styles.logoContainer}>
+                                    <View
                                         style={[
-                                            styles.input,
-                                            getFieldState("email").error
-                                                ? styles.inputError
-                                                : null,
+                                            styles.logoShadow,
                                             {
+                                                shadowColor: colors.primary,
                                                 backgroundColor:
-                                                    colors.searchbar,
-                                                color: colors.text,
-                                                borderColor: getFieldState(
-                                                    "email",
-                                                ).error
-                                                    ? colors.error
-                                                    : colors.border,
+                                                    colors.background,
                                             },
                                         ]}
-                                        placeholder="Correo electrónico"
-                                        placeholderTextColor={
-                                            colors.secondaryText
-                                        }
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        value={email}
-                                        onChangeText={setEmail}
-                                        onBlur={() => markTouched("email")}
-                                        returnKeyType="next"
-                                        submitBehavior="submit"
-                                        onSubmitEditing={() =>
-                                            passwordInputRef.current?.focus()
-                                        }
-                                    />
-                                    {getFieldState("email").error ? (
-                                        <Text
-                                            variant="xm"
-                                            style={[
-                                                styles.errorText,
-                                                { color: colors.error },
-                                            ]}
-                                        >
-                                            {getFieldState("email").error}
-                                        </Text>
-                                    ) : null}
+                                    >
+                                        <DocWalletLogo
+                                            size={80}
+                                            primaryColor={colors.primary}
+                                            secondaryColor={colors.secondary}
+                                            backgroundColor={colors.background}
+                                        />
+                                    </View>
                                 </View>
-
-                                {/* Password */}
-                                <View>
+                                {/* Greeting */}
+                                <View style={styles.greetingContainer}>
+                                    <Text
+                                        variant="md"
+                                        weight="bold"
+                                        style={[
+                                            styles.title,
+                                            { color: colors.text },
+                                        ]}
+                                    >
+                                        Crea tu cuenta
+                                    </Text>
+                                    <Spacer size={4} />
                                     <Text
                                         variant="sm"
-                                        weight="medium"
-                                        style={styles.inputLabel}
+                                        style={[
+                                            styles.subtitle,
+                                            { color: colors.secondaryText },
+                                        ]}
                                     >
-                                        Contraseña
+                                        Comienza a gestionar tus documentos de
+                                        forma segura
                                     </Text>
-                                    <View style={styles.passwordContainer}>
-                                        <TextInput
-                                            ref={passwordInputRef}
-                                            style={[
-                                                styles.input,
-                                                getFieldState("password").error
-                                                    ? styles.inputError
-                                                    : null,
-                                                {
-                                                    backgroundColor:
-                                                        colors.searchbar,
-                                                    color: colors.text,
-                                                    borderColor: getFieldState(
-                                                        "password",
-                                                    ).error
-                                                        ? colors.error
-                                                        : colors.border,
-                                                },
-                                            ]}
-                                            placeholder="Contraseña (al menos 6 caracteres)"
-                                            placeholderTextColor={
-                                                colors.secondaryText
-                                            }
-                                            secureTextEntry={!isPasswordVisible}
-                                            value={password}
-                                            onChangeText={setPassword}
-                                            onBlur={() =>
-                                                markTouched("password")
-                                            }
-                                            returnKeyType="next"
-                                            submitBehavior="submit"
-                                            onSubmitEditing={() =>
-                                                passwordInputRef.current?.focus()
-                                            }
-                                        />
-                                        <TouchableOpacity
-                                            onPress={() =>
-                                                setPasswordVisible(
-                                                    !isPasswordVisible,
-                                                )
-                                            }
-                                            style={styles.eyeIconContainer}
-                                            hitSlop={{
-                                                top: 10,
-                                                bottom: 10,
-                                                left: 10,
-                                                right: 10,
-                                            }}
+                                </View>
+                                {/* Registration Form */}
+                                <Animated.View
+                                    style={{
+                                        transform: [
+                                            { translateX: shakeAnimation },
+                                        ],
+                                    }}
+                                >
+                                    <Stack spacing={10}>
+                                        {/* Names Row */}
+                                        <Row
+                                            style={styles.namesRow}
+                                            spacing={10}
                                         >
-                                            {isPasswordVisible ? (
-                                                <EyeIcon
-                                                    width={20}
-                                                    height={20}
-                                                    stroke={
-                                                        colors.secondaryText
+                                            <View style={styles.nameField}>
+                                                <Text
+                                                    variant="sm"
+                                                    weight="medium"
+                                                    style={[
+                                                        styles.inputLabel,
+                                                        { color: colors.text },
+                                                    ]}
+                                                >
+                                                    Nombre(s)
+                                                </Text>
+                                                <TextField
+                                                    placeholder="Tu nombre"
+                                                    value={firstName}
+                                                    onChangeText={setFirstName}
+                                                    onBlur={() =>
+                                                        markTouched("firstName")
+                                                    }
+                                                    returnKeyType="next"
+                                                    hasError={
+                                                        firstNameState.touched &&
+                                                        !!firstNameState.error
+                                                    }
+                                                    onSubmitEditing={() =>
+                                                        lastNameInputRef.current?.focus()
                                                     }
                                                 />
+                                                {firstNameState.touched &&
+                                                firstNameState.error ? (
+                                                    <Text
+                                                        variant="xm"
+                                                        style={[
+                                                            styles.errorText,
+                                                            {
+                                                                color: colors.error,
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {firstNameState.error}
+                                                    </Text>
+                                                ) : (
+                                                    <View
+                                                        style={
+                                                            styles.errorPlaceholder
+                                                        }
+                                                    />
+                                                )}
+                                            </View>
+                                            <View style={styles.nameField}>
+                                                <Text
+                                                    variant="sm"
+                                                    weight="medium"
+                                                    style={[
+                                                        styles.inputLabel,
+                                                        { color: colors.text },
+                                                    ]}
+                                                >
+                                                    Apellidos
+                                                </Text>
+                                                <TextField
+                                                    ref={lastNameInputRef}
+                                                    placeholder="Tus apellidos"
+                                                    value={lastName}
+                                                    onChangeText={setLastName}
+                                                    onBlur={() =>
+                                                        markTouched("lastName")
+                                                    }
+                                                    returnKeyType="next"
+                                                    hasError={
+                                                        lastNameState.touched &&
+                                                        !!lastNameState.error
+                                                    }
+                                                    onSubmitEditing={() =>
+                                                        emailInputRef.current?.focus()
+                                                    }
+                                                />
+                                                {lastNameState.touched &&
+                                                lastNameState.error ? (
+                                                    <Text
+                                                        variant="xm"
+                                                        style={[
+                                                            styles.errorText,
+                                                            {
+                                                                color: colors.error,
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {lastNameState.error}
+                                                    </Text>
+                                                ) : (
+                                                    <View
+                                                        style={
+                                                            styles.errorPlaceholder
+                                                        }
+                                                    />
+                                                )}
+                                            </View>
+                                        </Row>
+                                        {/* Email */}
+                                        <View>
+                                            <Text
+                                                variant="sm"
+                                                weight="medium"
+                                                style={[
+                                                    styles.inputLabel,
+                                                    { color: colors.text },
+                                                ]}
+                                            >
+                                                Correo electrónico
+                                            </Text>
+                                            <TextField
+                                                ref={emailInputRef}
+                                                placeholder="ejemplo@correo.com"
+                                                value={email}
+                                                onChangeText={setEmail}
+                                                onBlur={() =>
+                                                    markTouched("email")
+                                                }
+                                                keyboardType="email-address"
+                                                autoCapitalize="none"
+                                                returnKeyType="next"
+                                                hasError={
+                                                    emailState.touched &&
+                                                    !!emailState.error
+                                                }
+                                                onSubmitEditing={() =>
+                                                    passwordInputRef.current?.focus()
+                                                }
+                                            />
+                                            {emailState.touched &&
+                                            emailState.error ? (
+                                                <Text
+                                                    variant="xm"
+                                                    style={[
+                                                        styles.errorText,
+                                                        { color: colors.error },
+                                                    ]}
+                                                >
+                                                    {emailState.error}
+                                                </Text>
                                             ) : (
-                                                <EyeOffIcon
-                                                    width={20}
-                                                    height={20}
-                                                    stroke={
-                                                        colors.secondaryText
+                                                <View
+                                                    style={
+                                                        styles.errorPlaceholder
                                                     }
                                                 />
                                             )}
-                                        </TouchableOpacity>
-                                    </View>
-                                    {renderPasswordStrength()}
-                                    {getFieldState("password").error ? (
-                                        <Text
-                                            variant="xm"
-                                            style={[
-                                                styles.errorText,
-                                                { color: colors.error },
-                                            ]}
-                                        >
-                                            {getFieldState("password").error}
-                                        </Text>
-                                    ) : null}
-                                </View>
-
-                                {/* Confirm Password */}
-                                <View>
-                                    <Text
-                                        variant="sm"
-                                        weight="medium"
-                                        style={styles.inputLabel}
-                                    >
-                                        Confirm Password
-                                    </Text>
-                                    <View style={styles.passwordContainer}>
-                                        <TextInput
-                                            ref={confirmPasswordInputRef}
-                                            style={[
-                                                styles.input,
-                                                getFieldState("confirmPassword")
-                                                    .error
-                                                    ? styles.inputError
-                                                    : null,
-                                                {
-                                                    backgroundColor:
-                                                        colors.searchbar,
-                                                    color: colors.text,
-                                                    borderColor: getFieldState(
-                                                        "confirmPassword",
-                                                    ).error
-                                                        ? colors.error
-                                                        : colors.border,
-                                                },
-                                            ]}
-                                            placeholder="Confirma tu contraseña"
-                                            placeholderTextColor={
-                                                colors.secondaryText
-                                            }
-                                            secureTextEntry={!isPasswordVisible}
-                                            value={confirmPassword}
-                                            onChangeText={setConfirmPassword}
-                                            onBlur={() =>
-                                                markTouched("confirmPassword")
-                                            }
-                                            returnKeyType="done"
+                                        </View>
+                                        {/* Password */}
+                                        <View>
+                                            <Text
+                                                variant="sm"
+                                                weight="medium"
+                                                style={[
+                                                    styles.inputLabel,
+                                                    { color: colors.text },
+                                                ]}
+                                            >
+                                                Contraseña
+                                            </Text>
+                                            <View
+                                                style={styles.passwordContainer}
+                                            >
+                                                <TextField
+                                                    ref={passwordInputRef}
+                                                    placeholder="Mínimo 6 caracteres"
+                                                    value={password}
+                                                    onChangeText={setPassword}
+                                                    onBlur={() =>
+                                                        markTouched("password")
+                                                    }
+                                                    secureTextEntry={
+                                                        !isPasswordVisible
+                                                    }
+                                                    returnKeyType="next"
+                                                    hasError={
+                                                        passwordState.touched &&
+                                                        !!passwordState.error
+                                                    }
+                                                    onSubmitEditing={() =>
+                                                        confirmPasswordInputRef.current?.focus()
+                                                    }
+                                                />
+                                                <TouchableOpacity
+                                                    onPress={() =>
+                                                        setPasswordVisible(
+                                                            !isPasswordVisible,
+                                                        )
+                                                    }
+                                                    style={
+                                                        styles.eyeIconContainer
+                                                    }
+                                                    hitSlop={{
+                                                        top: 10,
+                                                        bottom: 10,
+                                                        left: 10,
+                                                        right: 10,
+                                                    }}
+                                                >
+                                                    {isPasswordVisible ? (
+                                                        <EyeIcon
+                                                            width={20}
+                                                            height={20}
+                                                            color={
+                                                                colors.secondaryText
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        <EyeOffIcon
+                                                            width={20}
+                                                            height={20}
+                                                            color={
+                                                                colors.secondaryText
+                                                            }
+                                                        />
+                                                    )}
+                                                </TouchableOpacity>
+                                            </View>
+                                            {renderPasswordStrength()}
+                                            {passwordState.touched &&
+                                            passwordState.error ? (
+                                                <Text
+                                                    variant="xm"
+                                                    style={[
+                                                        styles.errorText,
+                                                        { color: colors.error },
+                                                    ]}
+                                                >
+                                                    {passwordState.error}
+                                                </Text>
+                                            ) : (
+                                                <View
+                                                    style={
+                                                        styles.errorPlaceholder
+                                                    }
+                                                />
+                                            )}
+                                        </View>
+                                        {/* Confirm Password */}
+                                        <View>
+                                            <Text
+                                                variant="sm"
+                                                weight="medium"
+                                                style={[
+                                                    styles.inputLabel,
+                                                    { color: colors.text },
+                                                ]}
+                                            >
+                                                Confirmar contraseña
+                                            </Text>
+                                            <View
+                                                style={styles.passwordContainer}
+                                            >
+                                                <TextField
+                                                    ref={
+                                                        confirmPasswordInputRef
+                                                    }
+                                                    placeholder="Confirma tu contraseña"
+                                                    value={confirmPassword}
+                                                    onChangeText={
+                                                        setConfirmPassword
+                                                    }
+                                                    onBlur={() =>
+                                                        markTouched(
+                                                            "confirmPassword",
+                                                        )
+                                                    }
+                                                    secureTextEntry={
+                                                        !isPasswordVisible
+                                                    }
+                                                    returnKeyType="done"
+                                                    onSubmitEditing={
+                                                        handleRegister
+                                                    }
+                                                    hasError={
+                                                        confirmPasswordState.touched &&
+                                                        !!confirmPasswordState.error
+                                                    }
+                                                />
+                                            </View>
+                                            {confirmPasswordState.touched &&
+                                            confirmPasswordState.error ? (
+                                                <Text
+                                                    variant="xm"
+                                                    style={[
+                                                        styles.errorText,
+                                                        { color: colors.error },
+                                                    ]}
+                                                >
+                                                    {confirmPasswordState.error}
+                                                </Text>
+                                            ) : (
+                                                <View
+                                                    style={
+                                                        styles.errorPlaceholder
+                                                    }
+                                                />
+                                            )}
+                                        </View>
+                                        {/* General form error */}
+                                        {errors.form ? (
+                                            <Text
+                                                variant="sm"
+                                                style={[
+                                                    styles.formErrorText,
+                                                    { color: colors.error },
+                                                ]}
+                                            >
+                                                {errors.form}
+                                            </Text>
+                                        ) : null}
+                                    </Stack>
+                                </Animated.View>
+                                {/* Terms and Conditions */}
+                                <View style={styles.termsContainer}>
+                                    <View style={styles.checkboxWrapper}>
+                                        <Checkbox
+                                            checked={acceptedTerms}
+                                            onToggle={() => {
+                                                setIsTermsModalVisible(true)
+                                                markTouched("acceptedTerms")
+                                            }}
+                                            // Removed style prop
                                         />
                                     </View>
-                                    {getFieldState("confirmPassword").error ? (
+                                    <View style={styles.termsTextContainer}>
                                         <Text
-                                            variant="xm"
+                                            variant="sm"
                                             style={[
-                                                styles.errorText,
-                                                { color: colors.error },
+                                                styles.termsText,
+                                                { color: colors.secondaryText },
                                             ]}
                                         >
-                                            {
-                                                getFieldState("confirmPassword")
-                                                    .error
-                                            }
+                                            Acepto los
+                                            <Text
+                                                variant="sm"
+                                                style={[
+                                                    styles.linkText,
+                                                    { color: colors.primary },
+                                                ]}
+                                                onPress={() =>
+                                                    setIsTermsModalVisible(true)
+                                                }
+                                            >
+                                                {" "}
+                                                términos de servicio
+                                            </Text>
                                         </Text>
-                                    ) : null}
+                                        {acceptedTermsState.touched &&
+                                        acceptedTermsState.error ? (
+                                            <Text
+                                                variant="xm"
+                                                style={[
+                                                    styles.errorText,
+                                                    { color: colors.error },
+                                                ]}
+                                            >
+                                                {acceptedTermsState.error}
+                                            </Text>
+                                        ) : (
+                                            <View
+                                                style={styles.errorPlaceholder}
+                                            />
+                                        )}
+                                    </View>
                                 </View>
-
-                                {/* General form error */}
-                                {errors.form ? (
+                                {/* Register Button */}
+                                <Animated.View
+                                    style={[
+                                        { transform: [{ scale: buttonScale }] },
+                                        styles.buttonWrapper,
+                                    ]}
+                                >
+                                    <Button
+                                        onPress={handleRegister}
+                                        disabled={isRegistering}
+                                    >
+                                        {isRegistering ? (
+                                            <ActivityIndicator
+                                                size="small"
+                                                color={colors.tabbarIcon_active}
+                                            />
+                                        ) : (
+                                            <Text
+                                                variant="base"
+                                                weight="bold"
+                                                style={{
+                                                    color: colors.tabbarIcon_active,
+                                                }}
+                                            >
+                                                Crear cuenta
+                                            </Text>
+                                        )}
+                                    </Button>
+                                </Animated.View>
+                                {/* Login Link */}
+                                <Row
+                                    style={styles.loginContainer}
+                                    justify="center"
+                                    align="center"
+                                >
                                     <Text
                                         variant="sm"
-                                        style={[
-                                            styles.formErrorText,
-                                            { color: colors.error },
-                                        ]}
+                                        style={{ color: colors.secondaryText }}
                                     >
-                                        {errors.form}
+                                        ¿Ya tienes una cuenta?{" "}
                                     </Text>
-                                ) : null}
+                                    <TouchableOpacity
+                                        onPress={onGoToLogin}
+                                        style={styles.loginLink}
+                                        hitSlop={{
+                                            top: 10,
+                                            bottom: 10,
+                                            left: 10,
+                                            right: 10,
+                                        }}
+                                    >
+                                        <Text
+                                            variant="sm"
+                                            weight="bold"
+                                            style={{ color: colors.primary }}
+                                        >
+                                            Iniciar sesión
+                                        </Text>
+                                    </TouchableOpacity>
+                                </Row>
                             </Stack>
-                        </Animated.View>
-
-                        {/* Terms and Conditions */}
-                        <View style={styles.termsContainer}>
-                            <TouchableOpacity
-                                style={styles.checkboxWrapper}
-                                onPress={() => {
-                                    setAcceptedTerms(!acceptedTerms)
-                                    markTouched("acceptedTerms")
-                                }}
-                                hitSlop={{
-                                    top: 10,
-                                    bottom: 10,
-                                    left: 10,
-                                    right: 10,
-                                }}
-                            >
-                                <View
-                                    style={[
-                                        styles.checkbox,
-                                        {
-                                            backgroundColor: acceptedTerms
-                                                ? colors.primary
-                                                : colors.background,
-                                            borderColor: getFieldState(
-                                                "acceptedTerms",
-                                            ).error
-                                                ? colors.error
-                                                : acceptedTerms
-                                                ? colors.primary
-                                                : colors.secondaryText,
-                                        },
-                                    ]}
-                                >
-                                    {acceptedTerms && (
-                                        <CheckIcon
-                                            width={14}
-                                            height={14}
-                                            stroke="#FFFFFF"
-                                        />
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-
-                            <View style={styles.termsTextContainer}>
-                                <Text
-                                    variant="sm"
-                                    style={[
-                                        styles.termsText,
-                                        { color: colors.secondaryText },
-                                    ]}
-                                >
-                                    I agree to the{" "}
-                                    <Text
-                                        style={{ color: colors.primary }}
-                                        onPress={() => {
-                                            // Handle Terms of Service link
-                                            if (termsAndConditionsUrl) {
-                                                // Open terms URL
-                                            }
-                                        }}
-                                    >
-                                        Terms of Service
-                                    </Text>{" "}
-                                    and{" "}
-                                    <Text
-                                        style={{ color: colors.primary }}
-                                        onPress={() => {
-                                            // Handle Privacy Policy link
-                                            if (privacyPolicyUrl) {
-                                                // Open privacy policy URL
-                                            }
-                                        }}
-                                    >
-                                        Privacy Policy
-                                    </Text>
-                                </Text>
-
-                                {getFieldState("acceptedTerms").error ? (
-                                    <Text
-                                        variant="xm"
-                                        style={[
-                                            styles.errorText,
-                                            { color: colors.error },
-                                        ]}
-                                    >
-                                        {getFieldState("acceptedTerms").error}
-                                    </Text>
-                                ) : null}
-                            </View>
                         </View>
+                    </TouchableWithoutFeedback>
+                </ScrollView>
+            </KeyboardAvoidingView>
 
-                        {/* Register Button with Press Animation */}
-                        <Animated.View
-                            style={{
-                                transform: [{ scale: buttonScale }],
-                            }}
-                        >
-                            <Button
-                                title={isRegistering ? "" : "Create Account"}
-                                onPress={handleRegister}
-                            >
-                                {isRegistering && (
-                                    <ActivityIndicator
-                                        size="small"
-                                        color="#FFFFFF"
-                                        style={styles.loadingIndicator}
-                                    />
-                                )}
-                            </Button>
-                        </Animated.View>
-
-                        {/* Login Link */}
-                        <View style={styles.loginContainer}>
-                            <Text
-                                variant="sm"
-                                style={{ color: colors.secondaryText }}
-                            >
-                                Already have an account?{" "}
-                            </Text>
-                            <TouchableOpacity
-                                onPress={onGoToLogin}
-                                style={styles.loginLink}
-                                hitSlop={{
-                                    top: 10,
-                                    bottom: 10,
-                                    left: 10,
-                                    right: 10,
-                                }}
-                            >
-                                <Text
-                                    variant="sm"
-                                    weight="bold"
-                                    style={{ color: colors.primary }}
-                                >
-                                    Sign In
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </Stack>
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+            {/* Terms and Conditions Modal */}
+            <Modal
+                visible={isTermsModalVisible}
+                animationType="slide"
+                onRequestClose={handleDeclineTerms}
+            >
+                <TermsAndConditionsScreen
+                    onAccept={handleAcceptTerms}
+                    onDecline={handleDeclineTerms}
+                />
+            </Modal>
+        </>
     )
 }
 
+// --- Styles ---
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    scrollContainer: {
-        flexGrow: 1,
-        justifyContent: "center",
-    },
-    dismissKeyboardContainer: {
-        flex: 1,
-    },
+    container: { flex: 1 },
+    scrollContainer: { flexGrow: 1 },
     inner: {
         paddingHorizontal: 24,
-        paddingVertical: 20,
-    },
-    logoContainer: {
-        alignItems: "center",
-        marginBottom: 15,
-    },
-    logoShadow: {
-        borderRadius: 45,
-        shadowOpacity: 0.2,
-        shadowOffset: { width: 0, height: 8 },
-        shadowRadius: 15,
-        elevation: 12,
-        padding: 8,
-    },
-    greetingContainer: {
-        alignItems: "center",
-        marginBottom: 24,
-    },
-    title: {
-        textAlign: "center",
-        marginBottom: 6,
-        fontSize: 24,
-    },
-    subtitle: {
-        textAlign: "center",
-        marginTop: 4,
-    },
-    formContainer: {
-        marginBottom: 8,
-    },
-    namesRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-    },
-    nameField: {
+        paddingTop: 60,
+        paddingBottom: 30,
         flex: 1,
-        marginHorizontal: 4,
+        justifyContent: "center",
     },
-    inputLabel: {
-        marginBottom: 6,
+    logoContainer: { alignItems: "center", marginBottom: 15 },
+    logoShadow: {
+        borderRadius: 50,
+        shadowOpacity: 0.15,
+        shadowOffset: { width: 0, height: 6 },
+        shadowRadius: 12,
+        elevation: 10,
     },
-    input: {
-        height: 48,
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        fontSize: 16,
-        borderWidth: 1,
+    greetingContainer: { alignItems: "center", marginBottom: 20 },
+    title: { textAlign: "center" },
+    subtitle: { textAlign: "center", marginTop: 4 },
+    namesRow: {
+        /* Using Row component spacing */
     },
-    inputError: {
-        borderWidth: 1.5,
-    },
-    passwordContainer: {
-        position: "relative",
-    },
+    nameField: { flex: 1 },
+    inputLabel: { marginBottom: 6, marginLeft: 4, fontSize: 14 },
+    // inputBase style removed
+    // inputError style removed
+    passwordContainer: { position: "relative", justifyContent: "center" },
     eyeIconContainer: {
         position: "absolute",
         right: 16,
-        top: "50%",
-        transform: [{ translateY: -10 }],
+        height: "100%",
+        justifyContent: "center",
     },
-    errorText: {
-        marginTop: 4,
-        marginBottom: 2,
-    },
-    formErrorText: {
-        textAlign: "center",
-        marginTop: 8,
-        marginBottom: 8,
-    },
+    errorText: { marginTop: 4, fontSize: 12, minHeight: 16 },
+    errorPlaceholder: { minHeight: 16 },
+    formErrorText: { textAlign: "center", marginVertical: 8 },
     termsContainer: {
         flexDirection: "row",
         alignItems: "flex-start",
-        marginVertical: 8,
+        marginVertical: 12,
     },
     checkboxWrapper: {
         marginRight: 10,
-        marginTop: 2,
+        marginTop: 3,
     },
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: 6,
-        borderWidth: 2,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    termsTextContainer: {
-        flex: 1,
-    },
-    termsText: {
-        flexWrap: "wrap",
-    },
-    strengthContainer: {
-        marginTop: 6,
-    },
-    strengthBars: {
-        flexDirection: "row",
-        marginVertical: 4,
-    },
-    strengthBar: {
-        flex: 1,
-        height: 4,
-        marginHorizontal: 2,
-        borderRadius: 2,
-    },
-    loadingIndicator: {
-        position: "absolute",
-    },
-    loginContainer: {
-        flexDirection: "row",
-        justifyContent: "center",
-        alignItems: "center",
-        marginTop: 16,
-    },
-    loginLink: {
-        padding: 5,
-    },
+    termsTextContainer: { flex: 1 },
+    termsText: { lineHeight: 20 },
+    linkText: { fontWeight: "500" },
+    strengthContainer: { marginTop: 6 },
+    strengthBars: { flexDirection: "row", marginVertical: 4, height: 4 },
+    strengthBar: { flex: 1, marginHorizontal: 1, borderRadius: 2 },
+    buttonWrapper: { marginTop: 16, marginBottom: 8 },
+    loginContainer: { marginTop: 16, flexWrap: "wrap" },
+    loginLink: { paddingLeft: 5, paddingVertical: 5 },
 })

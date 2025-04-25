@@ -1,98 +1,149 @@
-// src/components/ui/screens/TermsAndConditionsScreen.tsx
-import React, { useState, useCallback } from "react"
+import React, { useState, useCallback, useRef } from "react" // Added useRef
 import {
     View,
     StyleSheet,
     ScrollView,
     NativeSyntheticEvent,
     NativeScrollEvent,
-    TouchableOpacity,
+    SafeAreaView,
+    LayoutChangeEvent, // Import LayoutChangeEvent
 } from "react-native"
-import { useTheme } from "../../../../hooks/useTheme"
-import { Stack } from "../../layout"
-import { Text } from "../../typography"
-import { Button } from "../../button"
+import { useTheme } from "../../../../hooks/useTheme" // Adjust path
+import { Stack } from "../../layout" // Adjust path
+import { Text } from "../../typography" // Use custom Text
+import { Button } from "../../button" // Use custom Button
 
 interface Props {
     onAccept: () => void
-    onDecline?: () => void
+    onDecline: () => void
 }
 
 export function TermsAndConditionsScreen({ onAccept, onDecline }: Props) {
     const { colors } = useTheme()
     const [canAccept, setCanAccept] = useState(false)
+    const scrollViewRef = useRef<ScrollView>(null) // Ref for ScrollView
+    const contentHeightRef = useRef<number>(0) // Store content height
+    const scrollViewHeightRef = useRef<number>(0) // Store ScrollView height
 
+    // Check if scroll is needed and enable accept button if not
+    const checkScrollNeeded = useCallback(() => {
+        // Add a small tolerance
+        if (contentHeightRef.current <= scrollViewHeightRef.current + 1) {
+            console.log("T&C content is short, enabling accept immediately.")
+            setCanAccept(true)
+        }
+    }, []) // No dependencies needed here
+
+    // Get ScrollView height on layout
+    const handleScrollViewLayout = (event: LayoutChangeEvent) => {
+        scrollViewHeightRef.current = event.nativeEvent.layout.height
+        console.log("ScrollView Layout Height:", scrollViewHeightRef.current)
+        // Check immediately if scroll is needed after layout
+        checkScrollNeeded()
+    }
+
+    // Get Content height on layout
+    const handleContentLayout = (event: LayoutChangeEvent) => {
+        contentHeightRef.current = event.nativeEvent.layout.height
+        console.log("Content Layout Height:", contentHeightRef.current)
+        // Check immediately if scroll is needed after layout
+        checkScrollNeeded()
+    }
+
+    // Logic to enable button after scrolling near bottom
     const handleScroll = useCallback(
         (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+            // If already enabled, no need to check further
+            if (canAccept) return
+
             const { layoutMeasurement, contentOffset, contentSize } =
                 e.nativeEvent
-            if (
+            const paddingToBottom = 30 // Increased tolerance slightly
+            const isScrolledToBottom =
                 layoutMeasurement.height + contentOffset.y >=
-                contentSize.height - 20
-            ) {
+                contentSize.height - paddingToBottom
+
+            // console.log(`Scroll Check: Layout=${layoutMeasurement.height.toFixed(1)}, Offset=${contentOffset.y.toFixed(1)}, Content=${contentSize.height.toFixed(1)}, ReachedBottom=${isScrolledToBottom}`);
+
+            if (isScrolledToBottom) {
                 setCanAccept(true)
+                console.log("Scrolled near bottom, enabling accept button.")
             }
         },
-        [],
+        [canAccept], // Dependency on canAccept to avoid unnecessary checks
     )
 
     return (
-        <View
+        <SafeAreaView
             style={[styles.container, { backgroundColor: colors.background }]}
         >
             <Stack spacing={16} style={styles.inner}>
-                <Text variant="lg" weight="bold" style={{ color: colors.text }}>
-                    Términos y condiciones
+                <Text
+                    variant="md"
+                    weight="bold"
+                    style={[styles.header, { color: colors.text }]}
+                >
+                    Términos y Condiciones
                 </Text>
 
-                <ScrollView
-                    style={styles.scroll}
-                    contentContainerStyle={styles.scrollContent}
-                    onScroll={handleScroll}
-                    scrollEventThrottle={200}
+                {/* Scrollable Terms Content */}
+                <View
+                    style={[
+                        styles.scrollContainer,
+                        { borderColor: colors.border },
+                    ]}
                 >
-                    {/* Aquí pon tu texto real de T&C */}
-                    <Text
-                        style={[styles.text, { color: colors.secondaryText }]}
+                    <ScrollView
+                        ref={scrollViewRef} // Assign ref
+                        style={styles.scroll}
+                        contentContainerStyle={styles.scrollContent}
+                        onScroll={handleScroll}
+                        scrollEventThrottle={160}
+                        onLayout={handleScrollViewLayout} // Get ScrollView height
+                        showsVerticalScrollIndicator={true} // Show scrollbar
                     >
-                        1. Introducción{"\n"}
-                        Bienvenido a DocWallet. Al usar esta aplicación,
-                        aceptas...
-                    </Text>
-                    <Text
-                        style={[styles.text, { color: colors.secondaryText }]}
-                    >
-                        2. Uso permitido{"\n"}
-                        No debes usar la app para...
-                    </Text>
-                    {/* ... más secciones ... */}
-                    <Text
-                        style={[styles.text, { color: colors.secondaryText }]}
-                    >
-                        10. Privacidad{"\n"}
-                        Tus datos están encriptados y...
-                    </Text>
-                </ScrollView>
+                        {/* Wrap content in a View to measure its height */}
+                        <View onLayout={handleContentLayout}>
+                            {/* T&C Text Content */}
+                            <Text
+                                style={[
+                                    styles.textContent,
+                                    { color: colors.secondaryText },
+                                ]}
+                            >
+                                {/* ... (Your full T&C text here) ... */}
+                                <Text weight="bold">1. Introducción</Text>
+                                {"\n"}
+                                Bienvenido a DocWallet...
+                                {"\n\n"}
+                                <Text weight="bold">10. Contacto</Text>
+                                {"\n"}
+                                Si tiene alguna pregunta...
+                                {"\n\n"}
+                                Al hacer clic en Acepto, confirma que ha
+                                leído...
+                            </Text>
+                        </View>
+                    </ScrollView>
+                </View>
 
-                <Button
-                    title="Acepto"
-                    onPress={onAccept}
-                    disabled={!canAccept}
-                    style={styles.acceptButton}
-                />
-
-                {onDecline && (
-                    <TouchableOpacity
-                        onPress={onDecline}
-                        style={styles.declineLink}
-                    >
-                        <Text style={{ color: colors.primary }} weight="medium">
-                            Cancelar
-                        </Text>
-                    </TouchableOpacity>
-                )}
+                {/* Action Buttons */}
+                <View style={styles.buttonContainer}>
+                    <Button
+                        title="Declinar"
+                        variant="outline"
+                        onPress={onDecline} // This should call the function passed via props
+                        style={styles.actionButton}
+                    />
+                    <Button
+                        title="Acepto"
+                        onPress={onAccept} // This should call the function passed via props
+                        disabled={!canAccept} // Enable based on state
+                        style={styles.actionButton}
+                    />
+                </View>
             </Stack>
-        </View>
+        </SafeAreaView>
     )
 }
 
@@ -102,28 +153,38 @@ const styles = StyleSheet.create({
     },
     inner: {
         flex: 1,
-        padding: 24,
-        justifyContent: "flex-start",
+        paddingHorizontal: 20,
+        paddingTop: 15, // Ensure space for header
+        paddingBottom: 10, // Space above buttons
     },
-    scroll: {
+    header: {
+        textAlign: "center",
+        marginBottom: 10,
+    },
+    scrollContainer: {
         flex: 1,
         borderWidth: 1,
         borderRadius: 8,
         marginBottom: 16,
+        overflow: "hidden",
+    },
+    scroll: {
+        flex: 1,
     },
     scrollContent: {
         padding: 16,
     },
-    text: {
-        marginBottom: 12,
+    textContent: {
         lineHeight: 22,
         fontSize: 14,
     },
-    acceptButton: {
-        marginBottom: 12,
+    buttonContainer: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        gap: 15,
+        paddingBottom: 5, // Add padding below buttons if needed
     },
-    declineLink: {
-        alignSelf: "center",
-        padding: 8,
+    actionButton: {
+        flex: 1,
     },
 })

@@ -184,6 +184,4 @@ const styles = StyleSheet.create({
     pressedState: {
         opacity: 0.8, // Use opacity for pressed state across variants
     },
-    // Specific style overrides can be added here if needed,
-    // but most logic is handled in getVariantStyles now.
 })

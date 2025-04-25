@@ -116,17 +116,15 @@ export function TabBarNavigation({
                         backgroundColor: colors.primary, // Moved to styles.indicator initially, but needs theme color
                         transform: [{ translateX: indicatorPosition }], // Animated transform
                     },
-                    // Note: Moving backgroundColor to StyleSheet might require passing theme colors differently
-                    // Keeping it inline might be necessary if theme context isn't easily available in StyleSheet.create
-                    // Let's keep it inline for now as it depends on `colors` from the hook.
-                    // If your setup allows passing theme to StyleSheet, you can move backgroundColor there.
                 ]}
             />
 
             {/* Tab Items */}
             {tabs.map(({ key, label, icon: Icon }) => {
                 const isActive = activeTab === key
-                const currentIconColor = isActive ? colors.primary : colors.text
+                const currentIconColor = isActive
+                    ? colors.primary
+                    : colors.secondaryText
                 const labelColor = isActive
                     ? colors.primary
                     : colors.secondaryText
@@ -163,11 +161,9 @@ const styles = StyleSheet.create({
         position: "relative",
     },
     indicator: {
-        // Base styles for the indicator
         position: "absolute",
         top: 0,
         height: INDICATOR_HEIGHT,
-        // backgroundColor can be set here if theme is passed or defined statically
     },
     tab: {
         flex: 1,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import {
     View,
     StyleSheet,
@@ -6,25 +6,33 @@ import {
     FlatList,
     ScrollView,
     ActivityIndicator,
-    ViewStyle, // Import ViewStyle
-    StyleProp, // Import StyleProp
+    Modal,
+    Animated,
+    Dimensions,
+    TouchableWithoutFeedback,
+    Platform,
+    KeyboardAvoidingView,
+    PanResponder,
 } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme" // Adjust path
-import { BaseModal } from "../../../common/modal" // Adjust path
 import { Text } from "../../typography" // Adjust path
 import { Button } from "../../button" // Adjust path
 import { Spacer, Row } from "../../layout" // Adjust path
 import type { Folder } from "./types" // Adjust path
 import { FolderCard } from "../../cards" // Adjust path
-// Assuming you have a chevron icon
 import RightChevronIcon from "../../assets/svg/chevron-right.svg" // Example path
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+
+// --- Constants ---
+const screenHeight = Dimensions.get("window").height
+const sheetHeight = screenHeight * 0.75
+const dragThreshold = sheetHeight * 0.3
 
 interface FolderMoveModalProps {
     isVisible: boolean
     onClose: () => void
     folders: Folder[]
     selectedFolderIds: string[]
-    // currentFolderId: string | null; // Removed as not directly used for filtering logic here
     onMove: (targetFolderId: string | null) => void
 }
 
@@ -36,28 +44,71 @@ export function FolderMoveModal({
     onMove,
 }: FolderMoveModalProps) {
     const { colors } = useTheme()
+    const insets = useSafeAreaInsets()
+    const translateY = useRef(new Animated.Value(screenHeight)).current
     const [targetFolderId, setTargetFolderId] = useState<
         string | null | undefined
     >(undefined)
-    const [folderPath, setFolderPath] = useState<Folder[]>([])
+    const [folderPath, setFolderPath] = useState<Folder[]>([]) // Now used by breadcrumbs
     const [currentViewFolderId, setCurrentViewFolderId] = useState<
         string | null
     >(null)
     const [isLoading, setIsLoading] = useState(false)
 
-    // --- State Reset ---
+    // --- Animation Logic ---
+    const animateSheet = (toValue: number, duration: number = 300) => {
+        Animated.timing(translateY, {
+            toValue,
+            duration,
+            useNativeDriver: true,
+        }).start()
+    }
+
     useEffect(() => {
         if (isVisible) {
+            animateSheet(0) // Animate In
+            // Reset state
             setTargetFolderId(undefined)
             setCurrentViewFolderId(null)
             setFolderPath([])
             setIsLoading(false)
+        } else {
+            animateSheet(screenHeight, 250)
         }
     }, [isVisible])
 
-    // --- Navigation Logic ---
+    // --- Gesture Handling ---
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onPanResponderMove: (_, gestureState) => {
+                translateY.setValue(Math.max(0, gestureState.dy))
+            },
+            onPanResponderRelease: (_, gestureState) => {
+                if (gestureState.dy > dragThreshold || gestureState.vy > 0.5) {
+                    // Animate out fully before calling onClose
+                    Animated.timing(translateY, {
+                        toValue: screenHeight,
+                        duration: 200,
+                        useNativeDriver: true,
+                    }).start(() => {
+                        // Call onClose *after* animation completes
+                        onClose()
+                    })
+                } else {
+                    animateSheet(0, 200) // Spring back up
+                }
+            },
+        }),
+    ).current
+
+    // --- Navigation Logic (Used by Breadcrumbs) ---
     const navigateToFolder = (folderId: string | null) => {
+        // Now used
+        if (folderId === currentViewFolderId || isLoading) return
         setIsLoading(true)
+        setTargetFolderId(undefined)
+
         if (folderId === null) {
             setCurrentViewFolderId(null)
             setFolderPath([])
@@ -71,7 +122,7 @@ export function FolderMoveModal({
                     path.unshift(current)
                     current = folders.find((f) => f.id === current?.parentId)
                 }
-                setFolderPath(path)
+                setFolderPath(path) // folderPath is now used here
             }
         }
         setTimeout(() => setIsLoading(false), 50)
@@ -86,260 +137,284 @@ export function FolderMoveModal({
         )
     }
 
-    // --- Selection Handling ---
+    // --- Selection & Move ---
     const handleSelectTarget = (id: string | null) => {
         setTargetFolderId(id)
     }
 
-    // --- Move Action ---
     const handleMove = () => {
         if (targetFolderId !== undefined) {
             onMove(targetFolderId)
-            onClose()
+            // Parent should set isVisible=false after move, triggering animation
+            // onClose(); // Do not call onClose directly here
         }
     }
 
     // --- Rendering ---
     const renderFolderItem = ({ item }: { item: Folder }) => (
-        <TouchableOpacity
-            onPress={() => navigateToFolder(item.id)}
-            // Apply item-specific styles to the wrapper if needed
-            style={styles.folderItemWrapper}
-        >
+        <TouchableOpacity onPress={() => handleSelectTarget(item.id)}>
             <FolderCard
                 title={item.title}
                 type={item.type ?? "custom"}
-                selected={false} // Selection is shown on explicit buttons, not cards
+                selected={targetFolderId === item.id}
                 folderId={item.id}
                 showAddTagButton={false}
-                onPress={() => navigateToFolder(item.id)}
+                onPress={() => handleSelectTarget(item.id)}
             />
         </TouchableOpacity>
     )
 
     const displayedFolders = getCurrentFolders()
-
-    // Pre-calculate styles for selection buttons to fix TS error [cite: 2]
-    const isCurrentSelected = targetFolderId === currentViewFolderId
-    const isRootSelected = targetFolderId === null
-
-    const selectCurrentButtonStyle: StyleProp<ViewStyle> = [
-        styles.selectCurrentButton,
-        { borderColor: colors.primary }, // Base border color
-        isCurrentSelected && styles.selectedTargetButton, // Apply conditional border style
-        {
-            backgroundColor: isCurrentSelected
-                ? colors.primary + "20"
-                : colors.card,
-        }, // Apply conditional background
-    ]
-
-    const selectRootButtonStyle: StyleProp<ViewStyle> = [
-        styles.selectRootButton,
-        { borderColor: colors.border }, // Base border color
-        isRootSelected && styles.selectedTargetButton, // Apply conditional border style
-        {
-            backgroundColor: isRootSelected
-                ? colors.primary + "20"
-                : colors.card,
-        }, // Apply conditional background
-    ]
+    const animatedStyle = { transform: [{ translateY: translateY }] }
 
     return (
-        <BaseModal
-            isVisible={isVisible}
-            onClose={onClose}
-            dismissOnBackdropPress={false}
+        <Modal
+            animationType="none"
+            transparent={true}
+            visible={isVisible}
+            onRequestClose={onClose}
         >
-            <View style={styles.modalContainer}>
-                <Text
-                    variant="md"
-                    weight="bold"
-                    style={[styles.title, { color: colors.text }]}
-                >
-                    Mover carpeta
-                </Text>
-                <Spacer size={10} />
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardAvoidingView}
+            >
+                <TouchableWithoutFeedback onPress={onClose}>
+                    <View style={styles.backdrop} />
+                </TouchableWithoutFeedback>
 
-                {/* --- Breadcrumbs and Select Current --- */}
-                <Row
-                    align="center"
-                    justify="space-between"
-                    style={styles.navigationRow}
+                <Animated.View
+                    style={[
+                        styles.sheetContainer,
+                        animatedStyle,
+                        {
+                            backgroundColor: colors.background,
+                            paddingBottom: insets.bottom,
+                        },
+                    ]}
+                    {...panResponder.panHandlers}
                 >
-                    {/* Breadcrumbs */}
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={styles.breadcrumbsScrollView}
-                        contentContainerStyle={styles.breadcrumbsContent}
-                    >
-                        {/* Root Breadcrumb */}
-                        <TouchableOpacity
-                            style={styles.breadcrumbItem}
-                            onPress={() => navigateToFolder(null)}
-                        >
-                            <Text
-                                variant="sm"
-                                style={[
-                                    styles.breadcrumbText,
-                                    // Apply active style directly based on condition
-                                    currentViewFolderId === null
-                                        ? [
-                                              styles.breadcrumbActive,
-                                              { color: colors.text },
-                                          ] // Active style needs color too
-                                        : { color: colors.primary },
-                                ]}
-                            >
-                                Elige una carpeta destino
-                            </Text>
-                        </TouchableOpacity>
-                        {/* Folder Path Breadcrumbs */}
-                        {folderPath.map((folder) => (
-                            <Row key={folder.id} align="center">
-                                <RightChevronIcon
-                                    width={12}
-                                    height={12}
-                                    color={colors.secondaryText}
-                                    style={styles.breadcrumbSeparator}
-                                />
-                                <TouchableOpacity
-                                    style={styles.breadcrumbItem}
-                                    onPress={() => navigateToFolder(folder.id)}
-                                >
-                                    <Text
-                                        variant="sm"
-                                        style={[
-                                            styles.breadcrumbText,
-                                            // Apply active style directly based on condition
-                                            currentViewFolderId === folder.id
-                                                ? [
-                                                      styles.breadcrumbActive,
-                                                      { color: colors.text },
-                                                  ] // Active style needs color too
-                                                : { color: colors.primary },
-                                        ]}
-                                        numberOfLines={1}
-                                    >
-                                        {folder.title}
-                                    </Text>
-                                </TouchableOpacity>
-                            </Row>
-                        ))}
-                    </ScrollView>
-
-                    {/* Select Current Folder Button */}
-                    {currentViewFolderId !== null && (
-                        <TouchableOpacity
-                            // Apply pre-calculated style array [cite: 2]
-                            style={selectCurrentButtonStyle}
-                            onPress={() =>
-                                handleSelectTarget(currentViewFolderId)
-                            }
-                        >
-                            <Text
-                                style={[
-                                    styles.selectButtonText,
-                                    { color: colors.primary },
-                                ]}
-                            >
-                                Select Current
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                </Row>
-                <Spacer size={10} />
-
-                {/* --- Select Root Option --- */}
-                <TouchableOpacity
-                    // Apply pre-calculated style array [cite: 2]
-                    style={selectRootButtonStyle}
-                    onPress={() => handleSelectTarget(null)}
-                >
-                    <Text
+                    <View
                         style={[
-                            styles.selectButtonText,
-                            { color: colors.text },
+                            styles.handleIndicator,
+                            { backgroundColor: colors.border + "80" },
+                        ]}
+                    />
+
+                    {/* Title */}
+                    <Text
+                        variant="md"
+                        weight="bold"
+                        style={[styles.title, { color: colors.text }]}
+                    >
+                        Move To Folder
+                    </Text>
+                    <Spacer size={5} />
+
+                    {/* --- Breadcrumbs (Re-added) --- */}
+                    <View style={styles.navigationRow}>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={styles.breadcrumbsScrollView}
+                            contentContainerStyle={styles.breadcrumbsContent}
+                        >
+                            {/* Root Breadcrumb */}
+                            <TouchableOpacity
+                                style={styles.breadcrumbItem}
+                                onPress={() => navigateToFolder(null)} // Uses navigateToFolder
+                            >
+                                <Text
+                                    variant="sm"
+                                    style={[
+                                        styles.breadcrumbText,
+                                        currentViewFolderId === null
+                                            ? [
+                                                  styles.breadcrumbActive,
+                                                  { color: colors.text },
+                                              ]
+                                            : { color: colors.primary },
+                                    ]}
+                                >
+                                    Choose Destination
+                                </Text>
+                            </TouchableOpacity>
+                            {/* Folder Path Breadcrumbs */}
+                            {folderPath.map(
+                                (
+                                    folder, // Uses folderPath
+                                ) => (
+                                    <Row key={folder.id} align="center">
+                                        <RightChevronIcon
+                                            width={12}
+                                            height={12}
+                                            color={colors.secondaryText}
+                                            style={styles.breadcrumbSeparator}
+                                        />
+                                        <TouchableOpacity
+                                            style={styles.breadcrumbItem}
+                                            onPress={() =>
+                                                navigateToFolder(folder.id)
+                                            } // Uses navigateToFolder
+                                        >
+                                            <Text
+                                                variant="sm"
+                                                style={[
+                                                    styles.breadcrumbText,
+                                                    currentViewFolderId ===
+                                                    folder.id
+                                                        ? [
+                                                              styles.breadcrumbActive,
+                                                              {
+                                                                  color: colors.text,
+                                                              },
+                                                          ]
+                                                        : {
+                                                              color: colors.primary,
+                                                          },
+                                                ]}
+                                                numberOfLines={1}
+                                            >
+                                                {folder.title}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </Row>
+                                ),
+                            )}
+                        </ScrollView>
+                    </View>
+                    {/* --- End Breadcrumbs --- */}
+
+                    <Spacer size={10} />
+
+                    {/* Selection Buttons */}
+                    <Row style={styles.selectionButtonRow}>
+                        <Button
+                            title="Move to Root"
+                            variant="text"
+                            onPress={() => handleSelectTarget(null)}
+                            style={styles.selectButton}
+                        />
+                        {currentViewFolderId !== null && (
+                            <Button
+                                title="Move Here"
+                                variant="text"
+                                onPress={() =>
+                                    handleSelectTarget(currentViewFolderId)
+                                }
+                                style={styles.selectButton}
+                            />
+                        )}
+                    </Row>
+                    <Spacer size={16} />
+
+                    {/* Folder List Title */}
+                    <Text
+                        variant="sm"
+                        weight="medium"
+                        style={[
+                            styles.subheading,
+                            { color: colors.secondaryText },
                         ]}
                     >
-                        Mover a vista general
+                        Or select a subfolder below:
                     </Text>
-                </TouchableOpacity>
-                <Spacer size={16} />
+                    {/* Folder List */}
+                    <View
+                        style={[
+                            styles.folderListContainer,
+                            { borderColor: colors.border },
+                        ]}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator
+                                style={styles.loadingIndicator}
+                                color={colors.primary}
+                            />
+                        ) : (
+                            <FlatList
+                                data={displayedFolders}
+                                renderItem={renderFolderItem}
+                                keyExtractor={(item) => item.id}
+                                ListEmptyComponent={
+                                    <View style={styles.emptyContainer}>
+                                        <Text
+                                            variant="sm"
+                                            style={{
+                                                color: colors.secondaryText,
+                                            }}
+                                        >
+                                            (No subfolders here)
+                                        </Text>
+                                    </View>
+                                }
+                            />
+                        )}
+                    </View>
+                    <Spacer size={16} />
 
-                {/* --- Folder List --- */}
-                <Text
-                    variant="sm"
-                    weight="medium"
-                    style={[styles.subheading, { color: colors.secondaryText }]}
-                >
-                    Navega y escoge una carpeta
-                </Text>
-                <View style={styles.folderListContainer}>
-                    {isLoading ? (
-                        <ActivityIndicator style={styles.loadingIndicator} />
-                    ) : (
-                        <FlatList
-                            data={displayedFolders}
-                            renderItem={renderFolderItem}
-                            keyExtractor={(item) => item.id}
-                            ListEmptyComponent={
-                                <View style={styles.emptyContainer}>
-                                    <Text
-                                        variant="sm"
-                                        style={{ color: colors.secondaryText }}
-                                    >
-                                        (No hay carpetas disponibles)
-                                    </Text>
-                                </View>
-                            }
-                        />
-                    )}
-                    {/* --- Action Buttons --- */}
-                    <Row justify="space-between">
+                    {/* Action Buttons */}
+                    <Row justify="space-between" style={styles.actionButtonRow}>
                         <View style={styles.buttonContainer}>
                             <Button
-                                title="Cancelar"
+                                title="Cancel"
                                 onPress={onClose}
                                 variant="outline"
-                                style={styles.cancelButton}
                             />
                         </View>
                         <View style={styles.buttonContainer}>
                             <Button
-                                title="Mover"
+                                title="Move"
                                 onPress={handleMove}
                                 disabled={targetFolderId === undefined}
                             />
                         </View>
                     </Row>
-                </View>
-                <Spacer size={16} />
-            </View>
-        </BaseModal>
+                </Animated.View>
+            </KeyboardAvoidingView>
+        </Modal>
     )
 }
 
+// --- Styles ---
+// Styles remain the same
 const styles = StyleSheet.create({
-    modalContainer: {
-        flexShrink: 1,
-        padding: 15,
-        maxHeight: "85%",
-        width: "100%",
+    keyboardAvoidingView: {
+        flex: 1,
+        justifyContent: "flex-end",
+    },
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    sheetContainer: {
+        height: sheetHeight,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingHorizontal: 15,
+        paddingTop: 10,
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 10,
+        overflow: "hidden",
+    },
+    handleIndicator: {
+        width: 50,
+        height: 6,
+        borderRadius: 3,
+        alignSelf: "center",
+        marginBottom: 8,
     },
     title: {
-        marginBottom: 10,
+        marginBottom: 5,
         textAlign: "center",
     },
     navigationRow: {
         marginBottom: 8,
-        // Ensure this row doesn't allow content to overlap
-        minHeight: 35, // Set minimum height
+        minHeight: 35,
+        flexShrink: 1,
     },
     breadcrumbsScrollView: {
-        flexShrink: 1, // Allow shrinking
-        maxWidth: "70%", // Prevent breadcrumbs from taking all space
+        flex: 1,
     },
     breadcrumbsContent: {
         alignItems: "center",
@@ -353,41 +428,23 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     breadcrumbActive: {
-        // Style for the *currently viewed* folder in breadcrumbs
         fontWeight: "bold",
-        // color set dynamically
     },
     breadcrumbSeparator: {
         marginHorizontal: 4,
-        alignSelf: "center", // Align chevron vertically
+        alignSelf: "center",
     },
-    selectCurrentButton: {
-        // Base style for the button itself
-        paddingVertical: 6,
+    selectionButtonRow: {
+        justifyContent: "flex-start",
+        gap: 10,
+        flexWrap: "wrap",
+    },
+    selectButton: {
+        width: "auto",
         paddingHorizontal: 10,
-        borderRadius: 6,
-        borderWidth: 1, // Base border width
-        marginLeft: 10,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    selectRootButton: {
-        // Base style for the button itself
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 6,
-        borderWidth: StyleSheet.hairlineWidth,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    selectButtonText: {
-        fontSize: 13,
-        fontWeight: "500",
-    },
-    selectedTargetButton: {
-        // Applied when this button represents the selected target
-        borderWidth: 2.5, // Thicker border for selected target
-        // backgroundColor is applied dynamically
+        paddingVertical: 4,
+        minHeight: 0,
+        borderWidth: 0,
     },
     folderListContainer: {
         flex: 1,
@@ -395,31 +452,27 @@ const styles = StyleSheet.create({
         borderTopWidth: StyleSheet.hairlineWidth,
         borderBottomWidth: StyleSheet.hairlineWidth,
         paddingTop: 8,
+        marginBottom: 10,
     },
     subheading: {
         marginBottom: 8,
         paddingLeft: 4,
     },
-    folderItemWrapper: {
-        // Style for the touchable wrapper around FolderCard
-        // Add padding/margin here if needed for spacing items in the list
-        marginBottom: 4,
-    },
-    // folderItemCard style removed as it's not passed to FolderCard
     emptyContainer: {
         height: 80,
         alignItems: "center",
         justifyContent: "center",
     },
     loadingIndicator: {
-        marginTop: 20,
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    actionButtonRow: {
+        // Style as needed
     },
     buttonContainer: {
         flex: 1,
         marginHorizontal: 5,
     },
-    cancelButton: {
-        // Using Button variant="outline" handles styling
-    },
-    // disabledButton style removed (handled by Button's disabled prop)
 })
