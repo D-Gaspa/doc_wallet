@@ -1,4 +1,3 @@
-// hooks/useDismissKeyboard.ts
 import { useCallback } from "react"
 import { Keyboard, ViewProps } from "react-native"
 

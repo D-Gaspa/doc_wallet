@@ -1,7 +1,7 @@
 import React from "react"
 import { StyleSheet, View } from "react-native"
-import { useTheme } from "../../../../hooks/useTheme.ts" // Adjust path if needed
-import { TabBarNavigation } from "./TabBarNavigation.tsx" // Import INDICATOR_HEIGHT
+import { useTheme } from "../../../../hooks/useTheme.ts"
+import { TabBarNavigation } from "./TabBarNavigation.tsx"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export interface TabBarProps {
@@ -12,8 +12,7 @@ export interface TabBarProps {
     testID?: string
 }
 
-// Define a base height for the content area (icon + label + padding)
-const TAB_BAR_CONTENT_HEIGHT = 60 // Adjust if needed based on icon/label size
+const TAB_BAR_CONTENT_HEIGHT = 60
 
 export function TabBar({
     activeTab,
@@ -31,9 +30,8 @@ export function TabBar({
                 {
                     backgroundColor: colors.background,
                     borderTopColor: colors.border,
-                    // Calculate total height: content + safe area bottom
                     height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
-                    paddingBottom: insets.bottom, // Apply safe area padding
+                    paddingBottom: insets.bottom,
                 },
             ]}
             testID={testID ?? "tabBar-root"}
@@ -52,6 +50,5 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         width: "100%",
         borderTopWidth: StyleSheet.hairlineWidth,
-        // Height and paddingBottom are set dynamically above
     },
 })
