@@ -1,10 +1,18 @@
-import React from "react"
-import { StyleSheet, TouchableOpacity, View } from "react-native"
-import { useTheme } from "../../../../hooks/useTheme.ts"
+import React, { useState, useEffect, useRef } from "react"
+import {
+    StyleSheet,
+    TouchableOpacity,
+    View,
+    Text,
+    Animated,
+    Dimensions,
+} from "react-native"
+import { useTheme } from "../../../../hooks/useTheme.ts" // Adjust path
 
-import HomeIcon from "../../assets/svg/Home.svg"
-import ProfileIcon from "../../assets/svg/Profile.svg"
-import AddFileIcon from "../../assets/svg/add-file-icon.svg"
+// Import icons
+import HouseIcon from "../../assets/svg/Home.svg" // Ensure path is correct
+import ProfileIcon from "../../assets/svg/Profile.svg" // Ensure path is correct
+import AddFileIcon from "../../assets/svg/add-file-icon.svg" // Ensure path is correct
 
 export interface TabBarNavigationProps {
     activeTab: string
@@ -13,11 +21,19 @@ export interface TabBarNavigationProps {
     testID?: string
 }
 
+// --- Constants ---
+export const INDICATOR_HEIGHT = 3
+const ICON_SIZE = 32
+const TAB_PADDING_TOP = 6 + INDICATOR_HEIGHT
+const TAB_PADDING_BOTTOM = 4
+
+// Updated tabs array
 const tabs = [
-    { tab: "Home", icon: HomeIcon, useFill: false },
-    { tab: "Files", icon: AddFileIcon, useFill: true },
-    { tab: "Profile", icon: ProfileIcon, useFill: false },
+    { key: "Home", label: "Home", icon: HouseIcon },
+    { key: "Files", label: "Files", icon: AddFileIcon },
+    { key: "Profile", label: "Profile", icon: ProfileIcon },
 ]
+const tabKeys = tabs.map((t) => t.key)
 
 export function TabBarNavigation({
     activeTab,
@@ -26,53 +42,110 @@ export function TabBarNavigation({
     testID,
 }: TabBarNavigationProps) {
     const { colors } = useTheme()
+    const [containerWidth, setContainerWidth] = useState(
+        Dimensions.get("window").width,
+    )
+    const indicatorPosition = useRef(new Animated.Value(0)).current
+    const itemWidth = tabs.length > 0 ? containerWidth / tabs.length : 0
 
-    // Handle tab press with reselection detection
-    const handleTabPress = (tab: string) => {
-        if (tab === activeTab && onTabReselect) {
-            // If we're already on this tab and have a reselect handler
-            onTabReselect(tab)
-        } else {
-            // Normal tab change
-            onTabChange(tab)
+    // Effect for initial position
+    useEffect(() => {
+        const initialActiveIndex = tabKeys.indexOf(activeTab)
+        // Calculate initial position carefully, handle itemWidth possibly being 0 initially
+        const calculatedItemWidth = Dimensions.get("window").width / tabs.length
+        const initialPosition =
+            initialActiveIndex >= 0 && calculatedItemWidth > 0
+                ? initialActiveIndex * calculatedItemWidth
+                : 0
+        indicatorPosition.setValue(initialPosition)
+        // Removed eslint-disable-next-line: The empty array is correct for setting initial state on mount.
+        // If ESLint setup finds the rule later, it might complain, but the logic is standard.
+    }, []) // Run only once on mount
+
+    // Effect for animating position changes
+    useEffect(() => {
+        const activeIndex = tabKeys.indexOf(activeTab)
+        // Only animate if itemWidth is calculated and valid
+        if (activeIndex !== -1 && itemWidth > 0) {
+            const targetPosition = activeIndex * itemWidth
+            Animated.timing(indicatorPosition, {
+                toValue: targetPosition,
+                duration: 300,
+                useNativeDriver: true,
+            }).start()
+        }
+        // Dependencies are correct: animation depends on activeTab and itemWidth
+    }, [activeTab, itemWidth, indicatorPosition])
+
+    const handleTabPress = (tabKey: string) => {
+        if (tabKey === activeTab && onTabReselect) {
+            onTabReselect(tabKey)
+        } else if (tabKey !== activeTab) {
+            onTabChange(tabKey)
+        }
+    }
+
+    const handleLayout = (event: {
+        nativeEvent: { layout: { width: number } }
+    }) => {
+        const { width } = event.nativeEvent.layout
+        if (width > 0 && Math.abs(width - containerWidth) > 1) {
+            setContainerWidth(width)
+            const activeIndex = tabKeys.indexOf(activeTab)
+            if (activeIndex !== -1) {
+                const newItemWidth = width / tabs.length
+                indicatorPosition.setValue(activeIndex * newItemWidth)
+            }
         }
     }
 
     return (
-        <View style={styles.container} testID={testID ?? "tab-bar-navigation"}>
-            {tabs.map(({ tab, icon: Icon, useFill }) => {
-                const isActive = activeTab === tab
+        <View
+            style={styles.container}
+            testID={testID ?? "tab-bar-navigation"}
+            onLayout={handleLayout}
+        >
+            {/* Animated Indicator */}
+            <Animated.View
+                style={[
+                    styles.indicator, // Base styles from StyleSheet
+                    // eslint-disable-next-line react-native/no-inline-styles
+                    {
+                        // Inline styles ONLY for dynamic/animated properties
+                        width: itemWidth > 0 ? itemWidth : 0, // Dynamic width
+                        backgroundColor: colors.primary, // Moved to styles.indicator initially, but needs theme color
+                        transform: [{ translateX: indicatorPosition }], // Animated transform
+                    },
+                ]}
+            />
 
-                const strokeColor = isActive
-                    ? colors.tabbarIcon_active
-                    : colors.tabbarIcon_inactive
-
-                console.log(`Tab: ${tab}, Stroke Color: ${strokeColor}`)
+            {/* Tab Items */}
+            {tabs.map(({ key, label, icon: Icon }) => {
+                const isActive = activeTab === key
+                const currentIconColor = isActive
+                    ? colors.primary
+                    : colors.secondaryText
+                const labelColor = isActive
+                    ? colors.primary
+                    : colors.secondaryText
 
                 return (
                     <TouchableOpacity
-                        key={tab}
+                        key={key}
                         style={styles.tab}
-                        onPress={() => handleTabPress(tab)}
-                        testID={`tab-${tab.toLowerCase()}`}
+                        onPress={() => handleTabPress(key)}
+                        testID={`tab-${key.toLowerCase()}`}
+                        activeOpacity={0.7}
                     >
-                        {isActive && (
-                            <View
-                                style={[
-                                    styles.activeCircle,
-                                    { backgroundColor: colors.primary },
-                                ]}
-                            />
-                        )}
-
-                        {/* Icon */}
                         <Icon
-                            width={28}
-                            height={28}
-                            stroke={!useFill ? strokeColor : "none"}
-                            fill={useFill ? strokeColor : "none"}
+                            width={ICON_SIZE}
+                            height={ICON_SIZE}
+                            color={currentIconColor}
                             style={styles.icon}
                         />
+                        <Text style={[styles.label, { color: labelColor }]}>
+                            {label}
+                        </Text>
                     </TouchableOpacity>
                 )
             })}
@@ -80,30 +153,31 @@ export function TabBarNavigation({
     )
 }
 
-// Styles remain the same
-
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
-        justifyContent: "space-around",
-        alignItems: "center",
         width: "100%",
-    },
-    tab: {
-        alignItems: "center",
-        justifyContent: "center",
-        width: 60,
-        height: 60,
+        height: "100%",
         position: "relative",
     },
-    activeCircle: {
+    indicator: {
         position: "absolute",
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        zIndex: -1,
+        top: 0,
+        height: INDICATOR_HEIGHT,
+    },
+    tab: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingTop: TAB_PADDING_TOP,
+        paddingBottom: TAB_PADDING_BOTTOM,
     },
     icon: {
-        zIndex: 1,
+        marginBottom: 2,
+    },
+    label: {
+        fontSize: 10,
+        fontWeight: "500",
+        textAlign: "center",
     },
 })

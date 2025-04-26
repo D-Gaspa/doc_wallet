@@ -60,9 +60,9 @@ export const GoogleAuthService = {
 
             return {
                 id: decodedToken.sub,
-                name: decodedToken.name || null,
+                name: decodedToken.name ?? undefined,
                 email: decodedToken.email,
-                photo: decodedToken.picture || null,
+                photo: decodedToken.picture ?? undefined,
             }
         } catch (error) {
             logger.error("Error decoding ID token", error)

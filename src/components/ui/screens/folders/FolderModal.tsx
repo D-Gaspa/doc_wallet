@@ -12,7 +12,7 @@ import { Button } from "../../button"
 import { LoggingService } from "../../../../services/monitoring/loggingService"
 import { useDismissGesture } from "../../gestures/useDismissGesture.ts"
 import { CustomIconSelector } from "./CustomIconSelector"
-
+import { Switch } from "react-native"
 // Folder type definition
 export type FolderType = "travel" | "medical" | "car" | "education" | "custom"
 
@@ -25,6 +25,7 @@ interface UnifiedFolderModalProps {
         type: FolderType,
         customIconId?: string,
         folderId?: string,
+        favorite?: boolean,
     ) => void
     mode: "create" | "edit"
     initialData?: {
@@ -32,6 +33,7 @@ interface UnifiedFolderModalProps {
         name?: string
         type?: FolderType
         customIconId?: string
+        favorite?: boolean
     }
     parentFolderId?: string | null
 }
@@ -48,7 +50,7 @@ export function UnifiedFolderModal({
     const logger = LoggingService.getLogger
         ? LoggingService.getLogger("UnifiedFolderModal")
         : { debug: console.debug }
-
+    const [isFavorite, setIsFavorite] = useState(initialData.favorite ?? false)
     // Track if modal is fully mounted to prevent premature interactions
     const isMounted = useRef(false)
 
@@ -148,6 +150,7 @@ export function UnifiedFolderModal({
             selectedType,
             selectedType === "custom" ? customIconId : undefined,
             initialData.id,
+            isFavorite,
         )
 
         logger.debug(`${mode === "create" ? "Creating" : "Updating"} folder`, {
@@ -250,6 +253,22 @@ export function UnifiedFolderModal({
                     >
                         <Stack spacing={16}>
                             {/* Folder name input */}
+                            {/* Favorite toggle */}
+                            <Stack spacing={8}>
+                                <Text weight="medium">Mark as Favorite</Text>
+                                <Switch
+                                    value={isFavorite}
+                                    onValueChange={setIsFavorite}
+                                    trackColor={{
+                                        true: colors.primary,
+                                        false: colors.border,
+                                    }}
+                                    thumbColor={
+                                        isFavorite ? colors.primary : "#ccc"
+                                    }
+                                />
+                            </Stack>
+
                             <Stack spacing={8}>
                                 <Text weight="medium">Folder Name</Text>
                                 <TextField

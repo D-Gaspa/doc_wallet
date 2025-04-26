@@ -6,6 +6,10 @@ import { SearchBar } from "../../search_bar"
 import { TagFilterDropdown } from "../../tag_functionality/TagFilter"
 import { Folder } from "./types"
 import { ActiveTagFilters } from "../../tag_functionality/ActiveTagFilters"
+import { SortDropdown, SortOption } from "../../search_engine/SortDropdown.tsx"
+
+// Define sort options
+export type FolderSortOption = "name" | "date" | "type"
 
 interface FolderHeaderProps {
     currentFolderId: string | null
@@ -16,6 +20,8 @@ interface FolderHeaderProps {
     setSelectedTagFilters: (tagIds: string[]) => void
     searchQuery: string
     setSearchQuery: (query: string) => void
+    sortOption?: FolderSortOption
+    setSortOption?: (option: FolderSortOption) => void
     testID?: string
 }
 
@@ -26,8 +32,9 @@ export function FolderHeader({
     folders,
     selectedTagFilters,
     setSelectedTagFilters,
-
     setSearchQuery,
+    sortOption = "name",
+    setSortOption,
     testID,
 }: FolderHeaderProps) {
     // Handler for removing a single tag filter
@@ -78,11 +85,20 @@ export function FolderHeader({
                 <Text variant="md" weight="bold" style={styles.titleText}>
                     {getCurrentFolderName()}
                 </Text>
-                <TagFilterDropdown
-                    selectedTagIds={selectedTagFilters}
-                    onSelectTags={setSelectedTagFilters}
-                    testID="tag-filter-dropdown"
-                />
+                <Row spacing={8} align="center">
+                    {setSortOption && (
+                        <SortDropdown
+                            sortOption={sortOption as SortOption}
+                            onSelect={(opt) => setSortOption(opt)}
+                            testID="folder-sort-dropdown"
+                        />
+                    )}
+                    <TagFilterDropdown
+                        selectedTagIds={selectedTagFilters}
+                        onSelectTags={setSelectedTagFilters}
+                        testID="tag-filter-dropdown"
+                    />
+                </Row>
             </Row>
 
             {/* Search bar */}

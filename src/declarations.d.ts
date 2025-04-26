@@ -6,8 +6,8 @@ declare module "*.svg" {
 }
 
 declare module "*.png" {
-    const src: string
-    export default src
+    const content: number
+    export default content
 }
 
 declare module "*.jpg" {

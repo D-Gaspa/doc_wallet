@@ -1,5 +1,5 @@
 export { DocumentCard } from "./DocumentCard"
-export { FavoriteDocumentCard } from "./FavoriteDocuementCard.tsx"
+export { FavoriteDocumentCard } from "./FavoriteDocumentCard.tsx"
 export { ExpiringDocumentCard } from "./ExpiringDocumentCard"
 export { DocumentCardCarousel } from "./DocumentCardCarousel"
 export { FolderCard } from "./FolderCard"
