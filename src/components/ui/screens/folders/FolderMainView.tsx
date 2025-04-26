@@ -1,4 +1,10 @@
-import React, { forwardRef, useImperativeHandle, useState } from "react"
+import React, {
+    forwardRef,
+    useImperativeHandle,
+    useState,
+    useEffect,
+    useRef,
+} from "react"
 import { StyleSheet, View } from "react-native"
 import { Container, Spacer, Stack } from "../../layout"
 import { Alert as AlertComponent, AlertType } from "../../feedback/Alert"
@@ -12,6 +18,7 @@ import { FolderSelectionControls } from "./FolderSelectionControls.tsx"
 import { TagManagerSection } from "../../tag_functionality/TagManagerSection"
 import { useFolderOperations } from "./useFolderOperations"
 import { useSelectionMode } from "./useSelectionMode"
+import { useRoute, useIsFocused, RouteProp } from "@react-navigation/native"
 import { Folder } from "./types"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { useDocStore } from "../../../../store"
@@ -26,11 +33,13 @@ import { FolderMoveModal } from "./FolderMoveModal"
 import { TouchableOpacity } from "react-native" // Make sure this is imported
 import AddDocumentIcon from "../../assets/svg/add_folder.svg"
 import { useTheme } from "../../../../hooks/useTheme"
+import { TabParamList } from "../../../../App"
 
 export interface FolderMainViewRef {
     resetToRootFolder(): void
     navigateToFolder(folderId: string): void
 }
+type FolderMainViewRouteProp = RouteProp<TabParamList, "Home">
 
 const FolderMainViewContent = forwardRef((_props, ref) => {
     const logger = LoggingService.getLogger
@@ -51,22 +60,60 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoading, setLoading] = useState(false)
+    const route = useRoute<FolderMainViewRouteProp>() // <-- Get route object
+    const isFocused = useIsFocused() // <-- Check if the screen is focused
 
     // Add sorting state
     const [sortOption, setSortOption] = useState<FolderSortOption>("name")
-
     // Add move modal state
     const [moveFolderModalVisible, setMoveFolderModalVisible] = useState(false)
-
     const documents = useDocStore((state) => state.documents)
-
+    const navigatedFromParams = useRef(false)
     // State for the unified modal
     const [folderModalVisible, setFolderModalVisible] = useState(false)
     const [folderModalMode, setFolderModalMode] = useState<"create" | "edit">(
         "create",
     )
     const [folderToEdit, setFolderToEdit] = useState<Folder | null>(null)
+    const internalNavigateToFolder = (folderId: string) => {
+        logger.debug("Navigating internally to folder:", folderId)
+        setCurrentFolderId(folderId) // <-- This is the core navigation logic in FolderMainView
+    }
+    useEffect(() => {
+        const targetFolderId = route.params?.folderId
 
+        // Check if the screen is focused, there's a target folderId,
+        // and we haven't already navigated based on this parameter set
+        if (isFocused && targetFolderId && !navigatedFromParams.current) {
+            logger.debug(
+                `FolderMainView focused with folderId param: ${targetFolderId}`,
+            )
+            internalNavigateToFolder(targetFolderId)
+            // Mark that we've handled this navigation intent
+            navigatedFromParams.current = true
+
+            // It's often good practice to clear the params after handling them
+            // to prevent re-navigation if the screen refocuses without params changing.
+            // However, direct modification isn't standard. Resetting the ref flag is usually sufficient.
+            // If re-navigation becomes an issue, more complex state management might be needed.
+        } else if (!isFocused) {
+            // Reset the flag when the screen loses focus, allowing navigation again
+            // if the user leaves and comes back with the same params (though unlikely here)
+            // or more importantly, if they come back with *new* params.
+            navigatedFromParams.current = false
+        }
+    }, [isFocused, route.params?.folderId]) // Re-run when focus or folderId param changes
+
+    // ... rest of useFolderOperations, useSelectionMode, handlers, etc.
+
+    // Use the internalNavigateToFolder function where needed inside this component
+    useImperativeHandle(ref, () => ({
+        resetToRootFolder: () => {
+            logger.debug("Resetting to root folder view")
+            setCurrentFolderId(null)
+        },
+        navigateToFolder: internalNavigateToFolder, // Expose the internal navigation function
+    }))
     // Alert state using the existing AlertType from the Alert component
     const [alert, setAlert] = useState<{
         visible: boolean
@@ -242,22 +289,13 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     const handleFolderPress = (folderId: string) => {
         if (selectionMode) {
             handleFolderSelect(folderId)
-            return
+        } else {
+            internalNavigateToFolder(folderId) // Use the consistent internal function
         }
-
-        // if we have an active search or tag‑filter, clear them
-        if (searchQuery) {
-            setSearchQuery("")
-            setSelectedTagFilters([])
-        }
-
-        logger.debug("Navigating to folder", { folderId })
-        setCurrentFolderId(folderId)
     }
 
     const handleBackPress = () => {
         if (selectionMode) {
-            // Exit selection mode when pressing back in selection mode
             toggleSelectionMode()
             return
         }
@@ -354,6 +392,13 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 : inCurrentDirectory && matchesTags
         })
     })()
+    useImperativeHandle(ref, () => ({
+        resetToRootFolder: () => {
+            logger.debug("Resetting to root folder view")
+            setCurrentFolderId(null)
+        },
+        navigateToFolder: internalNavigateToFolder, // Expose the internal navigation function
+    }))
 
     // Apply sorting to filtered folders
     const sortedFolders = sortFolders(filteredFolders)

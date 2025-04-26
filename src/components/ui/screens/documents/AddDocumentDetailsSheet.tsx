@@ -92,7 +92,7 @@ export const AddDocumentDetailsSheet = ({
             // Pass the relevant data to the parent component
             onSave(document, selectedFolderId, selectedTagIds)
         } catch (error) {
-            console.error("❌ Error in handleSave:", error)
+            console.error("Error in handleSave:", error)
         } finally {
             setLoading(false)
         }

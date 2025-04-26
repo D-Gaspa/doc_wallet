@@ -44,17 +44,25 @@ export function ProfileScreen({ folderMainViewRef }: Props) {
 
         const folder = folders.find((f) => f.documentIds?.includes(doc.id))
 
-        if (folder && folderMainViewRef.current?.navigateToFolder) {
-            folderMainViewRef.current.navigateToFolder(folder.id)
-            navigation.navigate("Home")
+        if (folder) {
+            // Navigate to Home tab, passing the target folderId as a parameter
+            navigation.navigate("Home", { folderId: folder.id }) // <-- Pass parameter
         } else {
             console.warn("Folder not found for document:", title)
         }
     }
 
     const handleGoToFolder = (folderId: string) => {
-        folderMainViewRef.current?.navigateToFolder(folderId)
-        navigation.navigate("Home")
+        if (folderMainViewRef.current?.navigateToFolder) {
+            // 1. Navigate to the Home tab
+            navigation.navigate("Home", { folderId: folderId })
+            // 2. Add a small delay
+            setTimeout(() => {
+                folderMainViewRef.current?.navigateToFolder(folderId)
+            }, 50) // 50ms delay, adjust if needed
+        } else {
+            console.warn("Folder reference not available for navigation")
+        }
     }
 
     if (!user) return null
