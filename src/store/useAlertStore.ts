@@ -1,4 +1,3 @@
-// store/useAlertStore.ts
 import { create } from "zustand"
 import { useDocStore } from "./useDocStore"
 import { IDocument } from "../types/document.ts"

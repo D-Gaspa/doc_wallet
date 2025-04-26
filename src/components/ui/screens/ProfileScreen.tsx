@@ -1,20 +1,17 @@
 import React, { useEffect, useState } from "react"
-import { View, StyleSheet, Text, ScrollView } from "react-native"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
-import { DocumentCardCarousel, FolderCard } from "../cards" // Assuming path is correct
+import { DocumentCardCarousel, FolderCard } from "../cards"
 import { useAlertStore } from "../../../store/useAlertStore"
 import { IDocument } from "../../../types/document"
-import { useNavigation, NavigationProp } from "@react-navigation/native"
 import { useFolderStore } from "../../../store/useFolderStore"
-import { useDocStore } from "../../../store"
-import { TabParamList } from "../../../App" // Assuming path is correct
-import { ProfileHeader } from "../profile_header" // Assuming path is correct
-import { useAuthStore } from "../../../store"
-import { Stack, Spacer } from "../layout" // Assuming path is correct
-import { getIconById, ThemeColors } from "./folders/CustomIconSelector" // Assuming path is correct
-import type { Folder } from "./folders/types.ts" // ---> Import Folder type
+import { useAuthStore, useDocStore } from "../../../store"
+import { TabParamList } from "../../../App"
+import { ProfileHeader } from "../profile_header"
+import { getIconById, ThemeColors } from "./folders/CustomIconSelector"
+import type { Folder } from "./folders/types.ts"
+import { Spacer, Stack } from "../layout"
 
-// Define Folder with optional favorite property locally if not updating global type yet
 type FolderWithFavorite = Folder & { favorite?: boolean }
 
 type Props = {
@@ -22,15 +19,18 @@ type Props = {
         resetToRootFolder: () => void
         navigateToFolder: (folderId: string) => void
     }>
+    navigateToTab: (
+        tabKey: keyof TabParamList,
+        params?: TabParamList[keyof TabParamList],
+    ) => void
 }
 
-export function ProfileScreen({ folderMainViewRef }: Props) {
+export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
     const { colors } = useTheme()
     const getExpiringDocuments = useAlertStore((s) => s.getExpiringDocuments)
     const [expiringDocs, setExpiringDocs] = useState<IDocument[]>([])
     const documents = useDocStore((state) => state.documents)
     const folders = useFolderStore((s) => s.folders)
-    const navigation = useNavigation<NavigationProp<TabParamList>>()
     const user = useAuthStore((s) => s.user)
 
     useEffect(() => {
@@ -45,23 +45,22 @@ export function ProfileScreen({ folderMainViewRef }: Props) {
         const folder = folders.find((f) => f.documentIds?.includes(doc.id))
 
         if (folder) {
-            // Navigate to Home tab, passing the target folderId as a parameter
-            navigation.navigate("Home", { folderId: folder.id }) // <-- Pass parameter
+            navigateToTab("Home", { folderId: folder.id })
         } else {
             console.warn("Folder not found for document:", title)
         }
     }
-
     const handleGoToFolder = (folderId: string) => {
+        navigateToTab("Home", { folderId: folderId })
+
         if (folderMainViewRef.current?.navigateToFolder) {
-            // 1. Navigate to the Home tab
-            navigation.navigate("Home", { folderId: folderId })
-            // 2. Add a small delay
             setTimeout(() => {
                 folderMainViewRef.current?.navigateToFolder(folderId)
-            }, 50) // 50ms delay, adjust if needed
+            }, 50)
         } else {
-            console.warn("Folder reference not available for navigation")
+            console.warn(
+                "Folder reference not available for internal navigation",
+            )
         }
     }
 
@@ -76,7 +75,6 @@ export function ProfileScreen({ folderMainViewRef }: Props) {
 
     // Get custom icon for folder - Use the imported Folder type
     const getFolderIcon = (folder: Folder) => {
-        // ---> Changed 'any' to 'Folder'
         if (folder.type === "custom" && folder.customIconId) {
             // Cast colors to ThemeColors type expected by getIconById
             return getIconById(
