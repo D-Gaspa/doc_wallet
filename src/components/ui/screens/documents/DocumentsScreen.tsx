@@ -81,17 +81,7 @@ export const DocumentsScreen = () => {
                 sourceUri: doc.sourceUri,
                 tags: selectedTagIds,
                 metadata: doc.metadata,
-                parameters: [
-                    {
-                        id: `${Date.now()}`,
-                        documentId: "temp", // if you don’t have an id yet
-                        key: "expiration_date",
-                        value: tenDaysFromNow.toISOString(),
-                        type: "date",
-                        isSearchable: true,
-                        isSystem: true,
-                    },
-                ],
+                parameters: doc.parameters ?? [],
             })
 
             // Update folder association

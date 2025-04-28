@@ -11,6 +11,7 @@ import { ProfileHeader } from "../profile_header"
 import { getIconById, ThemeColors } from "./folders/CustomIconSelector"
 import type { Folder } from "./folders/types.ts"
 import { Spacer, Stack } from "../layout"
+import { DocumentItem } from "../cards/DocumentCardCarousel.tsx"
 
 type FolderWithFavorite = Folder & { favorite?: boolean }
 
@@ -25,6 +26,31 @@ type Props = {
     ) => void
 }
 
+function getDocumentType(
+    expirationDateStr: string | undefined,
+): "expiring" | "expired" | null {
+    if (!expirationDateStr) return null // Or "valid" if you want another type
+
+    const expirationDate = new Date(expirationDateStr)
+    const now = new Date()
+
+    expirationDate.setHours(0, 0, 0, 0)
+    now.setHours(0, 0, 0, 0)
+
+    const msInDay = 1000 * 60 * 60 * 24
+    const diffInDays = Math.ceil(
+        (expirationDate.getTime() - now.getTime()) / msInDay,
+    )
+
+    if (diffInDays < 0) {
+        return "expired"
+    } else if (diffInDays <= 30) {
+        return "expiring"
+    } else {
+        return null // Not shown in expiring/expired carousel
+    }
+}
+
 export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
     const { colors } = useTheme()
     const getExpiringDocuments = useAlertStore((s) => s.getExpiringDocuments)
@@ -32,6 +58,9 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
     const documents = useDocStore((state) => state.documents)
     const folders = useFolderStore((s) => s.folders)
     const user = useAuthStore((s) => s.user)
+    const documentsWithExpiration = documents.filter((doc) =>
+        doc.parameters?.some((p) => p.key === "expiration_date" && p.value),
+    )
 
     useEffect(() => {
         const docs = getExpiringDocuments()
@@ -105,7 +134,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
 
             {/* Wrap content in a View with padding */}
             <View style={styles.contentContainer}>
-                {/* Expiring Documents Section - Ensure no raw text/whitespace */}
+                {/* Expiring Documents Section*/}
                 {expiringDocs.length > 0 && (
                     <>
                         <Stack spacing={12}>
@@ -118,14 +147,24 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                                 Expiring Soon
                             </Text>
                             <DocumentCardCarousel
-                                documents={expiringDocs.map((doc) => ({
-                                    type: "expiring",
-                                    title: doc.title ?? "Sin título",
-                                    expirationDate:
-                                        doc.parameters?.find(
+                                documents={documentsWithExpiration
+                                    .map((doc): DocumentItem | null => {
+                                        const expDate = doc.parameters?.find(
                                             (p) => p.key === "expiration_date",
-                                        )?.value ?? "Sin fecha",
-                                }))}
+                                        )?.value
+                                        const type = getDocumentType(expDate)
+                                        if (!type) return null
+                                        return {
+                                            type,
+                                            title: doc.title ?? "Sin título",
+                                            expirationDate:
+                                                expDate ?? "Sin fecha",
+                                        }
+                                    })
+                                    .filter(
+                                        (item): item is DocumentItem =>
+                                            item !== null,
+                                    )}
                                 onPress={handleCardPress}
                             />
                         </Stack>
@@ -133,7 +172,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                     </>
                 )}
 
-                {/* Favorite Folders Section - Ensure no raw text/whitespace */}
+                {/* Favorite Folders Section */}
                 {favoriteFolders.length > 0 && (
                     <>
                         <Stack spacing={12}>
