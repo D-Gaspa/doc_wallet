@@ -27,6 +27,7 @@
     "expo": "^53.0.0-canary-20250304-f08e984",
     "expo-file-system": "^19.0.0-canary-20250304-f08e984",
     "expo-local-authentication": "16.0.0-canary-20250304-f08e984",
+    "expo-sqlite": "^15.1.4",
     "jwt-decode": "^4.0.0",
     "pods": "^2.0.0",
     "react": "19.0.0",
