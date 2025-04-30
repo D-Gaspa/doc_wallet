@@ -101,16 +101,17 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
     }, [documents, getExpiringDocuments])
 
     const handleCardPress = (title: string) => {
-        const doc = expiringDocs.find((d) => d.title === title)
+        const doc = documentsWithExpiration.find((d) => d.title === title)
         if (!doc) return
 
         const folder = folders.find((f) => f.documentIds?.includes(doc.id))
-
-        if (folder) {
-            navigateToTab("Home", { folderId: folder.id })
-        } else {
+        if (!folder) {
             console.warn("Folder not found for document:", title)
+            return
         }
+
+        // Avoid looping by checking if it's already selected
+        navigateToTab("Home", { folderId: folder.id })
     }
 
     const handleFavoriteCardPress = async (title: string) => {

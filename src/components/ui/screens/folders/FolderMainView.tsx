@@ -84,7 +84,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
 
         // Check if the screen is focused, there's a target folderId,
         // and we haven't already navigated based on this parameter set
-        if (isFocused && targetFolderId && !navigatedFromParams.current) {
+        if (targetFolderId && !navigatedFromParams.current) {
             logger.debug(
                 `FolderMainView focused with folderId param: ${targetFolderId}`,
             )
