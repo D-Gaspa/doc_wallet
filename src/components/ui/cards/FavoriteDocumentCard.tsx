@@ -1,10 +1,11 @@
 import React from "react"
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native"
 import { useTheme } from "../../../hooks/useTheme.ts"
+import { ImageSourcePropType } from "react-native"
 
 export interface FavoriteDocumentCardProps {
     title: string
-    image: number
+    image: ImageSourcePropType
     onPress: () => void
     testID?: string
 }
@@ -24,13 +25,16 @@ export function FavoriteDocumentCard({
             testID={testID}
         >
             <View style={[styles.container, { shadowColor: colors.shadow }]}>
-                <Image source={image} style={styles.image} />
-                <View
-                    style={[
-                        styles.overlay,
-                        { backgroundColor: colors.background + "99" },
-                    ]}
-                />
+                <View style={styles.imageContainer}>
+                    <Image source={image} style={styles.image} />
+                    <View
+                        style={[
+                            styles.overlay,
+                            { backgroundColor: colors.background + "99" },
+                        ]}
+                    />
+                </View>
+
                 <Text style={[styles.title, { color: colors.text }]}>
                     {title}
                 </Text>
@@ -44,7 +48,6 @@ const styles = StyleSheet.create({
         width: 200,
         height: 130,
         marginHorizontal: 5,
-
         shadowOpacity: 0.1,
         shadowOffset: { width: 0, height: 3 },
         shadowRadius: 8,
@@ -55,11 +58,15 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         overflow: "hidden",
     },
+    imageContainer: {
+        flex: 1,
+        borderRadius: 20,
+        overflow: "hidden", // 🛠️ Important: Clip the overlay properly
+    },
     image: {
         width: "100%",
         height: "100%",
         resizeMode: "cover",
-        borderRadius: 20,
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,

@@ -12,6 +12,9 @@ import { getIconById, ThemeColors } from "./folders/CustomIconSelector"
 import type { Folder } from "./folders/types.ts"
 import { Spacer, Stack } from "../layout"
 import { DocumentItem } from "../cards/DocumentCardCarousel.tsx"
+import { useFavoriteDocumentsStore } from "../../../store/useFavoriteDocumentsStore.ts"
+import { documentPreview } from "../../../services/document/preview.ts"
+import { documentStorage } from "../../../services/document/storage.ts"
 
 type FolderWithFavorite = Folder & { favorite?: boolean }
 
@@ -61,6 +64,36 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
     const documentsWithExpiration = documents.filter((doc) =>
         doc.parameters?.some((p) => p.key === "expiration_date" && p.value),
     )
+    const favoriteIds = useFavoriteDocumentsStore((s) => s.favoriteIds)
+    const favoriteDocs = documents.filter((doc) => favoriteIds.includes(doc.id))
+    const [favoritePreviews, setFavoritePreviews] = useState<DocumentItem[]>([])
+
+    useEffect(() => {
+        const fetchPreviews = async () => {
+            const docStore = useDocStore.getState()
+            const previews: DocumentItem[] = []
+
+            for (const doc of favoriteDocs) {
+                try {
+                    const preview = await docStore.getDocumentPreview(doc.id)
+                    if (preview?.sourceUri) {
+                        previews.push({
+                            type: "favorite",
+                            title: doc.title ?? "Untitled",
+                            image: { uri: preview.sourceUri }, // ✅ Actual preview image
+                        })
+                    }
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                } catch (err) {
+                    console.warn("Failed to fetch preview for", doc.id)
+                }
+            }
+
+            setFavoritePreviews(previews)
+        }
+
+        fetchPreviews()
+    }, [favoriteDocs])
 
     useEffect(() => {
         const docs = getExpiringDocuments()
@@ -79,6 +112,35 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
             console.warn("Folder not found for document:", title)
         }
     }
+
+    const handleFavoriteCardPress = async (title: string) => {
+        const doc = favoriteDocs.find((d) => d.title === title)
+        if (!doc) return
+
+        try {
+            const docStore = useDocStore.getState()
+            const previewResult = await docStore.getDocumentPreview(doc.id)
+
+            if (!previewResult?.sourceUri) {
+                console.warn("No preview available")
+                return
+            }
+
+            const mimeType = previewResult.metadata?.type || "application/pdf"
+
+            await documentPreview.viewDocumentByUri(
+                previewResult.sourceUri,
+                mimeType,
+                async () => {
+                    const storage = await documentStorage
+                    await storage.deletePreviewFile(previewResult.sourceUri)
+                },
+            )
+        } catch (err) {
+            console.warn("Failed to preview favorite document", err)
+        }
+    }
+
     const handleGoToFolder = (folderId: string) => {
         navigateToTab("Home", { folderId: folderId })
 
@@ -167,6 +229,27 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                                     )}
                                 onPress={handleCardPress}
                             />
+
+                            {/* Favorite Documents Section */}
+                            {favoriteDocs.length > 0 && (
+                                <>
+                                    <Stack spacing={12}>
+                                        <Text
+                                            style={[
+                                                styles.sectionTitle,
+                                                { color: colors.text },
+                                            ]}
+                                        >
+                                            Favorite Documents
+                                        </Text>
+                                        <DocumentCardCarousel
+                                            documents={favoritePreviews}
+                                            onPress={handleFavoriteCardPress}
+                                        />
+                                    </Stack>
+                                    <Spacer size={16} />
+                                </>
+                            )}
                         </Stack>
                         <Spacer size={16} />
                     </>

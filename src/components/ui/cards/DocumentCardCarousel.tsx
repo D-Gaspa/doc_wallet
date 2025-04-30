@@ -3,11 +3,12 @@ import { FlatList, StyleSheet } from "react-native"
 import { ExpiringDocumentCard } from "./ExpiringDocumentCard"
 import { FavoriteDocumentCard } from "./FavoriteDocumentCard.tsx"
 import { ExpiredDocumentCard } from "./ExpiredDocumentCard"
+import { ImageSourcePropType } from "react-native"
 
 export interface DocumentItem {
     type: "favorite" | "expiring" | "expired"
     title: string
-    image?: number // Only for favorite documents
+    image?: ImageSourcePropType // Only for favorite documents
     expirationDate?: string // Only for expiring documents
 }
 

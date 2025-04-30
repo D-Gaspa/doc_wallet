@@ -1,9 +1,28 @@
 import { Alert } from "react-native"
 import { IDocument } from "../../../../types/document"
 import { useDocStore } from "../../../../store"
+import { useFavoriteDocumentsStore } from "../../../../store/useFavoriteDocumentsStore.ts"
 
 export const showDocumentOptions = (document: IDocument) => {
+    const { addFavorite, removeFavorite, isFavorite } =
+        useFavoriteDocumentsStore.getState()
+    const isCurrentlyFavorite = isFavorite(document.id)
+
     Alert.alert(document.title ?? "Document Options", "Choose an action", [
+        {
+            text: isCurrentlyFavorite
+                ? "Remove from Favorites"
+                : "Add to Favorites",
+            onPress: () => {
+                if (isCurrentlyFavorite) {
+                    removeFavorite(document.id)
+                    console.log("Removed from favorites")
+                } else {
+                    addFavorite(document.id)
+                    console.log("Added to favorites")
+                }
+            },
+        },
         {
             text: "Share",
             onPress: () => {
