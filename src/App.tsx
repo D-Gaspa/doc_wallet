@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { Suspense, useEffect, useState } from "react"
 import { StyleSheet, View } from "react-native"
 import { ThemeProvider } from "./context/ThemeContext"
 import { TagProvider } from "./components/ui/tag_functionality/TagContext"
@@ -16,12 +16,17 @@ import { RegisterScreen } from "./components/ui/screens/auth/RegisterScreen"
 import { SettingsScreen } from "./components/ui/screens/settings/SettingsScreen"
 import { FolderMainView } from "./components/ui/screens/folders/FolderMainView"
 import { DocumentsScreen } from "./components/ui/screens/documents/DocumentsScreen"
+import {
+    DATABASE_NAME,
+    databaseService,
+} from "./services/database/databaseService.ts"
 import { ProfileScreen } from "./components/ui/screens/ProfileScreen"
 import { TabBar } from "./components/ui/layout/tab_bar/TabBar"
 import type { FolderMainViewRef } from "./navigation"
 
 import { useAuthStore } from "./store"
 import type { IUserCredentials } from "./types/user"
+import { SQLiteDatabase, SQLiteProvider } from "expo-sqlite"
 
 export type AuthStackParamList = {
     Login: undefined
@@ -41,6 +46,11 @@ type RegisterData = {
     email: string
     password: string
     acceptedTerms: boolean
+}
+
+interface AuthScreensProps {
+    handleLogin: (email: string, password: string) => Promise<void>
+    handleRegister: (data: RegisterData) => Promise<void>
 }
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>()
@@ -106,7 +116,37 @@ function MainTabsContent() {
     )
 }
 
-export default function App() {
+function AuthScreens({ handleLogin, handleRegister }: AuthScreensProps) {
+    return (
+        <AuthStack.Navigator
+            screenOptions={{ headerShown: false }}
+            initialRouteName="Login"
+        >
+            <AuthStack.Screen name="Login">
+                {(props) => (
+                    <LoginScreen
+                        {...props}
+                        onLogin={handleLogin}
+                        onGoToRegister={() =>
+                            props.navigation.navigate("Register")
+                        }
+                    />
+                )}
+            </AuthStack.Screen>
+            <AuthStack.Screen name="Register">
+                {(props) => (
+                    <RegisterScreen
+                        {...props}
+                        onRegister={handleRegister}
+                        onGoToLogin={() => props.navigation.navigate("Login")}
+                    />
+                )}
+            </AuthStack.Screen>
+        </AuthStack.Navigator>
+    )
+}
+
+function AppContent() {
     const [showSplash, setShowSplash] = useState(true)
     const {
         isAuthenticated,
@@ -115,12 +155,11 @@ export default function App() {
         checkAuthStatus,
     } = useAuthStore()
 
-    // Check auth status when app loads
     useEffect(() => {
-        const initialize = async () => {
+        const initializeAuth = async () => {
             await checkAuthStatus()
         }
-        initialize().then((r) => r)
+        initializeAuth()
 
         const splashTimer = setTimeout(() => {
             setShowSplash(false)
@@ -137,7 +176,6 @@ export default function App() {
             await loginWithEmailPassword(email, password)
         } catch (error) {
             console.error("Login failed:", error)
-            // Handle login error feedback to the user if needed
         }
     }
 
@@ -149,62 +187,55 @@ export default function App() {
         }
         try {
             await registerUser(userData)
-            // Automatically log in after successful registration
             await loginWithEmailPassword(data.email, data.password)
         } catch (error) {
             console.error("Registration or auto-login failed:", error)
-            // Handle registration error feedback
+        }
+    }
+
+    if (showSplash) {
+        return <SplashScreen />
+    }
+
+    return (
+        <NavigationContainer>
+            {isAuthenticated ? (
+                <MainTabsContent />
+            ) : (
+                <AuthScreens
+                    handleLogin={handleLogin}
+                    handleRegister={handleRegister}
+                />
+            )}
+        </NavigationContainer>
+    )
+}
+
+export default function App() {
+    const initializeDatabase = async (db: SQLiteDatabase) => {
+        try {
+            databaseService.setDatabase(db)
+            await databaseService.initialize()
+            console.log("Database initialized successfully!")
+        } catch (error) {
+            console.error("Failed to initialize database:", error)
         }
     }
 
     return (
         <SafeAreaProvider>
             <ThemeProvider>
-                {showSplash ? (
-                    <SplashScreen />
-                ) : (
-                    <TagProvider>
-                        <NavigationContainer>
-                            {isAuthenticated ? (
-                                <MainTabsContent />
-                            ) : (
-                                <AuthStack.Navigator
-                                    screenOptions={{ headerShown: false }}
-                                    initialRouteName="Login"
-                                >
-                                    <AuthStack.Screen name="Login">
-                                        {(props) => (
-                                            <LoginScreen
-                                                {...props} // Pass navigation props
-                                                onLogin={handleLogin}
-                                                onGoToRegister={() =>
-                                                    // eslint-disable-next-line react/prop-types
-                                                    props.navigation.navigate(
-                                                        "Register",
-                                                    )
-                                                }
-                                            />
-                                        )}
-                                    </AuthStack.Screen>
-                                    <AuthStack.Screen name="Register">
-                                        {(props) => (
-                                            <RegisterScreen
-                                                {...props}
-                                                onRegister={handleRegister}
-                                                onGoToLogin={() =>
-                                                    // eslint-disable-next-line react/prop-types
-                                                    props.navigation.navigate(
-                                                        "Login",
-                                                    )
-                                                }
-                                            />
-                                        )}
-                                    </AuthStack.Screen>
-                                </AuthStack.Navigator>
-                            )}
-                        </NavigationContainer>
-                    </TagProvider>
-                )}
+                <Suspense fallback={<SplashScreen />}>
+                    <SQLiteProvider
+                        databaseName={DATABASE_NAME}
+                        onInit={initializeDatabase}
+                        useSuspense={true}
+                    >
+                        <TagProvider>
+                            <AppContent />
+                        </TagProvider>
+                    </SQLiteProvider>
+                </Suspense>
             </ThemeProvider>
         </SafeAreaProvider>
     )

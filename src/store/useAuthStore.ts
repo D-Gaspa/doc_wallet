@@ -9,6 +9,7 @@ import { TokenService } from "../services/auth/tokenService"
 import { LoggingService } from "../services/monitoring/loggingService"
 import { PerformanceMonitoringService } from "../services/monitoring/performanceMonitoringService"
 import { ErrorTrackingService } from "../services/monitoring/errorTrackingService"
+import { UserRepository } from "../services/database/repositories/userRespository.ts"
 
 const authService = new AuthService()
 const logger = LoggingService.getLogger("AuthStore")
@@ -39,6 +40,8 @@ export const useAuthStore = create<IAuthState>()(
                     logger.info("Email/password login started")
                     set({ isLoading: true })
 
+                    const userRepository = UserRepository.getInstance()
+
                     // Find user in mock data
                     const user = get().registeredUsers.find(
                         (u) =>
@@ -62,8 +65,9 @@ export const useAuthStore = create<IAuthState>()(
                         email: user.email,
                     }
 
-                    // Store user data for later auth
+                    // TODO: Change to database
                     await TokenService.storeUserData?.(safeUser)
+                    await userRepository.create(user)
 
                     logger.info("Email/password login successful", {
                         userId: safeUser.id,

@@ -2,13 +2,8 @@
   "name": "doc_wallet",
   "displayName": "doc_wallet",
   "expo": {
-    "plugins": [
-      [
-        "expo-sqlite",
-        {
-          "version": 1
-        }
-      ]
-    ]
+    "plugins": ["expo-sqlite"],
+    "name": "doc_wallet-sqlite_app",
+    "slug": "doc_wallet-sqlite_app"
   }
 }
