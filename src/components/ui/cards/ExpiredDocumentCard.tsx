@@ -34,7 +34,6 @@ export function ExpiredDocumentCard({
             ]}
             onPress={onPress}
             testID={testID}
-            disabled // prevent action on expired
         >
             <ExpiredIcon width={40} height={40} />
             <View

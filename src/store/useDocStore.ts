@@ -8,6 +8,7 @@ import { LoggingService } from "../services/monitoring/loggingService"
 import { PerformanceMonitoringService } from "../services/monitoring/performanceMonitoringService"
 import { documentStorage } from "../services/document/storage"
 import { generateUniqueId } from "../utils"
+import { generateUniqueTitle } from "../utils/uniqueTitle.ts"
 
 const docEncryption = new DocumentEncryptionService()
 const logger = LoggingService.getLogger("DocStore")
@@ -99,11 +100,22 @@ export const useDocStore = create<IDocState>()(
                     set({ isLoading: true, error: null })
 
                     const id = generateUniqueId()
+
+                    const existingTitles = get().documents.map(
+                        (doc) => doc.title?.trim() || "",
+                    )
+                    const baseTitle = documentData.title?.trim() || "Untitled"
+                    const uniqueTitle = generateUniqueTitle(
+                        baseTitle,
+                        existingTitles,
+                    )
+
                     const storage = await documentStorage
                     const storedDocument = await storage.importAndStoreDocument(
                         {
                             ...documentData,
                             id,
+                            title: uniqueTitle,
                         },
                         documentData.sourceUri,
                         true,
