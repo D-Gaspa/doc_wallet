@@ -34,7 +34,6 @@ export function ItemTagsManager({
     allTags = [],
     onTagPress,
     selectedTagIds = [],
-    maxTags = 3,
     horizontal = true,
     testID,
     showAddTagButton = true,
@@ -140,13 +139,14 @@ export function ItemTagsManager({
         >
             <TagList
                 tags={currentTags}
-                onTagPress={handleTagClick} // Click on tag to add to filter
-                onTagLongPress={handleTagLongPress} // Long press to delete tag
+                onTagPress={handleTagClick}
+                onTagLongPress={handleTagLongPress}
                 selectedTags={selectedTagIds}
                 horizontal={horizontal}
-                maxTags={maxTags}
-                showAddTagButton={showAddTagButton !== false}
-                onAddTagPress={handleShowTagMenu}
+                showAddTagButton={showAddTagButton}
+                onAddTagPress={showAddTagButton ? handleShowTagMenu : undefined}
+                size="small"
+                initiallyExpanded={false}
             />
 
             {/* Tag dropdown menu for adding tags */}

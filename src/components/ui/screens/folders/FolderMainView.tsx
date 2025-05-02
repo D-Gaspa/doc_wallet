@@ -144,6 +144,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         handleUpdateFolder,
         getCurrentFolders,
         getCurrentFolderName,
+        handleToggleFavorite,
         showFolderOptions,
         handleMoveFolders, // Add this to get the move folders function
     } = useFolderOperations({
@@ -459,7 +460,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                                                 setSearchQuery("")
                                                 setCurrentFolderId(parent.id)
                                             } else {
-                                                // normal preview flow
                                                 handleDocumentPress(doc)
                                             }
                                         }}
@@ -493,7 +493,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         folders={sortedFolders}
                         selectedFolderIds={selectedFolderIds}
                         selectedTagFilters={selectedTagFilters}
-                        tagContext={tagContext}
+                        handleToggleFavorite={handleToggleFavorite}
                         handleFolderPress={handleFolderPress}
                         handleFolderSelect={handleFolderSelect}
                         showFolderOptions={(folder) =>
@@ -509,6 +509,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                             searchQuery !== "" || selectedTagFilters.length > 0
                         }
                         hasDocuments={documentsToShow.length > 0}
+
                     />
                 </Stack>
 
