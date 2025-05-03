@@ -103,20 +103,24 @@ export function useFolderOperations({
 
     const handleToggleFavorite = (folderId: string) => {
         setFolders(
-            folders.map(folder =>
+            folders.map((folder) =>
                 folder.id === folderId
-                    ? { ...folder, favorite: !folder.favorite, updatedAt: new Date() } // Toggle favorite and update date
-                    : folder
-            )
-        );
+                    ? {
+                          ...folder,
+                          favorite: !folder.favorite,
+                          updatedAt: new Date(),
+                      } // Toggle favorite and update date
+                    : folder,
+            ),
+        )
         // Optional: Show a success alert
         setAlert({
             visible: true,
             message: "Favorite status updated",
             type: "success",
-        });
-        logger.debug("Toggled favorite status", { folderId });
-    };
+        })
+        logger.debug("Toggled favorite status", { folderId })
+    }
 
     // Update an existing folder
     const handleUpdateFolder = (

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { ScrollView, StyleSheet, Text, View, FlatList } from "react-native"
+import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { DocumentCardCarousel } from "../cards"
 import { FavoriteFolderCard } from "../cards/FavoriteFolderCard"
@@ -91,7 +91,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
 
             setFavoritePreviews(previews)
         }
-        fetchPreviews().then(r => r)
+        fetchPreviews().then((r) => r)
     }, [favoriteDocs])
 
     useFocusEffect(
@@ -206,12 +206,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
             iconColor = colors.primary
         }
         const themeColors = colors as unknown as ThemeColors
-        return getIconById(
-            iconId,
-            themeColors,
-            iconSize,
-            iconColor,
-        )
+        return getIconById(iconId, themeColors, iconSize, iconColor)
     }
 
     return (

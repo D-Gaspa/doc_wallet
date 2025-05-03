@@ -11,7 +11,7 @@ export interface TagProps {
     onLongPress?: () => void
     selected?: boolean
     testID?: string
-    size?: "default" | "small";
+    size?: "default" | "small"
 }
 
 export function Tag({
@@ -38,17 +38,17 @@ export function Tag({
         { backgroundColor: color + "20", borderColor: color },
         selected && styles.selected,
         size === "small" && styles.containerSmall, // Apply small style
-    ];
+    ]
     const dotStyle = [
         styles.dot,
         { backgroundColor: color },
         size === "small" && styles.dotSmall, // Apply small style
-    ];
+    ]
     const textStyle = [
         styles.text,
         { color: colors.text },
         size === "small" && styles.textSmall, // Apply small style
-    ];
+    ]
 
     return (
         <TouchableOpacity
@@ -64,7 +64,7 @@ export function Tag({
                 {name}
             </Text>
         </TouchableOpacity>
-    );
+    )
 }
 const styles = StyleSheet.create({
     container: {
@@ -72,11 +72,12 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderRadius: 16,
         paddingHorizontal: 8, // Default padding
-        paddingVertical: 6,   // Default padding
+        paddingVertical: 6, // Default padding
         margin: 4,
         borderWidth: 1,
     },
-    containerSmall: { // Styles for small tags
+    containerSmall: {
+        // Styles for small tags
         paddingHorizontal: 6,
         paddingVertical: 3,
         borderRadius: 12,
@@ -92,7 +93,8 @@ const styles = StyleSheet.create({
         borderRadius: 4, // Default size
         marginRight: 6, // Default margin
     },
-    dotSmall: { // Styles for small dot
+    dotSmall: {
+        // Styles for small dot
         width: 6,
         height: 6,
         borderRadius: 3,
@@ -102,7 +104,8 @@ const styles = StyleSheet.create({
         fontSize: 14, // Default font size
         fontWeight: "500",
     },
-    textSmall: { // Style for small text
+    textSmall: {
+        // Style for small text
         fontSize: 11,
     },
-});
+})
