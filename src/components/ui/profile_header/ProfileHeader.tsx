@@ -8,13 +8,12 @@ import {
     TouchableOpacity,
     Dimensions, // Import Dimensions
 } from "react-native"
-import { useTheme } from "../../../hooks/useTheme" // [cite: 191]
+import { useTheme } from "../../../hooks/useTheme"
 import { useNavigation } from "@react-navigation/native"
 import SettingsIcon from "../assets/svg/settings.svg"
 import EditIcon from "../assets/svg/edit.svg"
-import NotificationsIcon from "../assets/svg/bell.svg" // ---> Import Notification Icon
-import DefaultProfile from "../../ui/assets/images/default-avatar.png" // [cite: 191]
-// import DefaultCover from '../../ui/assets/images/default-cover.png';
+import NotificationsIcon from "../assets/svg/bell.svg"
+import DefaultProfile from "../../ui/assets/images/default-avatar.png"
 
 // Get screen width - assuming standard padding of 20 used in parent containers
 const screenWidth = Dimensions.get("window").width
@@ -22,10 +21,9 @@ const containerPadding = 20 // Adjust if your standard padding differs
 
 export interface ProfileHeaderProps {
     username: string
-    profileImage?: string // [cite: 191]
+    profileImage?: string
     coverImage?: string
-    onPressEdit: () => void // [cite: 191]
-    // Optional: Add handler for notifications button
+    onPressEdit: () => void
     onPressNotifications?: () => void
 }
 
@@ -201,11 +199,9 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     profileInfoContainer: {
-        // Container for avatar, name, edit button
         alignItems: "center",
-        // This container respects the parent's padding implicitly
-        marginTop: -120, // Overlap calculation: - (avatar height / 2) - (cover marginBottom / 2) - Adjust as needed
-        zIndex: 1, // Ensure it's above the cover photo but below icons if necessary
+        marginTop: -120,
+        zIndex: 1,
     },
     avatarWrapper: {
         width: 120,
@@ -228,7 +224,7 @@ const styles = StyleSheet.create({
     username: {
         marginTop: 12,
         fontSize: 22,
-        fontWeight: "bold", // [cite: 200]
+        fontWeight: "bold",
         textAlign: "center",
     },
     editProfileButton: {

@@ -55,7 +55,7 @@ export const DocumentDetailsSheet = ({
                         folderId={folder.id}
                         selected={selectedFolderId === folder.id}
                         onPress={() => setSelectedFolderId(folder.id)}
-                        showAddTagButton={false}
+                        onToggleFavorite={() => setSelectedFolderId(folder.id)}
                     />
                     {renderFolderTree(folders, folder.id, level + 1)}
                 </View>

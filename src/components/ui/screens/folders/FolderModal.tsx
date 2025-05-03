@@ -1,3 +1,5 @@
+// src/components/ui/screens/folders/FolderModal.tsx (Corrected)
+
 import React, { useState, useEffect, useRef } from "react"
 import { StyleSheet, View, ScrollView, ViewStyle, Animated } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme"
@@ -7,16 +9,16 @@ import { Row } from "../../layout"
 import { Spacer } from "../../layout"
 import { Text } from "../../typography"
 import { TextField } from "../../form"
-import { FolderCard } from "../../cards"
+import { FolderCard } from "../../cards" // Import FolderCardProps if using FolderCard inside
 import { Button } from "../../button"
 import { LoggingService } from "../../../../services/monitoring/loggingService"
 import { useDismissGesture } from "../../gestures/useDismissGesture.ts"
 import { CustomIconSelector } from "./CustomIconSelector"
-import { Switch } from "react-native"
-// Folder type definition
+// Removed Switch import
+
 export type FolderType = "travel" | "medical" | "car" | "education" | "custom"
 
-// Props for the unified folder modal
+// Props Updated: Removed 'favorite' from onSave
 interface UnifiedFolderModalProps {
     isVisible: boolean
     onClose: () => void
@@ -25,7 +27,7 @@ interface UnifiedFolderModalProps {
         type: FolderType,
         customIconId?: string,
         folderId?: string,
-        favorite?: boolean,
+        // favorite parameter removed
     ) => void
     mode: "create" | "edit"
     initialData?: {
@@ -33,7 +35,7 @@ interface UnifiedFolderModalProps {
         name?: string
         type?: FolderType
         customIconId?: string
-        favorite?: boolean
+        favorite?: boolean // Can still receive initial favorite for display elsewhere if needed
     }
     parentFolderId?: string | null
 }
@@ -50,11 +52,9 @@ export function UnifiedFolderModal({
     const logger = LoggingService.getLogger
         ? LoggingService.getLogger("UnifiedFolderModal")
         : { debug: console.debug }
-    const [isFavorite, setIsFavorite] = useState(initialData.favorite ?? false)
-    // Track if modal is fully mounted to prevent premature interactions
+    // Removed isFavorite state
     const isMounted = useRef(false)
 
-    // State for folder name and type
     const [folderName, setFolderName] = useState(initialData.name || "")
     const [selectedType, setSelectedType] = useState<FolderType>(
         initialData.type || "custom",
@@ -62,15 +62,11 @@ export function UnifiedFolderModal({
     const [customIconId, setCustomIconId] = useState(
         initialData.customIconId || "file",
     )
-
-    // Track whether the custom type was selected - used to safely handle icon selector visibility
     const [showCustomSelector, setShowCustomSelector] = useState(
         selectedType === "custom",
     )
 
-    // Define the cancelHandler separately as a stable function reference
     const handleCancelRef = useRef(() => {
-        // Reset state for create mode
         if (mode === "create") {
             setFolderName("")
             setSelectedType("custom")
@@ -79,13 +75,11 @@ export function UnifiedFolderModal({
         onClose()
     })
 
-    // Use the dismiss gesture hook with stable function reference
     const { translateX, panHandlers, resetPosition } = useDismissGesture({
         onDismiss: handleCancelRef.current,
         direction: "horizontal",
     })
 
-    // Reset state and mark as mounted when modal opens or initialData changes
     useEffect(() => {
         if (isVisible) {
             setFolderName(initialData.name || "")
@@ -93,7 +87,6 @@ export function UnifiedFolderModal({
             setCustomIconId(initialData.customIconId || "file")
             setShowCustomSelector(initialData.type === "custom")
 
-            // Small delay to ensure the modal is fully rendered before allowing interactions
             const timer = setTimeout(() => {
                 isMounted.current = true
                 if (resetPosition) resetPosition()
@@ -106,25 +99,20 @@ export function UnifiedFolderModal({
         }
     }, [isVisible, initialData])
 
-    // Folder type options
     const folderTypes = [
-        { type: "travel" as const, label: "Travel" },
+        /* ... folder types ... */ { type: "travel" as const, label: "Travel" },
         { type: "medical" as const, label: "Medical" },
         { type: "car" as const, label: "Vehicle" },
         { type: "education" as const, label: "Education" },
         { type: "custom" as const, label: "Custom" },
     ]
 
-    // Handle type selection with debounce
     const handleTypeSelect = (type: FolderType) => {
+        /* ... remains same ... */
         if (!isMounted.current) return
-
         setSelectedType(type)
-
-        // Use setTimeout to delay showing the custom selector to avoid rendering issues
         if (type === "custom") {
             if (!customIconId) setCustomIconId("file")
-            // Delay showing the selector to prevent layout issues
             setTimeout(() => {
                 setShowCustomSelector(true)
             }, 50)
@@ -132,55 +120,45 @@ export function UnifiedFolderModal({
             setShowCustomSelector(false)
         }
     }
-
-    // Handle icon selection
     const handleIconSelect = (iconId: string) => {
+        /* ... remains same ... */
         if (!isMounted.current) return
         setCustomIconId(iconId)
     }
 
-    // Handle save action
     const handleSave = () => {
-        if (!isMounted.current || folderName.trim() === "") {
-            return // Don't save if not mounted or folder has empty name
-        }
+        if (!isMounted.current || folderName.trim() === "") return
 
+        // Call onSave WITHOUT favorite parameter
         onSave(
-            folderName,
+            folderName.trim(), // Trim name on save
             selectedType,
             selectedType === "custom" ? customIconId : undefined,
             initialData.id,
-            isFavorite,
         )
 
         logger.debug(`${mode === "create" ? "Creating" : "Updating"} folder`, {
-            name: folderName,
+            /* ... logging data ... */ name: folderName.trim(),
             type: selectedType,
             customIconId: selectedType === "custom" ? customIconId : undefined,
             parentId: parentFolderId,
             id: initialData.id,
         })
 
-        // Reset state for create mode
         if (mode === "create") {
             setFolderName("")
             setSelectedType("custom")
             setCustomIconId("file")
         }
-
         onClose()
     }
 
-    // Handle cancel action
     function handleCancel() {
         handleCancelRef.current()
     }
 
-    // Compute button style conditionally
     const buttonStyle: ViewStyle =
         folderName.trim() === "" ? { ...styles.disabledButton } : {}
-
-    // Get modal title and action button text based on mode
     const modalTitle = mode === "create" ? "Create new folder" : "Edit folder"
     const actionButtonText =
         mode === "create" ? "Create Folder" : "Update Folder"
@@ -195,12 +173,14 @@ export function UnifiedFolderModal({
                 style={[styles.modalContent, { transform: [{ translateX }] }]}
                 {...panHandlers}
             >
+                {/* Header Bar */}
                 <View
                     style={[
                         styles.headerBar,
                         { borderBottomColor: colors.border },
                     ]}
                 >
+                    {/* ... close indicator, spacer, title ... */}
                     <View
                         style={[
                             styles.closeIndicator,
@@ -211,13 +191,11 @@ export function UnifiedFolderModal({
                     <Text variant="md" weight="bold" style={styles.title}>
                         {modalTitle}
                     </Text>
-                    {/* Action buttons */}
                     <Row
                         justify="space-between"
                         align="center"
                         style={styles.buttonRow}
                     >
-                        {/* Cancel Button */}
                         <View style={styles.buttonContainer}>
                             <Button
                                 title="Cancel"
@@ -225,8 +203,6 @@ export function UnifiedFolderModal({
                                 testID="cancel-button"
                             />
                         </View>
-
-                        {/* Action Button (Create/Update) */}
                         <View style={styles.buttonContainer}>
                             <Button
                                 title={actionButtonText}
@@ -242,6 +218,7 @@ export function UnifiedFolderModal({
                     </Row>
                 </View>
 
+                {/* Scrollable Content */}
                 <ScrollView
                     style={styles.scrollContainer}
                     contentContainerStyle={styles.scrollContentContainer}
@@ -252,23 +229,9 @@ export function UnifiedFolderModal({
                         testID={`folder-${mode}-modal`}
                     >
                         <Stack spacing={16}>
-                            {/* Folder name input */}
-                            {/* Favorite toggle */}
-                            <Stack spacing={8}>
-                                <Text weight="medium">Mark as Favorite</Text>
-                                <Switch
-                                    value={isFavorite}
-                                    onValueChange={setIsFavorite}
-                                    trackColor={{
-                                        true: colors.primary,
-                                        false: colors.border,
-                                    }}
-                                    thumbColor={
-                                        isFavorite ? colors.primary : "#ccc"
-                                    }
-                                />
-                            </Stack>
+                            {/* Favorite Toggle Section Removed */}
 
+                            {/* Folder Name Input */}
                             <Stack spacing={8}>
                                 <Text weight="medium">Folder Name</Text>
                                 <TextField
@@ -280,10 +243,9 @@ export function UnifiedFolderModal({
                                 />
                             </Stack>
 
-                            {/* Folder type selection */}
+                            {/* Folder Type Selection */}
                             <Stack spacing={8}>
                                 <Text weight="medium">Folder Type</Text>
-
                                 <View style={styles.typesOuterContainer}>
                                     {folderTypes.map((item) => (
                                         <View
@@ -292,7 +254,7 @@ export function UnifiedFolderModal({
                                                 styles.folderCardWrapper,
                                                 selectedType === item.type && {
                                                     backgroundColor:
-                                                        colors.primary + "20", // 20% opacity
+                                                        colors.primary + "20",
                                                     borderColor: colors.primary,
                                                 },
                                             ]}
@@ -304,13 +266,15 @@ export function UnifiedFolderModal({
                                                     handleTypeSelect(item.type)
                                                 }
                                                 testID={`folder-type-${item.type}`}
+                                                // Provide required dummy prop for onToggleFavorite
+                                                onToggleFavorite={() => {}}
                                             />
                                         </View>
                                     ))}
                                 </View>
                             </Stack>
 
-                            {/* Icon selector placeholder - always present for consistent layout */}
+                            {/* Custom Icon Selector */}
                             <View style={styles.iconSelectorContainer}>
                                 {showCustomSelector &&
                                 selectedType === "custom" ? (
@@ -330,24 +294,12 @@ export function UnifiedFolderModal({
     )
 }
 
+// --- Stylesheet --- (Keep existing styles)
 const styles = StyleSheet.create({
-    modalContent: {
-        flex: 1,
-        width: "100%",
-    },
-    scrollContainer: {
-        flex: 1,
-        width: "100%",
-    },
-    scrollContentContainer: {
-        flexGrow: 1,
-        paddingBottom: 30,
-    },
-    container: {
-        padding: 20,
-        width: 380,
-        flex: 1,
-    },
+    modalContent: { flex: 1, width: "100%" },
+    scrollContainer: { flex: 1, width: "100%" },
+    scrollContentContainer: { flexGrow: 1, paddingBottom: 30 },
+    container: { padding: 20, flex: 1 },
     headerBar: {
         paddingVertical: 16,
         paddingHorizontal: 20,
@@ -355,25 +307,21 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         width: "100%",
     },
-    title: {
-        marginVertical: 10,
-    },
+    title: { marginVertical: 10, textAlign: "center" },
     closeIndicator: {
         width: 40,
         height: 5,
         borderRadius: 2.5,
         marginBottom: 5,
+        alignSelf: "center",
     },
-    textField: {
-        width: "100%",
-    },
-    typesOuterContainer: {
-        width: "100%",
-        paddingVertical: 5,
-    },
+    textField: { width: "100%" },
+    typesOuterContainer: { width: "100%", paddingVertical: 5 },
     folderCardWrapper: {
+        borderWidth: 1,
+        borderRadius: 8,
+        marginBottom: 8,
         overflow: "hidden",
-        marginBottom: 12,
     },
     iconSelectorContainer: {
         width: "100%",
@@ -381,16 +329,8 @@ const styles = StyleSheet.create({
         marginTop: 10,
         marginBottom: 20,
     },
-    placeholderContainer: {
-        minHeight: 120,
-    },
-    buttonRow: {
-        width: "100%",
-    },
-    buttonContainer: {
-        flex: 0.48,
-    },
-    disabledButton: {
-        opacity: 0.5,
-    },
+    placeholderContainer: { minHeight: 120 },
+    buttonRow: { width: "100%" },
+    buttonContainer: { flex: 0.48 },
+    disabledButton: { opacity: 0.5 },
 })

@@ -158,8 +158,8 @@ export function FolderMoveModal({
                 type={item.type ?? "custom"}
                 selected={targetFolderId === item.id}
                 folderId={item.id}
-                showAddTagButton={false}
                 onPress={() => handleSelectTarget(item.id)}
+                onToggleFavorite={() => {}} // <-- Add dummy prop
             />
         </TouchableOpacity>
     )

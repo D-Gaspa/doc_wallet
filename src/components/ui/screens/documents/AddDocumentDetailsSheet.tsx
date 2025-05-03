@@ -14,7 +14,6 @@ import { useTheme } from "../../../../hooks/useTheme.ts"
 
 interface Props {
     visible: boolean
-
     document: IDocument | null
     onClose: () => void
     onSave: (doc: IDocument, folderId: string, tagIds: string[]) => void
@@ -93,7 +92,7 @@ export const AddDocumentDetailsSheet = ({
                         folderId={folder.id}
                         selected={selectedFolderId === folder.id}
                         onPress={() => setSelectedFolderId(folder.id)}
-                        showAddTagButton={false}
+                        onToggleFavorite={() => setSelectedFolderId(folder.id)}
                     />
                     {renderFolderTree(folders, folder.id, level + 1)}
                 </View>
