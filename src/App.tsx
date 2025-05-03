@@ -19,9 +19,20 @@ import { DocumentsScreen } from "./components/ui/screens/documents/DocumentsScre
 import { ProfileScreen } from "./components/ui/screens/ProfileScreen"
 import { TabBar } from "./components/ui/layout/tab_bar/TabBar"
 import type { FolderMainViewRef } from "./navigation"
-
 import { useAuthStore } from "./store"
 import type { IUserCredentials } from "./types/user"
+import * as Notifications from "expo-notifications"
+import { useNotificationStore } from "./store/useNotificationStore.ts"
+import { generateUniqueId } from "./utils"
+import { NotificationsInboxScreen } from "./components/ui/screens/NotificationsInboxScreen"
+
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+    }),
+})
 
 export type AuthStackParamList = {
     Login: undefined
@@ -33,6 +44,7 @@ export type TabParamList = {
     Files: undefined
     Profile: undefined
     Settings: undefined
+    Notifications: undefined
 }
 
 type RegisterData = {
@@ -95,6 +107,10 @@ function MainTabsContent() {
                     )}
                 </Tab.Screen>
                 <Tab.Screen name="Settings" component={SettingsScreen} />
+                <Tab.Screen
+                    name="Notifications"
+                    component={NotificationsInboxScreen}
+                />
             </Tab.Navigator>
 
             <TabBar
@@ -114,6 +130,45 @@ export default function App() {
         registerUser,
         checkAuthStatus,
     } = useAuthStore()
+
+    // Ask to allow notifications
+    useEffect(() => {
+        ;(async () => {
+            const { status: existingStatus } =
+                await Notifications.getPermissionsAsync()
+            let finalStatus = existingStatus
+            if (existingStatus !== "granted") {
+                const { status } = await Notifications.requestPermissionsAsync()
+                finalStatus = status
+            }
+
+            if (finalStatus !== "granted") {
+                console.warn("Push notifications not granted")
+                return
+            }
+
+            const token = (await Notifications.getExpoPushTokenAsync()).data
+            console.log("Expo Push Token:", token)
+            // Optionally store this on your backend if you send notifications server-side
+        })()
+    }, [])
+
+    useEffect(() => {
+        const subscription = Notifications.addNotificationReceivedListener(
+            (notification) => {
+                const { title, body } = notification.request.content
+
+                useNotificationStore.getState().logNotification({
+                    id: generateUniqueId(),
+                    title: title ?? "Notification",
+                    body: body ?? "",
+                    sentAt: new Date().toISOString(),
+                })
+            },
+        )
+
+        return () => subscription.remove()
+    }, [])
 
     // Check auth status when app loads
     useEffect(() => {

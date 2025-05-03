@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { asyncStorageMiddleware } from "./middleware/persist"
 
 interface FavoriteDocumentsState {
     favoriteIds: string[]
@@ -26,6 +27,7 @@ export const useFavoriteDocumentsStore = create<FavoriteDocumentsState>()(
         }),
         {
             name: "favorite-documents-storage", // localStorage key
+            storage: asyncStorageMiddleware,
         },
     ),
 )

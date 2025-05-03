@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { DocumentCardCarousel, FolderCard } from "../cards"
-import { useAlertStore } from "../../../store/useAlertStore"
+//import { useAlertStore } from "../../../store/useAlertStore"
 import { IDocument } from "../../../types/document"
 import { useFolderStore } from "../../../store/useFolderStore"
 import { useAuthStore, useDocStore } from "../../../store"
@@ -15,6 +15,7 @@ import { DocumentItem } from "../cards/DocumentCardCarousel.tsx"
 import { useFavoriteDocumentsStore } from "../../../store/useFavoriteDocumentsStore.ts"
 import { documentPreview } from "../../../services/document/preview.ts"
 import { documentStorage } from "../../../services/document/storage.ts"
+import { useFocusEffect } from "@react-navigation/native"
 
 type FolderWithFavorite = Folder & { favorite?: boolean }
 
@@ -56,14 +57,13 @@ function getDocumentType(
 
 export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
     const { colors } = useTheme()
-    const getExpiringDocuments = useAlertStore((s) => s.getExpiringDocuments)
+    //const getExpiringDocuments = useAlertStore((s) => s.getExpiringDocuments)
     const [expiringDocs, setExpiringDocs] = useState<IDocument[]>([])
     const documents = useDocStore((state) => state.documents)
     const folders = useFolderStore((s) => s.folders)
     const user = useAuthStore((s) => s.user)
-    const documentsWithExpiration = documents.filter((doc) =>
-        doc.parameters?.some((p) => p.key === "expiration_date" && p.value),
-    )
+    const documentsWithExpiration = expiringDocs
+
     const favoriteIds = useFavoriteDocumentsStore((s) => s.favoriteIds)
     const favoriteDocs = documents.filter((doc) => favoriteIds.includes(doc.id))
     const [favoritePreviews, setFavoritePreviews] = useState<DocumentItem[]>([])
@@ -91,14 +91,36 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
 
             setFavoritePreviews(previews)
         }
-
         fetchPreviews()
     }, [favoriteDocs])
 
+    useFocusEffect(
+        React.useCallback(() => {
+            const docs = useDocStore.getState().documents
+            const filtered = docs.filter((doc) => {
+                const expParam = doc.parameters?.find(
+                    (p) => p.key === "expiration_date",
+                )?.value
+                if (!expParam) return false
+                const type = getDocumentType(expParam)
+                return type === "expired" || type === "expiring"
+            })
+
+            setExpiringDocs(filtered)
+        }, []),
+    )
+
     useEffect(() => {
-        const docs = getExpiringDocuments()
-        setExpiringDocs(docs)
-    }, [documents, getExpiringDocuments])
+        const { favoriteIds, removeFavorite } =
+            useFavoriteDocumentsStore.getState()
+        const docIds = documents.map((doc) => doc.id)
+
+        for (const favId of favoriteIds) {
+            if (!docIds.includes(favId)) {
+                removeFavorite(favId)
+            }
+        }
+    }, [documents])
 
     const handleCardPress = (title: string) => {
         const doc = documentsWithExpiration.find((d) => d.title === title)
@@ -191,7 +213,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                     console.log("Edit Profile pressed")
                 }}
                 onPressNotifications={() => {
-                    console.log("Notifications pressed")
+                    navigateToTab("Notifications")
                 }}
             />
 

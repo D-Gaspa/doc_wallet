@@ -4,16 +4,17 @@ import { Button } from "../../button"
 import { IDocument } from "../../../../types/document.ts"
 import { Tag, useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { TagList } from "../../tag_functionality/TagList.tsx"
-import { useThemeContext } from "../../../../context/ThemeContext.tsx"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { Folder } from "../folders/types.ts"
 import { FolderCard } from "../../cards"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
 import { TouchableOpacity, TextInput, Alert } from "react-native"
+import { useTheme } from "../../../../hooks/useTheme.ts"
 
 interface Props {
     visible: boolean
+
     document: IDocument | null
     onClose: () => void
     onSave: (doc: IDocument, folderId: string, tagIds: string[]) => void
@@ -33,7 +34,7 @@ export const AddDocumentDetailsSheet = ({
         null,
     )
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
     const folders = useFolderStore((s) => s.folders)
     const [isLoading, setLoading] = useState(false)
 
