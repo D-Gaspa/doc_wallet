@@ -1,6 +1,5 @@
 // src/components/ui/form/Textfield.tsx
 import React from "react"
-// ---> Import required types <---
 import {
     TextInput,
     StyleSheet,
@@ -8,7 +7,7 @@ import {
     TextInputProps,
     StyleProp,
 } from "react-native"
-import { useTheme } from "../../../hooks/useTheme.ts" // Adjust path if needed
+import { useTheme } from "../../../hooks/useTheme.ts"
 
 export interface TextFieldProps
     extends Omit<TextInputProps, "style" | "placeholderTextColor"> {
@@ -17,22 +16,13 @@ export interface TextFieldProps
     onChangeText: (text: string) => void
     style?: StyleProp<ViewStyle> // ---> Use StyleProp<ViewStyle> for flexibility <---
     testID?: string
-    hasError?: boolean // ---> Add hasError prop <---
-    // Add ref support using forwardRef
+    hasError?: boolean
 }
 
 // ---> Use React.forwardRef to allow passing refs <---
 export const TextField = React.forwardRef<TextInput, TextFieldProps>(
     (
-        {
-            placeholder,
-            value,
-            onChangeText,
-            style,
-            testID,
-            hasError, // ---> Destructure hasError <---
-            ...rest
-        },
+        { placeholder, value, onChangeText, style, testID, hasError, ...rest },
         ref,
     ) => {
         // ---> Add ref parameter <---

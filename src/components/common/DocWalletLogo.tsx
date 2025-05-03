@@ -18,10 +18,8 @@ export function DocWalletLogo({
     return (
         <View style={[styles.container, { width: size, height: size }]}>
             <Svg width={size} height={size} viewBox="0 0 200 200">
-                {/* Círculo de fondo */}
                 <Circle cx="100" cy="100" r="90" fill={primaryColor} />
 
-                {/* Fondo circular más claro para resaltar el ícono */}
                 <Circle
                     cx="100"
                     cy="100"
@@ -30,7 +28,6 @@ export function DocWalletLogo({
                     opacity="0.3"
                 />
 
-                {/* Ícono de carpeta adaptado y centrado */}
                 <G scale="4" x="50" y="50">
                     <Path
                         fillRule="evenodd"

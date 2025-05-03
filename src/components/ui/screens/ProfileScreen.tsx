@@ -295,10 +295,9 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                                     key={folder.id}
                                     title={folder.title}
                                     folderId={folder.id}
-                                    // Use nullish coalescing for optional type [cite: 488]
+                                    onToggleFavorite={() => {}}
                                     type={folder.type ?? "custom"}
                                     customIcon={getFolderIcon(folder)}
-                                    showAddTagButton={false}
                                     onPress={() => handleGoToFolder(folder.id)}
                                 />
                             ))}

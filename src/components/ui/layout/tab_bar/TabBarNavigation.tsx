@@ -58,9 +58,7 @@ export function TabBarNavigation({
                 ? initialActiveIndex * calculatedItemWidth
                 : 0
         indicatorPosition.setValue(initialPosition)
-        // Removed eslint-disable-next-line: The empty array is correct for setting initial state on mount.
-        // If ESLint setup finds the rule later, it might complain, but the logic is standard.
-    }, []) // Run only once on mount
+    }, [])
 
     // Effect for animating position changes
     useEffect(() => {

@@ -34,6 +34,7 @@ import { TouchableOpacity } from "react-native" // Make sure this is imported
 import AddDocumentIcon from "../../assets/svg/add_folder.svg"
 import { useTheme } from "../../../../hooks/useTheme"
 import { TabParamList } from "../../../../App"
+import { FolderActionModal } from "./FolderActionModal.tsx"
 
 export interface FolderMainViewRef {
     resetToRootFolder(): void
@@ -62,6 +63,8 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     const [isLoading, setLoading] = useState(false)
     const route = useRoute<FolderMainViewRouteProp>() // <-- Get route object
     const isFocused = useIsFocused() // <-- Check if the screen is focused
+    const [actionModalVisible, setActionModalVisible] = useState(false)
+    const [folderForAction, setFolderForAction] = useState<Folder | null>(null)
 
     // Add sorting state
     const [sortOption, setSortOption] = useState<FolderSortOption>("name")
@@ -82,29 +85,17 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     useEffect(() => {
         const targetFolderId = route.params?.folderId
 
-        // Check if the screen is focused, there's a target folderId,
-        // and we haven't already navigated based on this parameter set
-        if (targetFolderId && !navigatedFromParams.current) {
+        if (isFocused && targetFolderId && !navigatedFromParams.current) {
             logger.debug(
                 `FolderMainView focused with folderId param: ${targetFolderId}`,
             )
             internalNavigateToFolder(targetFolderId)
             // Mark that we've handled this navigation intent
             navigatedFromParams.current = true
-
-            // It's often good practice to clear the params after handling them
-            // to prevent re-navigation if the screen refocuses without params changing.
-            // However, direct modification isn't standard. Resetting the ref flag is usually sufficient.
-            // If re-navigation becomes an issue, more complex state management might be needed.
         } else if (!isFocused) {
-            // Reset the flag when the screen loses focus, allowing navigation again
-            // if the user leaves and comes back with the same params (though unlikely here)
-            // or more importantly, if they come back with *new* params.
             navigatedFromParams.current = false
         }
     }, [isFocused, route.params?.folderId]) // Re-run when focus or folderId param changes
-
-    // ... rest of useFolderOperations, useSelectionMode, handlers, etc.
 
     // Use the internalNavigateToFolder function where needed inside this component
     useImperativeHandle(ref, () => ({
@@ -143,9 +134,9 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         handleCreateFolder,
         handleUpdateFolder,
         getCurrentFolders,
+        handleShareFolder,
         getCurrentFolderName,
         handleToggleFavorite,
-        showFolderOptions,
         handleMoveFolders, // Add this to get the move folders function
     } = useFolderOperations({
         folders,
@@ -189,6 +180,34 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
             return 0
         })
     }
+    const handleShowActionModal = (folder: Folder) => {
+        setFolderForAction(folder)
+        setActionModalVisible(true)
+        logger.debug("Showing action modal for folder", { folderId: folder.id })
+    }
+
+    const handleCloseActionModal = () => {
+        setActionModalVisible(false)
+        setFolderForAction(null)
+    }
+
+    const handleEditAction = (folder: Folder) => {
+        // This triggers the *existing* UnifiedFolderModal for editing
+        setFolderModalMode("edit")
+        setFolderToEdit(folder)
+        setFolderModalVisible(true)
+        logger.debug("Triggering edit from action modal", {
+            folderId: folder.id,
+        })
+    }
+
+    const handleShareAction = (folder: Folder) => {
+        // This calls the share logic from useFolderOperations
+        handleShareFolder(folder)
+        logger.debug("Triggering share from action modal", {
+            folderId: folder.id,
+        })
+    }
 
     // Add handler for moving folders
     const handleMoveSelectedFolders = (targetFolderId: string | null) => {
@@ -208,7 +227,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
             toggleSelectionMode()
         } catch (error) {
             // Log the error using the now guaranteed logger.error
-            logger.error("Error during folder move operation:", error)
+            logger.error("Error durante la operación:", error)
             setAlert({
                 visible: true,
                 message: "An error occurred while moving folders.", // Provide user feedback
@@ -233,7 +252,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
             if (!previewResult || !previewResult.sourceUri) {
                 setAlert({
                     visible: true,
-                    message: "No preview available for this document.",
+                    message: "No hay preview para este contenido.",
                     type: "error",
                 })
                 return
@@ -496,20 +515,13 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         handleToggleFavorite={handleToggleFavorite}
                         handleFolderPress={handleFolderPress}
                         handleFolderSelect={handleFolderSelect}
-                        showFolderOptions={(folder) =>
-                            showFolderOptions(
-                                folder,
-                                selectionMode,
-                                handleFolderSelect,
-                            )
-                        }
+                        showFolderOptions={handleShowActionModal}
                         selectionMode={selectionMode}
                         handleAddTagToFolder={handleAddTagToFolder}
                         isFiltering={
                             searchQuery !== "" || selectedTagFilters.length > 0
                         }
                         hasDocuments={documentsToShow.length > 0}
-
                     />
                 </Stack>
 
@@ -584,6 +596,13 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                     folders={folders}
                     selectedFolderIds={selectedFolderIds}
                     onMove={handleMoveSelectedFolders}
+                />
+                <FolderActionModal
+                    isVisible={actionModalVisible}
+                    onClose={handleCloseActionModal}
+                    folder={folderForAction}
+                    onShare={handleShareAction}
+                    onEdit={handleEditAction}
                 />
             </View>
 
