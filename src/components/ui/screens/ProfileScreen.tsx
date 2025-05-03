@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react"
-import { ScrollView, StyleSheet, Text, View } from "react-native"
+import { ScrollView, StyleSheet, Text, View, FlatList } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
-import { DocumentCardCarousel, FolderCard } from "../cards"
-//import { useAlertStore } from "../../../store/useAlertStore"
+import { DocumentCardCarousel } from "../cards"
+import { FavoriteFolderCard } from "../cards/FavoriteFolderCard"
 import { IDocument } from "../../../types/document"
 import { useFolderStore } from "../../../store/useFolderStore"
 import { useAuthStore, useDocStore } from "../../../store"
@@ -11,6 +11,7 @@ import { ProfileHeader } from "../profile_header"
 import { getIconById, ThemeColors } from "./folders/CustomIconSelector"
 import type { Folder } from "./folders/types.ts"
 import { Spacer, Stack } from "../layout"
+import { FolderType } from "./folders/FolderModal.tsx"
 import { DocumentItem } from "../cards/DocumentCardCarousel.tsx"
 import { useFavoriteDocumentsStore } from "../../../store/useFavoriteDocumentsStore.ts"
 import { documentPreview } from "../../../services/document/preview.ts"
@@ -57,7 +58,6 @@ function getDocumentType(
 
 export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
     const { colors } = useTheme()
-    //const getExpiringDocuments = useAlertStore((s) => s.getExpiringDocuments)
     const [expiringDocs, setExpiringDocs] = useState<IDocument[]>([])
     const documents = useDocStore((state) => state.documents)
     const folders = useFolderStore((s) => s.folders)
@@ -91,7 +91,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
 
             setFavoritePreviews(previews)
         }
-        fetchPreviews()
+        fetchPreviews().then(r => r)
     }, [favoriteDocs])
 
     useFocusEffect(
@@ -163,6 +163,12 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
             console.warn("Failed to preview favorite document", err)
         }
     }
+    const folderTypeColors: Record<Exclude<FolderType, "custom">, string> = {
+        travel: "#E74C3C",
+        medical: "#3498DB",
+        car: "#9B59B6",
+        education: "#2ECC71",
+    }
 
     const handleGoToFolder = (folderId: string) => {
         navigateToTab("Home", { folderId: folderId })
@@ -180,23 +186,32 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
 
     if (!user) return null
 
-    // Filter favorite folders using the local type assertion
-    // NOTE: Add 'favorite?: boolean' to the main Folder type for a better long-term solution
     const favoriteFolders = folders.filter(
         (folder): folder is FolderWithFavorite =>
             (folder as FolderWithFavorite).favorite,
     )
 
-    // Get custom icon for folder - Use the imported Folder type
     const getFolderIcon = (folder: Folder) => {
-        if (folder.type === "custom" && folder.customIconId) {
-            // Cast colors to ThemeColors type expected by getIconById
-            return getIconById(
-                folder.customIconId,
-                colors as unknown as ThemeColors,
-            )
+        const iconSize = 36
+        let iconId: string
+        let iconColor: string | undefined
+        if (folder.type && folder.type !== "custom") {
+            iconColor = folderTypeColors[folder.type]
+            iconId = folder.type
+        } else if (folder.customIconId) {
+            iconColor = undefined
+            iconId = folder.customIconId
+        } else {
+            iconId = "education"
+            iconColor = colors.primary
         }
-        return undefined
+        const themeColors = colors as unknown as ThemeColors
+        return getIconById(
+            iconId,
+            themeColors,
+            iconSize,
+            iconColor,
+        )
     }
 
     return (
@@ -290,17 +305,22 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                             >
                                 Favorite Folders
                             </Text>
-                            {favoriteFolders.map((folder) => (
-                                <FolderCard
-                                    key={folder.id}
-                                    title={folder.title}
-                                    folderId={folder.id}
-                                    onToggleFavorite={() => {}}
-                                    type={folder.type ?? "custom"}
-                                    customIcon={getFolderIcon(folder)}
-                                    onPress={() => handleGoToFolder(folder.id)}
-                                />
-                            ))}
+                            <FlatList
+                                data={favoriteFolders}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                keyExtractor={(item) => item.id}
+                                renderItem={({ item: folder }) => (
+                                    <FavoriteFolderCard
+                                        folder={folder}
+                                        icon={getFolderIcon(folder)} // Use the function to get the icon node
+                                        onPress={() =>
+                                            handleGoToFolder(folder.id)
+                                        }
+                                    />
+                                )}
+                                contentContainerStyle={styles.carouselContainer} // Add style for padding
+                            />
                         </Stack>
                         <Spacer size={20} />
                     </>
@@ -326,5 +346,8 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         marginBottom: 8,
         textAlign: "left",
+    },
+    carouselContainer: {
+        paddingVertical: 10,
     },
 })

@@ -147,25 +147,89 @@ const styles = StyleSheet.create({
 export function getIconById(
     iconId: string,
     colors: ThemeColors,
+    size: number = 24, // Add optional size prop
+    colorOverride?: string, // Add optional color override prop
 ): React.ReactNode {
     switch (iconId) {
         case "travel":
-            return <TravelIcon width={24} height={24} fill="#E74C3C" />
+            return (
+                <TravelIcon
+                    width={size}
+                    height={size}
+                    fill={colorOverride ?? "#E74C3C"}
+                />
+            )
         case "medical":
-            return <MedicalIcon width={24} height={24} fill="#3498DB" />
+            return (
+                <MedicalIcon
+                    width={size}
+                    height={size}
+                    fill={colorOverride ?? "#3498DB"}
+                />
+            )
         case "car":
-            return <CarIcon width={24} height={24} fill="#9B59B6" />
+            return (
+                <CarIcon
+                    width={size}
+                    height={size}
+                    fill={colorOverride ?? "#9B59B6"}
+                />
+            )
         case "education":
-            return <EducationIcon width={24} height={24} fill="#2ECC71" />
+            return (
+                <EducationIcon
+                    width={size}
+                    height={size}
+                    fill={colorOverride ?? "#2ECC71"}
+                />
+            )
         case "check":
-            return <CheckIcon width={24} height={24} stroke={colors.primary} />
+            return (
+                <CheckIcon
+                    width={size}
+                    height={size}
+                    stroke={colorOverride ?? colors.primary}
+                />
+            )
         case "warning":
-            return <WarningIcon width={24} height={24} fill={colors.warning} />
+            return (
+                <WarningIcon
+                    width={size}
+                    height={size}
+                    fill={colorOverride ?? colors.warning}
+                />
+            )
         case "success":
-            return <SuccessIcon width={24} height={24} fill={colors.success} />
+            return (
+                <SuccessIcon
+                    width={size}
+                    height={size}
+                    fill={colorOverride ?? colors.success}
+                />
+            )
         case "error":
-            return <ErrorIcon width={24} height={24} fill={colors.error} />
+            return (
+                <ErrorIcon
+                    width={size}
+                    height={size}
+                    fill={colorOverride ?? colors.error}
+                />
+            )
         case "search":
-            return <SearchIcon width={24} height={24} stroke={colors.primary} />
+            return (
+                <SearchIcon
+                    width={size}
+                    height={size}
+                    stroke={colorOverride ?? colors.primary}
+                />
+            )
+        default:
+            return (
+                <EducationIcon
+                    width={size}
+                    height={size}
+                    fill={colorOverride ?? colors.primary}
+                />
+            )
     }
 }

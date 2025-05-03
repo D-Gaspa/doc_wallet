@@ -7,13 +7,13 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback,
 } from "react-native"
-import { useTheme } from "../../../../hooks/useTheme" // Adjust path
-import { Stack } from "../../layout" // Adjust path
-import { Folder } from "./types" // Adjust path
+import { useTheme } from "../../../../hooks/useTheme"
+import { Stack } from "../../layout"
+import { Folder } from "./types"
 
 import ShareIcon from "../../assets/svg/share.svg"
 import EditIcon from "../../assets/svg/edit.svg"
-import ExitIcon from "../../assets/svg/close.svg" // Or just use text
+import ExitIcon from "../../assets/svg/close.svg"
 
 interface FolderActionModalProps {
     isVisible: boolean
@@ -32,16 +32,15 @@ export function FolderActionModal({
 }: FolderActionModalProps) {
     const { colors } = useTheme()
 
-    if (!folder) return null // Don't render if no folder is selected
-
+    if (!folder) return null
     const handleShare = () => {
         onShare(folder)
-        onClose() // Close modal after action
+        onClose()
     }
 
     const handleEdit = () => {
         onEdit(folder)
-        onClose() // Close modal after action
+        onClose()
     }
 
     const menuOptions = [
@@ -89,7 +88,6 @@ export function FolderActionModal({
                                         ]}
                                         onPress={option.action}
                                     >
-                                        {/* Add option.icon here if you have icons */}
                                         <Text
                                             style={[
                                                 styles.optionText,
