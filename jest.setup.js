@@ -174,3 +174,16 @@ jest.mock("@react-native-documents/viewer", () => ({
     isErrorWithCode: (error) =>
         error !== null && typeof error === "object" && "code" in error,
 }))
+
+jest.mock("expo-notifications", () => ({
+    scheduleNotificationAsync: jest.fn(),
+    cancelAllScheduledNotificationsAsync: jest.fn(),
+    getPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
+    requestPermissionsAsync: jest.fn().mockResolvedValue({ status: "granted" }),
+    addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+    addNotificationResponseReceivedListener: jest.fn(() => ({
+        remove: jest.fn(),
+    })),
+    removeNotificationSubscription: jest.fn(),
+    setNotificationHandler: jest.fn(),
+}))
