@@ -11,6 +11,11 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
     clear: jest.fn().mockImplementation(() => Promise.resolve()),
 }))
 
+jest.mock("expo-notifications", () => ({
+    scheduleNotificationAsync: jest.fn(),
+    cancelAllScheduledNotificationsAsync: jest.fn(),
+}))
+
 jest.mock("../../services/security/documentEncryption", () => {
     const mockEncryptService = {
         encryptDocument: jest

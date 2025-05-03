@@ -8,6 +8,56 @@ import { LoggingService } from "../services/monitoring/loggingService"
 import { PerformanceMonitoringService } from "../services/monitoring/performanceMonitoringService"
 import { documentStorage } from "../services/document/storage"
 import { generateUniqueId } from "../utils"
+import { generateUniqueTitle } from "../utils/uniqueTitle.ts"
+import * as Notifications from "expo-notifications"
+import { useNotificationStore } from "./useNotificationStore.ts"
+import { NotificationTriggerInput } from "expo-notifications"
+
+export async function scheduleDocumentNotifications(
+    doc: IDocument,
+): Promise<string[]> {
+    const expDateParam = doc.parameters?.find(
+        (p) => p.key === "expiration_date",
+    )?.value
+    const notifyBeforeRaw = doc.parameters?.find(
+        (p) => p.key === "expiration_notifications",
+    )?.value
+
+    if (!expDateParam || !notifyBeforeRaw) return []
+
+    const notifyBeforeDays: number[] = JSON.parse(notifyBeforeRaw)
+    const expDate = new Date(expDateParam)
+    const ids: string[] = []
+
+    for (const daysBefore of notifyBeforeDays) {
+        const triggerDate = new Date(expDate)
+        triggerDate.setDate(triggerDate.getDate() - daysBefore)
+
+        const today = new Date()
+        const msInDay = 1000 * 60 * 60 * 24
+        const diffDays = Math.ceil(
+            (expDate.getTime() - today.getTime()) / msInDay,
+        )
+
+        if (triggerDate > new Date()) {
+            const id = await Notifications.scheduleNotificationAsync({
+                content: {
+                    title: "📄 Document Expiration",
+
+                    body: `${doc.title} expires in ${diffDays} day(s)!`,
+                    sound: "default",
+                },
+                trigger: {
+                    type: "timestamp",
+                    timestamp: triggerDate.getTime(),
+                } as unknown as NotificationTriggerInput,
+            })
+            ids.push(id)
+        }
+    }
+
+    return ids
+}
 
 const docEncryption = new DocumentEncryptionService()
 const logger = LoggingService.getLogger("DocStore")
@@ -99,20 +149,37 @@ export const useDocStore = create<IDocState>()(
                     set({ isLoading: true, error: null })
 
                     const id = generateUniqueId()
+
+                    const existingTitles = get().documents.map(
+                        (doc) => doc.title?.trim() || "",
+                    )
+                    const baseTitle = documentData.title?.trim() || "Untitled"
+                    const uniqueTitle = generateUniqueTitle(
+                        baseTitle,
+                        existingTitles,
+                    )
+
                     const storage = await documentStorage
                     const storedDocument = await storage.importAndStoreDocument(
                         {
                             ...documentData,
                             id,
+                            title: uniqueTitle,
                         },
                         documentData.sourceUri,
                         true,
                     )
 
+                    const ids = await scheduleDocumentNotifications(
+                        storedDocument,
+                    )
+                    useNotificationStore.getState().registerScheduled(id, ids)
+
                     set((state) => ({
                         documents: [...state.documents, storedDocument],
                         isLoading: false,
                     }))
+
                     logger.info(
                         `Document with file added successfully with ID: ${id}`,
                     )
@@ -284,6 +351,16 @@ export const useDocStore = create<IDocState>()(
                     const document = get().documents.find(
                         (doc) => doc.id === id,
                     )
+
+                    const notifIds = useNotificationStore
+                        .getState()
+                        .getScheduledForDoc(id)
+                    for (const notifId of notifIds) {
+                        await Notifications.cancelScheduledNotificationAsync(
+                            notifId,
+                        )
+                    }
+                    useNotificationStore.getState().unregisterScheduled(id)
 
                     if (!document) {
                         logger.error(`Document ${id} not found`)

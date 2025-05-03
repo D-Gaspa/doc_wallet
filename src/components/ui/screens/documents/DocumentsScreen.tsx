@@ -1,7 +1,6 @@
 import React, { useState } from "react"
 import { StyleSheet, View } from "react-native"
 import { Button } from "../../button"
-import { useThemeContext } from "../../../../context/ThemeContext.tsx"
 import { documentImport } from "../../../../services/document/import.ts"
 import { types } from "@react-native-documents/picker"
 import { useDocStore } from "../../../../store"
@@ -11,9 +10,10 @@ import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
 import { useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { Alert } from "../../feedback"
+import { useTheme } from "../../../../hooks/useTheme.ts"
 
 export const DocumentsScreen = () => {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
     const [pendingDocument, setPendingDocument] = useState<IDocument | null>(
         null,
     )
@@ -81,17 +81,7 @@ export const DocumentsScreen = () => {
                 sourceUri: doc.sourceUri,
                 tags: selectedTagIds,
                 metadata: doc.metadata,
-                parameters: [
-                    {
-                        id: `${Date.now()}`,
-                        documentId: "temp", // if you don’t have an id yet
-                        key: "expiration_date",
-                        value: tenDaysFromNow.toISOString(),
-                        type: "date",
-                        isSearchable: true,
-                        isSystem: true,
-                    },
-                ],
+                parameters: doc.parameters ?? [],
             })
 
             // Update folder association

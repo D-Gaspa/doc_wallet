@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { Button } from "../../button"
 import { FolderCard } from "../../cards"
 import { TagList } from "../../tag_functionality/TagList.tsx"
-import { useThemeContext } from "../../../../context/ThemeContext.tsx"
+import { useTheme } from "../../../../hooks/useTheme.ts"
 import { useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { Folder } from "../folders/types.ts"
@@ -24,7 +24,7 @@ export const DocumentDetailsSheet = ({
     onClose,
     onComplete,
 }: Props) => {
-    const { colors } = useThemeContext()
+    const { colors } = useTheme()
     const { tags } = useTagContext()
     const folders = useFolderStore((s) => s.folders)
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(

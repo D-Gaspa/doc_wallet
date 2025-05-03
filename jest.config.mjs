@@ -4,7 +4,7 @@ export default {
         "^.+\\.[tj]sx?$": "babel-jest",
     },
     transformIgnorePatterns: [
-        "node_modules/(?!(@expo|expo|expo-modules-core|expo-local-authentication|expo-file-system|react-native|@react-native|@react-navigation|react-native-app-auth|react-native-keychain|react-native-base64|react-native-config)/)",
+        "node_modules/(?!(@expo|expo|expo-modules-core|expo-local-authentication|expo-file-system|expo-asset|react-native|@react-native|@react-navigation|react-native-app-auth|react-native-keychain|react-native-base64|expo-permissions|react-native-reanimated|react-native-config)/)",
     ],
     setupFiles: ["./jest.setup.js"],
     moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],

@@ -2,11 +2,13 @@ import React from "react"
 import { FlatList, StyleSheet } from "react-native"
 import { ExpiringDocumentCard } from "./ExpiringDocumentCard"
 import { FavoriteDocumentCard } from "./FavoriteDocumentCard.tsx"
+import { ExpiredDocumentCard } from "./ExpiredDocumentCard"
+import { ImageSourcePropType } from "react-native"
 
 export interface DocumentItem {
-    type: "favorite" | "expiring"
+    type: "favorite" | "expiring" | "expired"
     title: string
-    image?: number // Only for favorite documents
+    image?: ImageSourcePropType // Only for favorite documents
     expirationDate?: string // Only for expiring documents
 }
 
@@ -37,6 +39,14 @@ export function DocumentCardCarousel({
                 } else if (item.type === "expiring") {
                     return (
                         <ExpiringDocumentCard
+                            documentName={item.title}
+                            expirationDate={item.expirationDate!}
+                            onPress={() => onPress(item.title)}
+                        />
+                    )
+                } else if (item.type === "expired") {
+                    return (
+                        <ExpiredDocumentCard
                             documentName={item.title}
                             expirationDate={item.expirationDate!}
                             onPress={() => onPress(item.title)}

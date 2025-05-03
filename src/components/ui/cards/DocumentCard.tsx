@@ -37,6 +37,19 @@ export function DocumentCard({
     const [isLoading, setLoading] = useState(false)
     const [tags, setTags] = useState<Tag[]>([])
     const [previewUri, setPreviewUri] = useState<string | null>(null)
+    const isExpired = (() => {
+        const expirationParam = document.parameters?.find(
+            (p) => p.key === "expiration_date",
+        )
+        if (!expirationParam?.value) return false
+
+        const expirationDate = new Date(expirationParam.value)
+        const now = new Date()
+        expirationDate.setHours(0, 0, 0, 0)
+        now.setHours(0, 0, 0, 0)
+
+        return expirationDate < now
+    })()
 
     console.log("💡 DocumentCard rendering with tags:", tags)
 
@@ -140,6 +153,8 @@ export function DocumentCard({
             onPress={handleOpenPreview}
             testID={testID}
         >
+            {isExpired && <View style={styles.expiredOverlay} />}
+
             <Image
                 source={{ uri: previewUri ?? document.sourceUri }}
                 style={styles.image}
@@ -202,5 +217,11 @@ const styles = StyleSheet.create({
     viewText: {
         fontSize: 16,
         marginRight: 5,
+    },
+    // eslint-disable-next-line react-native/no-color-literals
+    expiredOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(0, 0, 0, 0.5)", // semi-transparent black
+        zIndex: 2,
     },
 })
