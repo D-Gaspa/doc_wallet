@@ -1,4 +1,3 @@
-// src/components/ui/screens/folders/FolderList.tsx (Corrected)
 import React from "react"
 import { FlatList, StyleSheet, View } from "react-native"
 import { FolderCard } from "../../cards" // Import FolderCardProps
@@ -15,6 +14,7 @@ interface FoldersListProps {
     handleFolderSelect: (folderId: string) => void // For toggling selection
     showFolderOptions: (folder: Folder) => void // For showing the options menu
     selectionMode: boolean
+    handleDeleteFolder: (folderId: string) => void
     handleAddTagToFolder: (tagId: string, folderId: string) => void
     handleToggleFavorite: (folderId: string) => void
     isFiltering?: boolean
