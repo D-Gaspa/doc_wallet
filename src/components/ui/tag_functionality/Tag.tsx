@@ -1,4 +1,3 @@
-// src/components/ui/tag_functionality/Tag.tsx
 import React from "react"
 import { TouchableOpacity, Text, StyleSheet, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"

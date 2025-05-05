@@ -1,16 +1,21 @@
 import React from "react"
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
-import { useTheme } from "../../../hooks/useTheme.ts" // Adjust path
-import { ItemTagsManager } from "../tag_functionality/ItemTagsManager.tsx" // Adjust path
-import { useTagContext } from "../tag_functionality/TagContext.tsx" // Adjust path
-import { GestureResponderEvent } from "react-native"
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    GestureResponderEvent,
+} from "react-native"
+import { useTheme } from "../../../hooks/useTheme.ts"
+import { ItemTagsManager } from "../tag_functionality/ItemTagsManager.tsx" // Ensure this path is correct
+import { useTagContext } from "../tag_functionality/TagContext.tsx" // Ensure this path is correct
 
-// --- Import necessary icons ---
-import TravelIcon from "../assets/svg/airplane.svg" // Adjusted path
-import MedicalIcon from "../assets/svg/medical.svg" // Adjusted path
-import CarIcon from "../assets/svg/car.svg" // Adjusted path
-import EducationIcon from "../assets/svg/book.svg" // Adjusted path
-import AddIcon from "..//assets/svg/plus.svg" // Adjusted path
+// Import necessary icons (ensure paths are correct)
+import TravelIcon from "../assets/svg/airplane.svg"
+import MedicalIcon from "../assets/svg/medical.svg"
+import CarIcon from "../assets/svg/car.svg"
+import EducationIcon from "../assets/svg/book.svg"
+import AddIcon from "../assets/svg/plus.svg"
 import StarIcon from "../assets/svg/starfilled.svg"
 import StarOutlineIcon from "../assets/svg/favorite.svg"
 import SettingsIcon from "../assets/svg/threedots.svg"
@@ -20,20 +25,18 @@ export interface FolderCardProps {
     type?: "travel" | "medical" | "car" | "education" | "custom"
     onPress: () => void
     onLongPress?: () => void
-    onToggleFavorite: () => void // <-- Re-added: Action for the favorite button CLICK
+    onToggleFavorite: () => void
     onShowOptions?: () => void
     isFavorite?: boolean
     customIcon?: React.ReactNode
     isNewFolder?: boolean
     selected?: boolean
     folderId?: string
-    onTagPress?: (tagId: string) => void
+    onTagPress?: (tagId: string) => void // For filtering
     selectedTagIds?: string[]
     testID?: string
-    handleMoveFolders?: (folderIds: string[], targetId: string | null) => void
 }
 
-// --- Component Implementation ---
 export function FolderCard({
     title,
     type = "custom",
@@ -43,7 +46,7 @@ export function FolderCard({
     isNewFolder = false,
     selected = false,
     folderId,
-    onToggleFavorite, // <-- Ensure it's destructured
+    onToggleFavorite,
     onShowOptions,
     isFavorite = false,
     onTagPress,
@@ -54,7 +57,6 @@ export function FolderCard({
     const tagContext = useTagContext()
 
     const folderIcons = {
-        /* ... icon mapping ... */
         travel: <TravelIcon width={24} height={24} fill={"#E74C3C"} />,
         medical: <MedicalIcon width={24} height={24} fill={"#3498DB"} />,
         car: <CarIcon width={24} height={24} fill={"#9B59B6"} />,
@@ -115,11 +117,10 @@ export function FolderCard({
                             </Text>
                             {!isNewFolder && folderId && (
                                 <View style={styles.actionButtons}>
-                                    {/* Favorite Button --> NOW CLICKABLE <-- */}
-                                    <TouchableOpacity // <-- Make the star touchable
+                                    <TouchableOpacity
                                         onPress={handleButtonPress(
                                             onToggleFavorite,
-                                        )} // <-- Call toggle favorite
+                                        )}
                                         style={styles.actionButton}
                                         hitSlop={{
                                             top: 10,
@@ -142,7 +143,6 @@ export function FolderCard({
                                             />
                                         )}
                                     </TouchableOpacity>
-                                    {/* Settings Button */}
                                     <TouchableOpacity
                                         onPress={handleButtonPress(
                                             onShowOptions,
@@ -164,16 +164,20 @@ export function FolderCard({
                                 </View>
                             )}
                         </View>
-                        {!isNewFolder && folderId && folderTags.length > 0 && (
+
+                        {/* Tags Section - Rendered for existing folders */}
+                        {/* This ensures ItemTagsManager is always rendered if it's not a new folder */}
+                        {!isNewFolder && folderId && (
                             <View style={styles.tagsContainer}>
                                 <ItemTagsManager
                                     itemId={folderId}
                                     itemType="folder"
-                                    tags={folderTags}
+                                    tags={folderTags} // Pass the tags (can be empty)
                                     allTags={tagContext.tags}
                                     onTagPress={onTagPress}
                                     selectedTagIds={selectedTagIds}
                                     horizontal={true}
+                                    showAddTagButton={true} // Crucial: Make sure this is true
                                 />
                             </View>
                         )}
@@ -184,7 +188,7 @@ export function FolderCard({
     )
 }
 
-// --- Stylesheet --- (Keep styles same as before)
+// Stylesheet remains the same as previous correct version
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
@@ -230,9 +234,10 @@ const styles = StyleSheet.create({
     },
     tagsContainer: {
         width: "100%",
-        flexDirection: "row",
-        flexWrap: "wrap",
-        alignItems: "center",
+        minHeight: 28,
         marginTop: 4,
+        flexDirection: "row",
+        alignItems: "center",
+        flexWrap: "wrap",
     },
 })

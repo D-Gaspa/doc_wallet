@@ -1,24 +1,26 @@
-// src/components/ui/screens/folders/FolderModal.tsx (Corrected)
-
 import React, { useState, useEffect, useRef } from "react"
-import { StyleSheet, View, ScrollView, ViewStyle, Animated } from "react-native"
+import {
+    StyleSheet,
+    View,
+    ScrollView,
+    ViewStyle,
+    Animated,
+    TouchableOpacity,
+} from "react-native"
 import { useTheme } from "../../../../hooks/useTheme"
 import { BaseModal } from "../../../common/modal"
 import { Stack } from "../../layout"
 import { Row } from "../../layout"
-import { Spacer } from "../../layout"
 import { Text } from "../../typography"
 import { TextField } from "../../form"
-import { FolderCard } from "../../cards" // Import FolderCardProps if using FolderCard inside
+import { FolderCard } from "../../cards"
 import { Button } from "../../button"
 import { LoggingService } from "../../../../services/monitoring/loggingService"
 import { useDismissGesture } from "../../gestures/useDismissGesture.ts"
 import { CustomIconSelector } from "./CustomIconSelector"
-// Removed Switch import
 
 export type FolderType = "travel" | "medical" | "car" | "education" | "custom"
 
-// Props Updated: Removed 'favorite' from onSave
 interface UnifiedFolderModalProps {
     isVisible: boolean
     onClose: () => void
@@ -27,7 +29,6 @@ interface UnifiedFolderModalProps {
         type: FolderType,
         customIconId?: string,
         folderId?: string,
-        // favorite parameter removed
     ) => void
     mode: "create" | "edit"
     initialData?: {
@@ -35,7 +36,7 @@ interface UnifiedFolderModalProps {
         name?: string
         type?: FolderType
         customIconId?: string
-        favorite?: boolean // Can still receive initial favorite for display elsewhere if needed
+        favorite?: boolean
     }
     parentFolderId?: string | null
 }
@@ -52,7 +53,6 @@ export function UnifiedFolderModal({
     const logger = LoggingService.getLogger
         ? LoggingService.getLogger("UnifiedFolderModal")
         : { debug: console.debug }
-    // Removed isFavorite state
     const isMounted = useRef(false)
 
     const [folderName, setFolderName] = useState(initialData.name || "")
@@ -60,10 +60,10 @@ export function UnifiedFolderModal({
         initialData.type || "custom",
     )
     const [customIconId, setCustomIconId] = useState(
-        initialData.customIconId || "file",
+        initialData.customIconId || "file", // Default icon if custom
     )
     const [showCustomSelector, setShowCustomSelector] = useState(
-        selectedType === "custom",
+        initialData.type === "custom",
     )
 
     const handleCancelRef = useRef(() => {
@@ -100,51 +100,42 @@ export function UnifiedFolderModal({
     }, [isVisible, initialData])
 
     const folderTypes = [
-        /* ... folder types ... */ { type: "travel" as const, label: "Travel" },
-        { type: "medical" as const, label: "Medical" },
-        { type: "car" as const, label: "Vehicle" },
-        { type: "education" as const, label: "Education" },
-        { type: "custom" as const, label: "Custom" },
+        { type: "travel" as const, label: "Viaje" },
+        { type: "medical" as const, label: "Médico" },
+        { type: "car" as const, label: "Vehículo" },
+        { type: "education" as const, label: "Educación" },
+        { type: "custom" as const, label: "Personalizado" },
     ]
 
     const handleTypeSelect = (type: FolderType) => {
-        /* ... remains same ... */
         if (!isMounted.current) return
         setSelectedType(type)
-        if (type === "custom") {
-            if (!customIconId) setCustomIconId("file")
-            setTimeout(() => {
-                setShowCustomSelector(true)
-            }, 50)
-        } else {
-            setShowCustomSelector(false)
+        setShowCustomSelector(type === "custom")
+        if (type === "custom" && !customIconId) {
+            setCustomIconId("file") // Ensure a default icon if switching to custom
         }
     }
+
     const handleIconSelect = (iconId: string) => {
-        /* ... remains same ... */
         if (!isMounted.current) return
         setCustomIconId(iconId)
     }
 
     const handleSave = () => {
         if (!isMounted.current || folderName.trim() === "") return
-
-        // Call onSave WITHOUT favorite parameter
         onSave(
-            folderName.trim(), // Trim name on save
+            folderName.trim(),
             selectedType,
             selectedType === "custom" ? customIconId : undefined,
             initialData.id,
         )
-
         logger.debug(`${mode === "create" ? "Creating" : "Updating"} folder`, {
-            /* ... logging data ... */ name: folderName.trim(),
+            name: folderName.trim(),
             type: selectedType,
             customIconId: selectedType === "custom" ? customIconId : undefined,
             parentId: parentFolderId,
             id: initialData.id,
         })
-
         if (mode === "create") {
             setFolderName("")
             setSelectedType("custom")
@@ -159,9 +150,10 @@ export function UnifiedFolderModal({
 
     const buttonStyle: ViewStyle =
         folderName.trim() === "" ? { ...styles.disabledButton } : {}
-    const modalTitle = mode === "create" ? "Create new folder" : "Edit folder"
+    const modalTitle =
+        mode === "create" ? "Crear Nueva Carpeta" : "Editar Carpeta"
     const actionButtonText =
-        mode === "create" ? "Create Folder" : "Update Folder"
+        mode === "create" ? "Crear Carpeta" : "Actualizar Carpeta"
 
     return (
         <BaseModal
@@ -170,92 +162,81 @@ export function UnifiedFolderModal({
             dismissOnBackdropPress={false}
         >
             <Animated.View
-                style={[styles.modalContent, { transform: [{ translateX }] }]}
+                style={[
+                    styles.modalContent,
+                    {
+                        backgroundColor: colors.background,
+                        transform: [{ translateX }],
+                    },
+                ]}
                 {...panHandlers}
             >
-                {/* Header Bar */}
-                <View
-                    style={[
-                        styles.headerBar,
-                        { borderBottomColor: colors.border },
-                    ]}
-                >
-                    {/* ... close indicator, spacer, title ... */}
+                <View style={styles.headerBar}>
                     <View
                         style={[
                             styles.closeIndicator,
-                            { backgroundColor: colors.secondaryText },
+                            { backgroundColor: colors.border }, // Use border color for subtle look
                         ]}
                     />
-                    <Spacer size={20} />
-                    <Text variant="md" weight="bold" style={styles.title}>
+                    <Text
+                        variant="md"
+                        weight="bold"
+                        style={[styles.title, { color: colors.text }]}
+                    >
                         {modalTitle}
                     </Text>
-                    <Row
-                        justify="space-between"
-                        align="center"
-                        style={styles.buttonRow}
-                    >
-                        <View style={styles.buttonContainer}>
-                            <Button
-                                title="Cancel"
-                                onPress={handleCancel}
-                                testID="cancel-button"
-                            />
-                        </View>
-                        <View style={styles.buttonContainer}>
-                            <Button
-                                title={actionButtonText}
-                                onPress={handleSave}
-                                style={buttonStyle}
-                                testID={
-                                    mode === "create"
-                                        ? "create-button"
-                                        : "update-button"
-                                }
-                            />
-                        </View>
-                    </Row>
                 </View>
 
-                {/* Scrollable Content */}
                 <ScrollView
                     style={styles.scrollContainer}
                     contentContainerStyle={styles.scrollContentContainer}
                     showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <View
                         style={styles.container}
                         testID={`folder-${mode}-modal`}
                     >
-                        <Stack spacing={16}>
-                            {/* Favorite Toggle Section Removed */}
-
-                            {/* Folder Name Input */}
-                            <Stack spacing={8}>
-                                <Text weight="medium">Folder Name</Text>
+                        <Stack spacing={20}>
+                            <Stack spacing={6}>
+                                <Text
+                                    weight="medium"
+                                    style={{ color: colors.text }}
+                                >
+                                    Nombre de la Carpeta
+                                </Text>
                                 <TextField
-                                    placeholder="Enter folder name"
+                                    placeholder="Ingresa el nombre de la carpeta"
                                     value={folderName}
                                     onChangeText={setFolderName}
                                     testID="folder-name-input"
-                                    style={styles.textField}
+                                    style={styles.textField} // Use specific style if needed
                                 />
                             </Stack>
 
-                            {/* Folder Type Selection */}
-                            <Stack spacing={8}>
-                                <Text weight="medium">Folder Type</Text>
+                            <Stack spacing={6}>
+                                <Text
+                                    weight="medium"
+                                    style={{ color: colors.text }}
+                                >
+                                    Tipo de Carpeta
+                                </Text>
                                 <View style={styles.typesOuterContainer}>
                                     {folderTypes.map((item) => (
-                                        <View
+                                        <TouchableOpacity
                                             key={item.type}
+                                            onPress={() =>
+                                                handleTypeSelect(item.type)
+                                            }
+                                            activeOpacity={0.7}
                                             style={[
                                                 styles.folderCardWrapper,
-                                                selectedType === item.type && {
-                                                    backgroundColor:
-                                                        colors.primary + "20",
-                                                    borderColor: colors.primary,
+                                                {
+                                                    borderColor:
+                                                        selectedType ===
+                                                        item.type
+                                                            ? colors.primary
+                                                            : colors.border,
                                                 },
                                             ]}
                                         >
@@ -266,71 +247,137 @@ export function UnifiedFolderModal({
                                                     handleTypeSelect(item.type)
                                                 }
                                                 testID={`folder-type-${item.type}`}
-                                                // Provide required dummy prop for onToggleFavorite
                                                 onToggleFavorite={() => {}}
+                                                selected={
+                                                    selectedType === item.type
+                                                }
                                             />
-                                        </View>
+                                        </TouchableOpacity>
                                     ))}
                                 </View>
                             </Stack>
 
-                            {/* Custom Icon Selector */}
                             <View style={styles.iconSelectorContainer}>
                                 {showCustomSelector &&
-                                selectedType === "custom" ? (
-                                    <CustomIconSelector
-                                        selectedIconId={customIconId}
-                                        onSelectIcon={handleIconSelect}
-                                    />
-                                ) : (
-                                    <View style={styles.placeholderContainer} />
-                                )}
+                                    selectedType === "custom" && (
+                                        <CustomIconSelector
+                                            selectedIconId={customIconId}
+                                            onSelectIcon={handleIconSelect}
+                                        />
+                                    )}
                             </View>
                         </Stack>
                     </View>
                 </ScrollView>
+
+                <View
+                    style={[styles.footer, { borderTopColor: colors.border }]}
+                >
+                    <Row
+                        justify="space-between"
+                        align="center"
+                        style={styles.buttonRow}
+                        spacing={15} // Add gap between buttons
+                    >
+                        <View style={styles.buttonContainer}>
+                            <Button
+                                title="Cancelar"
+                                onPress={handleCancel}
+                                testID="cancel-button"
+                                variant="outline" // Use outline variant for cancel
+                            />
+                        </View>
+                        <View style={styles.buttonContainer}>
+                            <Button
+                                title={actionButtonText}
+                                onPress={handleSave}
+                                style={buttonStyle}
+                                disabled={folderName.trim() === ""}
+                                testID={
+                                    mode === "create"
+                                        ? "create-button"
+                                        : "update-button"
+                                }
+                            />
+                        </View>
+                    </Row>
+                </View>
             </Animated.View>
         </BaseModal>
     )
 }
 
-// --- Stylesheet --- (Keep existing styles)
 const styles = StyleSheet.create({
-    modalContent: { flex: 1, width: "100%" },
-    scrollContainer: { flex: 1, width: "100%" },
-    scrollContentContainer: { flexGrow: 1, paddingBottom: 30 },
-    container: { padding: 20, flex: 1 },
+    modalContent: {
+        height: "85%", // Take up most of the screen height
+        width: "100%",
+        borderTopLeftRadius: 20, // Rounded corners at the top
+        borderTopRightRadius: 20,
+        overflow: "hidden", // Clip content to rounded corners
+    },
+    scrollContainer: {
+        flex: 1,
+    },
+    scrollContentContainer: {
+        paddingBottom: 30, // Padding at the bottom of scroll content
+    },
+    container: {
+        paddingHorizontal: 20,
+        paddingTop: 10, // Reduced top padding inside scroll view
+        paddingBottom: 20, // Add padding at the bottom inside scroll view
+        flex: 1,
+    },
     headerBar: {
-        paddingVertical: 16,
+        paddingTop: 12, // Adjust top padding for handle
+        paddingBottom: 12, // Bottom padding
         paddingHorizontal: 20,
         alignItems: "center",
-        borderBottomWidth: 1,
+        borderBottomWidth: StyleSheet.hairlineWidth,
         width: "100%",
     },
-    title: { marginVertical: 10, textAlign: "center" },
+    title: {
+        marginVertical: 4, // Reduced vertical margin
+        textAlign: "center",
+        fontSize: 18, // Slightly larger title
+    },
     closeIndicator: {
         width: 40,
         height: 5,
         borderRadius: 2.5,
-        marginBottom: 5,
+        marginBottom: 8, // Space below handle
         alignSelf: "center",
     },
-    textField: { width: "100%" },
-    typesOuterContainer: { width: "100%", paddingVertical: 5 },
+    textField: {
+        width: "100%",
+    },
+    typesOuterContainer: {
+        width: "100%",
+        marginTop: 4, // Add margin top for spacing
+    },
     folderCardWrapper: {
-        borderWidth: 1,
-        borderRadius: 8,
-        marginBottom: 8,
+        borderWidth: 1.5, // Slightly thicker border
+        borderRadius: 12, // Consistent border radius
+        marginBottom: 10, // Increased space between type options
         overflow: "hidden",
     },
     iconSelectorContainer: {
         width: "100%",
-        minHeight: 120,
+        minHeight: 80, // Adjust min height if needed
         marginTop: 10,
-        marginBottom: 20,
+        marginBottom: 10,
     },
-    placeholderContainer: { minHeight: 120 },
-    buttonRow: { width: "100%" },
-    buttonContainer: { flex: 0.48 },
-    disabledButton: { opacity: 0.5 },
+    footer: {
+        padding: 20,
+        borderTopWidth: StyleSheet.hairlineWidth, // Separator line
+        width: "100%",
+    },
+    buttonRow: {
+        width: "100%",
+    },
+    buttonContainer: {
+        flex: 1, // Make buttons take equal space
+    },
+    disabledButton: {
+        opacity: 0.5,
+    },
 })

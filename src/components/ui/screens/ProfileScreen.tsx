@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useMemo } from "react"
 import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { DocumentCardCarousel } from "../cards"
@@ -34,7 +34,7 @@ type Props = {
 function getDocumentType(
     expirationDateStr: string | undefined,
 ): "expiring" | "expired" | null {
-    if (!expirationDateStr) return null // Or "valid" if you want another type
+    if (!expirationDateStr) return null
 
     const expirationDate = new Date(expirationDateStr)
     const now = new Date()
@@ -52,7 +52,7 @@ function getDocumentType(
     } else if (diffInDays <= 30) {
         return "expiring"
     } else {
-        return null // Not shown in expiring/expired carousel
+        return null
     }
 }
 
@@ -62,11 +62,14 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
     const documents = useDocStore((state) => state.documents)
     const folders = useFolderStore((s) => s.folders)
     const user = useAuthStore((s) => s.user)
-    const documentsWithExpiration = expiringDocs
-
     const favoriteIds = useFavoriteDocumentsStore((s) => s.favoriteIds)
-    const favoriteDocs = documents.filter((doc) => favoriteIds.includes(doc.id))
     const [favoritePreviews, setFavoritePreviews] = useState<DocumentItem[]>([])
+
+    const favoriteDocs = useMemo(() => {
+        return documents.filter((doc) => favoriteIds.includes(doc.id))
+    }, [documents, favoriteIds])
+
+    const documentsWithExpiration = expiringDocs
 
     useEffect(() => {
         const fetchPreviews = async () => {
@@ -79,19 +82,18 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                     if (preview?.sourceUri) {
                         previews.push({
                             type: "favorite",
-                            title: doc.title ?? "Untitled",
-                            image: { uri: preview.sourceUri }, // ✅ Actual preview image
+                            title: doc.title ?? "Sin título",
+                            image: { uri: preview.sourceUri },
                         })
                     }
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                    // --- FIX: Use the 'err' variable ---
                 } catch (err) {
-                    console.warn("Failed to fetch preview for", doc.id)
+                    console.warn(`Failed to fetch preview for ${doc.id}:`, err) // Log the error
                 }
             }
-
             setFavoritePreviews(previews)
         }
-        fetchPreviews().then((r) => r)
+        fetchPreviews()
     }, [favoriteDocs])
 
     useFocusEffect(
@@ -105,7 +107,6 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                 const type = getDocumentType(expParam)
                 return type === "expired" || type === "expiring"
             })
-
             setExpiringDocs(filtered)
         }, []),
     )
@@ -115,9 +116,10 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
             useFavoriteDocumentsStore.getState()
         const docIds = documents.map((doc) => doc.id)
 
+        // --- FIX: Remove unused 'changed' variable ---
         for (const favId of favoriteIds) {
             if (!docIds.includes(favId)) {
-                removeFavorite(favId)
+                removeFavorite(favId) // Just call the function
             }
         }
     }, [documents])
@@ -131,8 +133,6 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
             console.warn("Folder not found for document:", title)
             return
         }
-
-        // Avoid looping by checking if it's already selected
         navigateToTab("Home", { folderId: folder.id })
     }
 
@@ -148,9 +148,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                 console.warn("No preview available")
                 return
             }
-
             const mimeType = previewResult.metadata?.type || "application/pdf"
-
             await documentPreview.viewDocumentByUri(
                 previewResult.sourceUri,
                 mimeType,
@@ -163,6 +161,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
             console.warn("Failed to preview favorite document", err)
         }
     }
+
     const folderTypeColors: Record<Exclude<FolderType, "custom">, string> = {
         travel: "#E74C3C",
         medical: "#3498DB",
@@ -216,7 +215,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
             showsVerticalScrollIndicator={false}
         >
             <ProfileHeader
-                username={user.name || "User"}
+                username={user.name || "Usuario"}
                 profileImage={undefined}
                 coverImage={undefined}
                 onPressEdit={() => {
@@ -227,7 +226,6 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                 }}
             />
 
-            {/* Wrap content in a View with padding */}
             <View style={styles.contentContainer}>
                 {/* Expiring Documents Section*/}
                 {expiringDocs.length > 0 && (
@@ -239,7 +237,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                                     { color: colors.text },
                                 ]}
                             >
-                                Expiring Soon
+                                Próximos a Expirar
                             </Text>
                             <DocumentCardCarousel
                                 documents={documentsWithExpiration
@@ -262,27 +260,27 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                                     )}
                                 onPress={handleCardPress}
                             />
+                        </Stack>
+                        <Spacer size={16} />
+                    </>
+                )}
 
-                            {/* Favorite Documents Section */}
-                            {favoriteDocs.length > 0 && (
-                                <>
-                                    <Stack spacing={12}>
-                                        <Text
-                                            style={[
-                                                styles.sectionTitle,
-                                                { color: colors.text },
-                                            ]}
-                                        >
-                                            Favorite Documents
-                                        </Text>
-                                        <DocumentCardCarousel
-                                            documents={favoritePreviews}
-                                            onPress={handleFavoriteCardPress}
-                                        />
-                                    </Stack>
-                                    <Spacer size={16} />
-                                </>
-                            )}
+                {/* Favorite Documents Section */}
+                {favoriteDocs.length > 0 && (
+                    <>
+                        <Stack spacing={12}>
+                            <Text
+                                style={[
+                                    styles.sectionTitle,
+                                    { color: colors.text },
+                                ]}
+                            >
+                                Documentos Favoritos
+                            </Text>
+                            <DocumentCardCarousel
+                                documents={favoritePreviews}
+                                onPress={handleFavoriteCardPress}
+                            />
                         </Stack>
                         <Spacer size={16} />
                     </>
@@ -298,7 +296,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                                     { color: colors.text },
                                 ]}
                             >
-                                Favorite Folders
+                                Carpetas Favoritas
                             </Text>
                             <FlatList
                                 data={favoriteFolders}
@@ -308,13 +306,13 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                                 renderItem={({ item: folder }) => (
                                     <FavoriteFolderCard
                                         folder={folder}
-                                        icon={getFolderIcon(folder)} // Use the function to get the icon node
+                                        icon={getFolderIcon(folder)}
                                         onPress={() =>
                                             handleGoToFolder(folder.id)
                                         }
                                     />
                                 )}
-                                contentContainerStyle={styles.carouselContainer} // Add style for padding
+                                contentContainerStyle={styles.carouselContainer}
                             />
                         </Stack>
                         <Spacer size={20} />
@@ -325,6 +323,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
     )
 }
 
+// Styles remain the same
 const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
