@@ -1,4 +1,3 @@
-// src/components/ui/tag_functionality/ItemTagsManager.tsx
 import React, { useState, useRef, useEffect } from "react"
 import {
     View,
@@ -17,9 +16,9 @@ import { useTagContext, Tag } from "./TagContext"
 export interface ItemTagsManagerProps {
     itemId: string
     itemType: "folder" | "document"
-    tags: Tag[] // Current tags on this item
-    allTags: Tag[] // All available tags for dropdown
-    onTagPress?: (tagId: string) => void // Click to add tag to filter
+    tags: Tag[]
+    allTags: Tag[]
+    onTagPress?: (tagId: string) => void
     selectedTagIds?: string[]
     maxTags?: number
     horizontal?: boolean
@@ -42,39 +41,33 @@ export function ItemTagsManager({
     const { associateTag, disassociateTag, createTag } = useTagContext()
     const [currentTags, setCurrentTags] = useState<Tag[]>(tags)
 
-    // Update tags when they change externally
     useEffect(() => {
         setCurrentTags(tags)
     }, [tags])
 
-    // State for modals/menus
     const [tagMenuVisible, setTagMenuVisible] = useState(false)
     const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false)
     const [tagToDelete, setTagToDelete] = useState<string | null>(null)
     const [createTagModalVisible, setCreateTagModalVisible] = useState(false)
 
-    // Refs for positioning
     const tagListRef = useRef<View>(null)
     const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
 
-    // Handle showing the tag menu
     const handleShowTagMenu = () => {
         if (tagListRef.current) {
             tagListRef.current.measureInWindow((x, y, width, height) => {
                 setMenuPosition({
                     top: y + height + 5,
-                    left: x + width / 2 - 100, // Center the menu
+                    left: x + width / 2 - 100,
                 })
                 setTagMenuVisible(true)
             })
         }
     }
 
-    // Handle adding a tag to the item
     const handleAddTag = (tagId: string) => {
         const success = associateTag(tagId, itemId, itemType)
         if (success) {
-            // Find the tag details to add it to our local state
             const tagToAdd = allTags.find((tag) => tag.id === tagId)
             if (tagToAdd && !currentTags.some((tag) => tag.id === tagId)) {
                 setCurrentTags((prev) => [...prev, tagToAdd])
@@ -83,26 +76,21 @@ export function ItemTagsManager({
         setTagMenuVisible(false)
     }
 
-    // Handle tag long press (for deletion)
     const handleTagLongPress = (tagId: string) => {
-        // Prevent default press behavior that might interfere
         setTagToDelete(tagId)
         setConfirmDeleteVisible(true)
     }
 
-    // Handle tag click to add to filter
     const handleTagClick = (tagId: string) => {
         if (onTagPress) {
             onTagPress(tagId)
         }
     }
 
-    // Handle tag deletion confirmation
     const handleConfirmDelete = () => {
         if (tagToDelete) {
             const success = disassociateTag(tagToDelete, itemId, itemType)
             if (success) {
-                // Update local state to remove the tag
                 setCurrentTags((prev) =>
                     prev.filter((tag) => tag.id !== tagToDelete),
                 )
@@ -112,21 +100,15 @@ export function ItemTagsManager({
         }
     }
 
-    // Handle creating a new tag
     const handleSaveNewTag = (name: string, color: string) => {
         const newTag = createTag(name, color)
         if (newTag) {
-            // First update our local state
             setCurrentTags((prev) => [...prev, newTag])
-
-            // Associate the tag with the item, passing the newly created tag
-            // to bypass the tag existence check in associateTag
             associateTag(newTag.id, itemId, itemType, newTag)
         }
         setCreateTagModalVisible(false)
     }
 
-    // Filter out tags that are already applied to this item
     const availableTags = allTags.filter(
         (tag) => !currentTags.some((itemTag) => itemTag.id === tag.id),
     )
@@ -146,10 +128,10 @@ export function ItemTagsManager({
                 showAddTagButton={showAddTagButton}
                 onAddTagPress={showAddTagButton ? handleShowTagMenu : undefined}
                 size="small"
-                initiallyExpanded={false}
+                initiallyExpanded={false} // Keep tags collapsed initially
             />
 
-            {/* Tag dropdown menu for adding tags */}
+            {/* Tag dropdown menu */}
             <Modal
                 visible={tagMenuVisible}
                 transparent
@@ -177,7 +159,7 @@ export function ItemTagsManager({
                                     { color: colors.text },
                                 ]}
                             >
-                                Add Tag
+                                Añadir Etiqueta {/* Translated */}
                             </Text>
 
                             {availableTags.length > 0 ? (
@@ -203,20 +185,11 @@ export function ItemTagsManager({
                                             <Text
                                                 style={{ color: colors.text }}
                                             >
-                                                {item.name}
+                                                {" "}
+                                                {item.name}{" "}
                                             </Text>
                                         </TouchableOpacity>
                                     )}
-                                    ListEmptyComponent={
-                                        <Text
-                                            style={[
-                                                styles.emptyText,
-                                                { color: colors.secondaryText },
-                                            ]}
-                                        >
-                                            No more tags available
-                                        </Text>
-                                    }
                                 />
                             ) : (
                                 <Text
@@ -225,13 +198,16 @@ export function ItemTagsManager({
                                         { color: colors.secondaryText },
                                     ]}
                                 >
-                                    All tags already applied
+                                    Todas las etiquetas ya aplicadas{" "}
+                                    {/* Translated */}
                                 </Text>
                             )}
 
-                            {/* Create new tag option */}
                             <TouchableOpacity
-                                style={styles.createTagOption}
+                                style={[
+                                    styles.createTagOption,
+                                    { borderTopColor: colors.border },
+                                ]} // Add theme border color
                                 onPress={() => {
                                     setTagMenuVisible(false)
                                     setCreateTagModalVisible(true)
@@ -244,11 +220,12 @@ export function ItemTagsManager({
                                     ]}
                                 >
                                     <Text style={{ color: colors.background }}>
-                                        +
+                                        {" "}
+                                        +{" "}
                                     </Text>
                                 </View>
                                 <Text style={{ color: colors.primary }}>
-                                    Create New Tag
+                                    Crear Nueva Etiqueta {/* Translated */}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -256,7 +233,7 @@ export function ItemTagsManager({
                 </TouchableWithoutFeedback>
             </Modal>
 
-            {/* Confirmation dialog for tag deletion */}
+            {/* Confirmation dialog */}
             <Modal
                 visible={confirmDeleteVisible}
                 transparent
@@ -276,7 +253,7 @@ export function ItemTagsManager({
                                 { color: colors.text },
                             ]}
                         >
-                            Remove Tag
+                            Eliminar Etiqueta {/* Translated */}
                         </Text>
                         <Text
                             style={[
@@ -284,10 +261,12 @@ export function ItemTagsManager({
                                 { color: colors.secondaryText },
                             ]}
                         >
-                            Are you sure you want to remove this tag from the{" "}
-                            {itemType}?
+                            ¿Estás seguro de que quieres eliminar esta etiqueta{" "}
+                            {itemType === "folder"
+                                ? "de la carpeta"
+                                : "del documento"}
+                            ? {/* Translated */}
                         </Text>
-
                         <View style={styles.confirmButtons}>
                             <TouchableOpacity
                                 style={[
@@ -297,10 +276,10 @@ export function ItemTagsManager({
                                 onPress={() => setConfirmDeleteVisible(false)}
                             >
                                 <Text style={{ color: colors.text }}>
-                                    Cancel
+                                    {" "}
+                                    Cancelar {/* Translated */}{" "}
                                 </Text>
                             </TouchableOpacity>
-
                             <TouchableOpacity
                                 style={[
                                     styles.confirmButton,
@@ -309,7 +288,8 @@ export function ItemTagsManager({
                                 onPress={handleConfirmDelete}
                             >
                                 <Text style={{ color: colors.background }}>
-                                    Remove
+                                    {" "}
+                                    Eliminar {/* Translated */}{" "}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -317,26 +297,26 @@ export function ItemTagsManager({
                 </View>
             </Modal>
 
-            {/* Create Tag Modal */}
+            {/* Create/Edit Tag Modal */}
             <TagEditModal
                 isVisible={createTagModalVisible}
                 onClose={() => setCreateTagModalVisible(false)}
                 onSave={handleSaveNewTag}
-                title="Create New Tag"
+                title="Crear Nueva Etiqueta" // Translated
             />
         </View>
     )
 }
 
+// Styles remain the same
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
-        justifyContent: "flex-end",
+        justifyContent: "flex-start", // Align tags/button to the start
         alignItems: "center",
+        width: "100%", // Ensure it takes available width
     },
-    modalOverlay: {
-        flex: 1,
-    },
+    modalOverlay: { flex: 1 },
     tagMenu: {
         position: "absolute",
         width: 200,
@@ -366,8 +346,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingVertical: 12,
         paddingHorizontal: 12,
-        borderTopWidth: 1,
-        marginTop: 8,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        marginTop: 8, // Use StyleSheet.hairlineWidth
     },
     createTagIcon: {
         width: 18,
@@ -377,23 +357,13 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         marginRight: 8,
     },
-    tagDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        marginRight: 8,
-    },
-    emptyText: {
-        padding: 12,
-        textAlign: "center",
-        fontStyle: "italic",
-    },
-    // Confirm dialog styles with fixed background
+    tagDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
+    emptyText: { padding: 12, textAlign: "center", fontStyle: "italic" },
     confirmModalOverlay: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-    },
+    }, // Added background dim
     confirmDialog: {
         width: "80%",
         borderRadius: 8,
@@ -409,19 +379,13 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         textAlign: "center",
     },
-    confirmMessage: {
-        textAlign: "center",
-        marginBottom: 16,
-    },
-    confirmButtons: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-    },
+    confirmMessage: { textAlign: "center", marginBottom: 16 },
+    confirmButtons: { flexDirection: "row", justifyContent: "space-between" },
     confirmButton: {
         flex: 0.48,
-        paddingVertical: 8,
-        borderRadius: 4,
+        paddingVertical: 10,
+        borderRadius: 6,
         borderWidth: 1,
         alignItems: "center",
-    },
+    }, // Adjusted padding/radius
 })

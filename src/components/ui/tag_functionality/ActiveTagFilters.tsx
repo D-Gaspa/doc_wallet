@@ -1,4 +1,3 @@
-// src/context/tag_functionality/ActiveTagFilters.tsx
 import React from "react"
 import {
     View,

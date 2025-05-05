@@ -1,5 +1,3 @@
-// src/components/cards/ExpiredDocumentCard.tsx
-
 import React from "react"
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
 import { useTheme } from "../../../hooks/useTheme.ts"
