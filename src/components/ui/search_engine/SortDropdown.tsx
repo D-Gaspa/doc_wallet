@@ -20,9 +20,9 @@ interface SortDropdownProps {
 }
 
 const OPTIONS: { label: string; value: SortOption }[] = [
-    { label: "Name", value: "name" },
-    { label: "Date", value: "date" },
-    { label: "Type", value: "type" },
+    { label: "Nombre", value: "name" },
+    { label: "Fecha", value: "date" },
+    { label: "Tipo", value: "type" },
 ]
 
 export function SortDropdown({
@@ -51,7 +51,7 @@ export function SortDropdown({
                 onPress={toggle}
                 testID={testID ?? "sort-dropdown-button"}
             >
-                <Text style={{ color: colors.text }}>{`Sort: ${
+                <Text style={{ color: colors.text }}>{`Ordenar: ${
                     OPTIONS.find((o) => o.value === sortOption)!.label
                 }`}</Text>
                 <ChevronIcon width={16} height={16} stroke={colors.text} />

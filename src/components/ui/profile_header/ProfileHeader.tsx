@@ -11,13 +11,11 @@ import {
 import { useTheme } from "../../../hooks/useTheme"
 import { useNavigation } from "@react-navigation/native"
 import SettingsIcon from "../assets/svg/settings.svg"
-import EditIcon from "../assets/svg/edit.svg"
 import NotificationsIcon from "../assets/svg/bell.svg"
 import DefaultProfile from "../../ui/assets/images/default-avatar.png"
 
-// Get screen width - assuming standard padding of 20 used in parent containers
 const screenWidth = Dimensions.get("window").width
-const containerPadding = 20 // Adjust if your standard padding differs
+const containerPadding = 20
 
 export interface ProfileHeaderProps {
     username: string
@@ -31,10 +29,9 @@ export function ProfileHeader({
     username,
     profileImage,
     coverImage,
-    onPressEdit,
-    onPressNotifications, // Add prop for notification press
+    onPressNotifications,
 }: ProfileHeaderProps) {
-    const { colors } = useTheme() // [cite: 191]
+    const { colors } = useTheme()
     const navigation = useNavigation()
 
     const resolvedProfileImage: ImageSourcePropType = profileImage
@@ -134,26 +131,6 @@ export function ProfileHeader({
                 <Text style={[styles.username, { color: colors.text }]}>
                     {username}
                 </Text>
-
-                {/* Edit Profile Button - Moved outside avatar */}
-                <TouchableOpacity
-                    onPress={onPressEdit}
-                    style={[
-                        styles.editProfileButton,
-                        { backgroundColor: colors.card },
-                    ]}
-                    testID="edit-profile-button"
-                >
-                    <EditIcon width={18} height={18} color={colors.text} />
-                    <Text
-                        style={[
-                            styles.editProfileButtonText,
-                            { color: colors.text },
-                        ]}
-                    >
-                        Edit Profile
-                    </Text>
-                </TouchableOpacity>
             </View>
         </View>
     )
@@ -226,23 +203,5 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: "bold",
         textAlign: "center",
-    },
-    editProfileButton: {
-        // Style for the new edit button
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 16, // Space below username
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 6,
-        elevation: 2, // Android shadow
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
-    },
-    editProfileButtonText: {
-        marginLeft: 8,
-        fontSize: 14,
-        fontWeight: "600",
     },
 })

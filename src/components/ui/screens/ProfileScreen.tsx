@@ -237,7 +237,7 @@ export function ProfileScreen({ folderMainViewRef, navigateToTab }: Props) {
                                     { color: colors.text },
                                 ]}
                             >
-                                Próximos a Expirar
+                                Próximos a expirar
                             </Text>
                             <DocumentCardCarousel
                                 documents={documentsWithExpiration

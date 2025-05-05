@@ -19,42 +19,53 @@ import {
 } from "@react-navigation/native"
 import { TabParamList } from "../../../../App"
 
-// Define Props for this screen
-interface DocumentsScreenProps {
+interface DocumentScannerScreenProps {
     navigation: NavigationProp<TabParamList, "Files">
     route: undefined
     setActiveTab: (tab: keyof TabParamList) => void
 }
 
-export const DocumentsScreen = ({ setActiveTab }: DocumentsScreenProps) => {
-    // Destructure setActiveTab from props
+/**
+ * DocumentScannerScreen Component
+ *
+ * Initiates a document scan upon focus, allows adding details, saves the document,
+ * and navigates back to the Home tab.
+ */
+export const DocumentScannerScreen = ({
+    setActiveTab,
+}: DocumentScannerScreenProps) => {
     const { colors } = useTheme()
     const navigation = useNavigation<NavigationProp<TabParamList>>()
+    const tagContext = useTagContext()
+    const docStore = useDocStore()
+    const updateFolders = useFolderStore((state) => state.setFolders)
+
     const [pendingDocument, setPendingDocument] = useState<IDocument | null>(
         null,
     )
     const [showAddSheet, setShowAddSheet] = useState(false)
     const [isLoading, setLoading] = useState(false)
-    const tagContext = useTagContext()
-    const docStore = useDocStore()
-    const updateFolders = useFolderStore((state) => state.setFolders)
     const [toastVisible, setToastVisible] = useState(false)
     const [scanAttemptedThisFocus, setScanAttemptedThisFocus] = useState(false)
 
-    const navigateHome = () => {
+    /** Navigates the user back to the 'Home' tab. */
+    const navigateHome = useCallback(() => {
         console.log("Navigating to Home...")
         setActiveTab("Home")
         navigation.navigate("Home")
-    }
+    }, [navigation, setActiveTab])
 
-    const handleScanDocument = async () => {
+    /** Initiates the document scanning process. */
+    const handleScanDocument = useCallback(async () => {
         if (isLoading || showAddSheet) {
             console.log("Scan prevented: Already busy.")
             return
         }
+
         console.log("Starting scan...")
         setLoading(true)
         setScanAttemptedThisFocus(true)
+
         try {
             const { scannedImages, status } =
                 await DocumentScanner.scanDocument({
@@ -73,6 +84,7 @@ export const DocumentsScreen = ({ setActiveTab }: DocumentsScreenProps) => {
                 const filename =
                     sourceUri.split("/").pop() ||
                     `Scan_${generateUniqueId()}.jpg`
+
                 const newDocument: Partial<IDocument> = {
                     title: filename,
                     sourceUri,
@@ -93,99 +105,100 @@ export const DocumentsScreen = ({ setActiveTab }: DocumentsScreenProps) => {
                 console.warn("Scan status not 'success' or 'cancel':", status)
                 setScanAttemptedThisFocus(false)
                 setLoading(false)
+                navigateHome()
             }
         } catch (error) {
             console.error("Error scanning document:", error)
             setScanAttemptedThisFocus(false)
             setLoading(false)
+            navigateHome()
         }
-    }
+    }, [isLoading, showAddSheet, navigateHome])
 
-    const handleSaveDocument = async (
-        doc: IDocument,
-        selectedFolderId: string | null,
-        selectedTagIds: string[],
-    ) => {
-        setLoading(true)
-        setShowAddSheet(false)
-        let success = false
+    /** Saves the document with details from the sheet. */
+    const handleSaveDocument = useCallback(
+        async (
+            doc: IDocument,
+            selectedFolderId: string | null,
+            selectedTagIds: string[],
+        ) => {
+            setLoading(true)
+            setShowAddSheet(false)
+            let success = false
 
-        try {
-            // Perform save operation
-            const storedDocument = await docStore.addDocument({
-                title: doc.title,
-                sourceUri: doc.sourceUri,
-                tags: selectedTagIds,
-                metadata: doc.metadata,
-                parameters: doc.parameters ?? [],
-            })
-            console.log("Document added successfully:", storedDocument.id)
+            try {
+                const storedDocument = await docStore.addDocument({
+                    title: doc.title,
+                    sourceUri: doc.sourceUri,
+                    tags: selectedTagIds,
+                    metadata: doc.metadata,
+                    parameters: doc.parameters ?? [],
+                })
+                console.log("Document added successfully:", storedDocument.id)
 
-            // Update folder if selected
-            if (selectedFolderId) {
-                const currentFolders = useFolderStore.getState().folders
-                const updatedFolders = currentFolders.map((folder) =>
-                    folder.id === selectedFolderId
-                        ? {
-                              ...folder,
-                              documentIds: [
-                                  ...new Set([
-                                      ...(folder.documentIds || []),
-                                      storedDocument.id,
-                                  ]),
-                              ],
-                          }
-                        : folder,
-                )
-                updateFolders(updatedFolders)
-                console.log(`Folder ${selectedFolderId} updated.`)
-            }
+                if (selectedFolderId && selectedFolderId !== "root") {
+                    const currentFolders = useFolderStore.getState().folders
+                    const updatedFolders = currentFolders.map((folder) =>
+                        folder.id === selectedFolderId
+                            ? {
+                                  ...folder,
+                                  documentIds: [
+                                      ...new Set([
+                                          ...(folder.documentIds || []),
+                                          storedDocument.id,
+                                      ]),
+                                  ],
+                              }
+                            : folder,
+                    )
+                    updateFolders(updatedFolders)
+                    console.log(`Folder ${selectedFolderId} updated.`)
+                }
 
-            // Update tags
-            if (selectedTagIds.length > 0) {
-                tagContext.syncTagsForItem(
-                    storedDocument.id,
-                    "document",
-                    selectedTagIds,
-                )
-                console.log(`Tags synced for ${storedDocument.id}`)
-            }
+                if (selectedTagIds.length > 0) {
+                    tagContext.syncTagsForItem(
+                        storedDocument.id,
+                        "document",
+                        selectedTagIds,
+                    )
+                    console.log(`Tags synced for ${storedDocument.id}`)
+                }
 
-            setPendingDocument(null)
-            success = true
-        } catch (error) {
-            console.error("Error saving document:", error)
-            success = false
-        } finally {
-            if (success) {
-                console.log("Save successful, showing toast...")
-                setToastVisible(true)
-                setTimeout(() => {
+                setPendingDocument(null)
+                success = true
+            } catch (error) {
+                console.error("Error saving document:", error)
+                success = false
+            } finally {
+                if (success) {
+                    console.log("Save successful, showing toast...")
+                    setToastVisible(true)
+                    setTimeout(() => {
+                        setLoading(false)
+                        navigateHome()
+                    }, 700)
+                } else {
                     setLoading(false)
                     navigateHome()
-                }, 700) //
-            } else {
-                setLoading(false)
-                navigateHome()
+                }
             }
-        }
-    }
+        },
+        [docStore, updateFolders, tagContext, navigateHome],
+    )
 
-    const handleCloseSheet = () => {
+    /** Handles closing the details sheet without saving. */
+    const handleCloseSheet = useCallback(() => {
         console.log("Closing sheet without saving.")
         setShowAddSheet(false)
         setPendingDocument(null)
         setLoading(false)
         navigateHome()
-    }
+    }, [navigateHome])
 
+    /** Triggers scan automatically when the screen comes into focus, but only once per focus session. */
     useFocusEffect(
         useCallback(() => {
-            console.log("DocumentsScreen focused")
-            // Only trigger scan if:
-            // 1. Scan hasn't been attempted during this focus.
-            // 2. Not currently loading.
-            // 3. The details sheet isn't yet open.
+            console.log("DocumentScannerScreen focused")
             if (!scanAttemptedThisFocus && !isLoading && !showAddSheet) {
                 console.log("Attempting auto-scan on focus...")
                 handleScanDocument().then((r) => r)
@@ -199,7 +212,7 @@ export const DocumentsScreen = ({ setActiveTab }: DocumentsScreenProps) => {
 
             return () => {
                 console.log(
-                    "DocumentsScreen blurred or unmounted - Resetting scan flag",
+                    "DocumentScannerScreen blurred/unmounted - Resetting scan flag",
                 )
                 setScanAttemptedThisFocus(false)
             }
@@ -226,13 +239,15 @@ export const DocumentsScreen = ({ setActiveTab }: DocumentsScreenProps) => {
                         console.error(
                             "Attempted to save with null document data.",
                         )
-                        handleCloseSheet() // Close sheet if data is invalid
+                        handleCloseSheet()
                     }
                 }}
             />
 
+            {/* Loading Overlay */}
             <LoadingOverlay visible={isLoading} />
 
+            {/* Success Toast */}
             <Alert
                 type={"success"}
                 message={"Document was successfully saved"}

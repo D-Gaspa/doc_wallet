@@ -1,12 +1,14 @@
 import React from "react"
 import { Modal, View, TouchableWithoutFeedback, StyleSheet } from "react-native"
 import { useTheme } from "../../../hooks/useTheme.ts"
+import { ViewStyle } from "react-native"
 
 interface IBaseModalProps {
     isVisible: boolean
     onClose: () => void
     dismissOnBackdropPress?: boolean
     children: React.ReactNode
+    containerStyle?: ViewStyle
 }
 
 const BaseModal: React.FC<IBaseModalProps> = ({
@@ -14,6 +16,7 @@ const BaseModal: React.FC<IBaseModalProps> = ({
     onClose,
     dismissOnBackdropPress = true,
     children,
+    containerStyle,
 }) => {
     const { colors } = useTheme()
     return (
@@ -27,6 +30,7 @@ const BaseModal: React.FC<IBaseModalProps> = ({
                         style={[
                             styles.modalContainer,
                             { backgroundColor: colors.background },
+                            containerStyle,
                         ]}
                         testID="modal-content"
                     >
@@ -44,11 +48,14 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.5)",
         justifyContent: "center",
-        alignItems: "center",
+        alignItems: "stretch",
     },
     modalContainer: {
-        padding: 20,
-        borderRadius: 10,
+        maxWidth: 600,
+        width: "100%",
+        height: "100%",
+        padding: 0,
+        borderRadius: 0,
     },
 })
 

@@ -6,7 +6,7 @@ import React, {
     useRef,
     useState,
 } from "react"
-import { Alert, StyleSheet, View } from "react-native"
+import { Alert as RNAlert, StyleSheet, View } from "react-native"
 import { Container, Stack } from "../../layout"
 import { Alert as AlertComponent, AlertType } from "../../feedback/Alert"
 import { LoggingService } from "../../../../services/monitoring/loggingService"
@@ -126,7 +126,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         handleToggleFavorite: handleToggleDocumentFavorite,
         handleDeleteDocument,
         handleShareDocument,
-        // isFavorite: isDocumentFavorite,
     } = useDocumentOperations()
 
     const favoriteDocIds = useFavoriteDocumentsStore((s) => s.favoriteIds)
@@ -144,7 +143,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 const doc = importedDocs[0]
                 const tempDoc: IDocument = {
                     id: `temp_${Date.now()}`,
-                    title: doc.name ?? `Documento_${Date.now()}`,
+                    title: doc.name ?? `Documento_${Date.now()}`, // Spanish prefix
                     sourceUri: doc.localUri ?? doc.uri,
                     metadata: {
                         createdAt: new Date().toISOString(),
@@ -196,21 +195,32 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 metadata: doc.metadata,
                 parameters: doc.parameters ?? [],
             })
-            const updatedFolders = folders.map((folder) =>
-                folder.id === selectedFolderId
-                    ? {
-                          ...folder,
-                          documentIds: [
-                              ...new Set([
-                                  ...(folder.documentIds || []),
-                                  storedDocument.id,
-                              ]),
-                          ],
-                          updatedAt: new Date(),
-                      }
-                    : folder,
-            )
-            setFolders(updatedFolders)
+
+            const targetFolderId =
+                selectedFolderId === "root" ? null : selectedFolderId
+            if (targetFolderId) {
+                const updatedFolders = folders.map((folder) =>
+                    folder.id === targetFolderId
+                        ? {
+                              ...folder,
+                              documentIds: [
+                                  ...new Set([
+                                      ...(folder.documentIds || []),
+                                      storedDocument.id,
+                                  ]),
+                              ],
+                              updatedAt: new Date(),
+                          }
+                        : folder,
+                )
+                setFolders(updatedFolders)
+                logger.info(`Folder ${targetFolderId} updated with document.`)
+            } else {
+                logger.info(
+                    `Document ${storedDocument.id} added, but not linked to a specific folder (potentially root?).`,
+                )
+            }
+
             tagContext.syncTagsForItem(
                 storedDocument.id,
                 "document",
@@ -429,7 +439,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         if (folder) {
             // TODO: We might want to use the Alert confirmation here as well,
             // similar to batch delete, or let handleDeleteFolder handle it.
-            // Assuming handleDeleteFolder already confirms.
             handleDeleteFolder(folder.id)
         }
     }
@@ -437,13 +446,13 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     const handleBatchDelete = () => {
         if (selectedItems.length === 0) return
 
-        Alert.alert(
-            "Confirm Delete",
-            `Are you sure you want to delete ${selectedItems.length} selected item(s)? This cannot be undone. Folders must be empty to be deleted.`,
+        RNAlert.alert(
+            "Confirmar Eliminación",
+            `¿Estás seguro de que quieres eliminar ${selectedItems.length} elemento(s) seleccionado(s)? Esta acción no se puede deshacer. Las carpetas deben estar vacías para ser eliminadas.`, // Spanish Message
             [
-                { text: "Cancel", style: "cancel" },
+                { text: "Cancelar", style: "cancel" },
                 {
-                    text: "Delete",
+                    text: "Eliminar",
                     style: "destructive",
                     onPress: async () => {
                         setLoading(true)
@@ -493,15 +502,15 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         }
                         setLoading(false)
 
-                        let message = `${successCount} item(s) deleted.`
+                        let message = `${successCount} elemento(s) eliminado(s).`
                         if (errorCount > 0) {
-                            message += ` ${errorCount} failed`
+                            message += ` ${errorCount} fallaron`
                             if (skippedNonEmptyFolders > 0) {
-                                message += ` (${skippedNonEmptyFolders} non-empty folder(s) skipped)`
+                                message += ` (${skippedNonEmptyFolders} carpeta(s) no vacía(s) omitida(s))`
                             }
                             message += `.`
                         } else if (skippedNonEmptyFolders > 0) {
-                            message += ` ${skippedNonEmptyFolders} non-empty folder(s) skipped.`
+                            message += ` ${skippedNonEmptyFolders} carpeta(s) no vacía(s) omitida(s).`
                         }
 
                         setAlert({
@@ -673,7 +682,8 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                                 } else {
                                     setAlert({
                                         visible: true,
-                                        message: "Select items to move.",
+                                        message:
+                                            "Selecciona elementos para mover.",
                                         type: "info",
                                     })
                                 }
