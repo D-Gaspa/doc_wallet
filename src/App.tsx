@@ -31,6 +31,8 @@ Notifications.setNotificationHandler({
         shouldShowAlert: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
+        shouldShowBanner: true, // Or false, depending on desired iOS banner behavior
+        shouldShowList: true, // Or false, depending on desired Android notification list behavior
     }),
 })
 

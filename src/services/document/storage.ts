@@ -1,52 +1,97 @@
 import * as FileSystem from "expo-file-system"
-import { DocumentType, IDocument } from "../../types/document"
+import { DocumentType, IDocument } from "../../types/document" // Ensure IDocument includes storedFilename? field
 import { DocumentEncryptionService } from "../security/documentEncryption"
 import { LoggingService } from "../monitoring/loggingService"
 import { PerformanceMonitoringService } from "../monitoring/performanceMonitoringService"
 
 interface FileMetadata {
     exists: boolean
-    uri?: string
+    uri: string
     isDirectory?: boolean
+    size?: number
 }
 
+// noinspection ExceptionCaughtLocallyJS
 /**
  * Service for managing document storage, including saving, retrieving, and deleting documents
  */
 export class DocumentStorageService {
+    // Make properties readonly but accessible within the class
     private readonly encryptionService: DocumentEncryptionService
     private readonly logger = LoggingService.getLogger("DocumentStorage")
     private readonly documentDirectory: string
     private readonly cacheDirectory: string
     private readonly encryptedDirectory: string
     private readonly documentsDirectory: string
+    private isInitialized: Promise<boolean> // Promise to track initialization status
 
     constructor() {
         this.encryptionService = new DocumentEncryptionService()
-        this.documentDirectory = FileSystem.documentDirectory || ""
-        this.cacheDirectory = FileSystem.cacheDirectory || ""
-        this.encryptedDirectory = `${this.documentDirectory}encrypted/`
-        this.documentsDirectory = `${this.documentDirectory}documents/` // New persistent directory for documents
+        this.documentDirectory = FileSystem.documentDirectory ?? ""
+        this.cacheDirectory = FileSystem.cacheDirectory ?? ""
+
+        if (!this.documentDirectory) {
+            this.logger.error(
+                "FileSystem.documentDirectory is null! Storage functionality will be severely limited.",
+            )
+        }
+        // Define storage subdirectories relative to the base document directory
+        this.encryptedDirectory = this.documentDirectory
+            ? `${this.documentDirectory}encrypted/`
+            : ""
+        this.documentsDirectory = this.documentDirectory
+            ? `${this.documentDirectory}documents/`
+            : ""
+
+        if (!this.encryptedDirectory || !this.documentsDirectory) {
+            this.logger.error(
+                "Could not define storage subdirectories! Storage functionality will be severely limited.",
+            )
+        }
+        // Start initialization asynchronously
+        this.isInitialized = this.initializeDirectories()
     }
 
-    static async create(): Promise<DocumentStorageService> {
-        const service = new DocumentStorageService()
-        await service.ensureDirectoriesExist()
-        return service
+    // Public method to await initialization if needed elsewhere
+    async ensureInitialized(): Promise<boolean> {
+        return this.isInitialized
     }
 
-    private async ensureDirectoriesExist(): Promise<void> {
+    // Private method to handle the actual directory creation logic
+    private async initializeDirectories(): Promise<boolean> {
+        // Guard against attempting to create dirs if paths are invalid/missing
+        if (
+            !this.documentDirectory ||
+            !this.encryptedDirectory ||
+            !this.documentsDirectory
+        ) {
+            this.logger.error(
+                "Cannot initialize directories - base paths missing.",
+            )
+            return false // Indicate initialization failed
+        }
         try {
-            await this.ensureDirectoryExists(this.encryptedDirectory)
-            await this.ensureDirectoryExists(this.documentsDirectory) // Ensure documents directory exists
-            this.logger.debug("Storage directories initialized")
+            // Use Promise.all for concurrent checks/creations
+            await Promise.all([
+                this.ensureDirectoryExists(this.encryptedDirectory),
+                this.ensureDirectoryExists(this.documentsDirectory),
+            ])
+            this.logger.debug(
+                "Storage directories checked/initialized successfully.",
+            )
+            return true // Indicate success
         } catch (error) {
-            this.logger.error("Failed to create storage directories", error)
-            throw new Error("Failed to initialize document storage")
+            this.logger.error(
+                "Failed to create storage directories during initialization",
+                error,
+            )
+            return false // Indicate failure
         }
     }
 
+    // ensureDirectoryExists remains private as it's an internal helper
     private async ensureDirectoryExists(dirUri: string): Promise<void> {
+        if (!dirUri) return // Should not happen if initializeDirectories checks first
         try {
             const dirInfo = await FileSystem.getInfoAsync(dirUri)
             if (!dirInfo.exists) {
@@ -56,553 +101,499 @@ export class DocumentStorageService {
                 this.logger.debug(`Created directory: ${dirUri}`)
             }
         } catch (error) {
-            this.logger.error(`Failed to create directory ${dirUri}`, error)
-            throw error
+            this.logger.error(
+                `Failed to ensure directory exists ${dirUri}`,
+                error,
+            )
+            throw error // Propagate error up
         }
     }
 
     /**
-     * Save a document file to storage
-     * @param sourceUri The URI of the file to save (from document picker or camera)
-     * @param documentId The document ID to associate with this file
-     * @param shouldEncrypt Whether to encrypt the file
-     * @param filename Optional filename (if not provided, will be extracted from sourceUri)
-     * @returns The stored document file metadata
+     * Save a document file to storage, ensuring consistency.
      */
     async saveFile(
         sourceUri: string,
         documentId: string,
         shouldEncrypt: boolean = true,
         filename?: string,
-    ): Promise<{ uri: string; metadata: FileMetadata }> {
-        PerformanceMonitoringService.startMeasure(`save_file_${documentId}`)
+    ): Promise<{ uri: string; metadata: FileMetadata; finalFilename: string }> {
+        const operationName = `save_file_${documentId}`
+        PerformanceMonitoringService.startMeasure(operationName)
+
+        // Await initialization before proceeding with file operations
+        const initialized = await this.ensureInitialized()
+        if (!initialized) {
+            this.logger.error("Storage not initialized, cannot save file.")
+            throw new Error("Storage service failed to initialize.")
+        }
+        const baseFilename =
+            filename || sourceUri.split("/").pop() || `doc_${documentId}`
+        const finalFilename = `${documentId}_${baseFilename.replace(
+            /[/:*?"<>|\\]/g,
+            "_",
+        )}`
 
         try {
-            this.logger.debug(`Saving file for document ${documentId}`)
-
-            const extractedFilename =
-                filename ||
-                sourceUri.split("/").pop() ||
-                `document_${documentId}`
-
-            const sanitizedFilename = extractedFilename.replace(
-                /[/:*?"<>|\\]/g,
-                "_",
+            this.logger.debug(
+                `Processing file for doc ${documentId}. Target filename: ${finalFilename}`,
             )
-
-            // Verify we have a file we can work with
-            const fileInfo = await FileSystem.getInfoAsync(sourceUri, {
+            const sourceInfo = await FileSystem.getInfoAsync(sourceUri, {
                 size: true,
             })
             if (
-                !fileInfo.exists ||
-                (fileInfo.size !== undefined && fileInfo.size === 0)
+                !sourceInfo.exists ||
+                (sourceInfo.size !== undefined && sourceInfo.size === 0)
             ) {
-                throw new Error(`Cannot access file: ${sanitizedFilename}`)
+                throw new Error(
+                    `Source file inaccessible or empty: ${sourceUri}`,
+                )
             }
 
-            // Determine the final location for the file
-            let finalUri: string
+            let finalTargetUri: string
+            let intermediateCopyPath: string | null = null
+            const permanentUnencryptedPath = `${this.documentsDirectory}${finalFilename}`
 
-            // If source is from cache, move to permanent storage first
-            if (sourceUri.includes(this.cacheDirectory)) {
-                // Create the target path in the documents directory
-                const permanentPath = `${this.documentsDirectory}${documentId}_${sanitizedFilename}`
-
-                // Copy from cache to permanent location
+            if (
+                sourceUri.includes(
+                    this.cacheDirectory || "ExponentFileCache",
+                ) ||
+                shouldEncrypt
+            ) {
+                intermediateCopyPath = permanentUnencryptedPath
                 await FileSystem.copyAsync({
                     from: sourceUri,
-                    to: permanentPath,
+                    to: intermediateCopyPath,
                 })
-
-                // Verify copy was successful
-                const permFileInfo = await FileSystem.getInfoAsync(
-                    permanentPath,
+                const copyInfo = await FileSystem.getInfoAsync(
+                    intermediateCopyPath,
                     { size: true },
                 )
-                if (
-                    !permFileInfo.exists ||
-                    (permFileInfo.size !== undefined && permFileInfo.size === 0)
-                ) {
-                    throw new Error("Failed to create permanent copy of file")
+                if (!copyInfo.exists || copyInfo.size === 0) {
+                    throw new Error(`Failed intermediate copy`)
                 }
-
-                finalUri = permanentPath
                 this.logger.debug(
-                    `Created permanent copy of file at: ${permanentPath}`,
+                    `Intermediate copy created: ${intermediateCopyPath}`,
                 )
-
-                // Clean up the cache file if we successfully copied it
-                try {
+                if (
+                    sourceUri.includes(
+                        this.cacheDirectory || "ExponentFileCache",
+                    )
+                ) {
                     await FileSystem.deleteAsync(sourceUri, {
                         idempotent: true,
-                    })
-                    this.logger.debug(`Cleaned up cache file: ${sourceUri}`)
-                } catch (cleanupError) {
-                    // Just log cleanup errors, don't fail
-                    this.logger.debug(
-                        `Failed to clean up cache file: ${sourceUri}`,
-                        cleanupError,
+                    }).catch((e) =>
+                        this.logger.warn(
+                            `Failed cache cleanup ${sourceUri}`,
+                            e,
+                        ),
                     )
                 }
             } else {
-                // Source is already from a permanent location
-                finalUri = sourceUri
+                intermediateCopyPath = null // No intermediate copy made
+                finalTargetUri = sourceUri // Tentatively use original (will be reassigned if encrypting)
+                this.logger.debug(
+                    `Using original source URI directly: ${finalTargetUri}`,
+                )
             }
 
-            // Now handle encryption if needed - this encrypts in place at finalUri
             if (shouldEncrypt) {
+                finalTargetUri = `${this.encryptedDirectory}${finalFilename}`
+                const fileToEncrypt = intermediateCopyPath ?? sourceUri // Encrypt the copy if made, else original
+
+                this.logger.debug(
+                    `Copying ${fileToEncrypt} to final encrypted destination ${finalTargetUri}`,
+                )
+                await FileSystem.copyAsync({
+                    from: fileToEncrypt,
+                    to: finalTargetUri,
+                })
+                const finalCopyInfo = await FileSystem.getInfoAsync(
+                    finalTargetUri,
+                    { size: true },
+                )
+                if (!finalCopyInfo.exists || finalCopyInfo.size === 0) {
+                    throw new Error(
+                        `Failed copy to final encrypted location ${finalTargetUri}`,
+                    )
+                }
+
+                this.logger.debug(`Encrypting file in place: ${finalTargetUri}`)
                 const success = await this.encryptionService.encryptDocument(
                     documentId,
-                    finalUri,
+                    finalTargetUri, // Encrypt the file at its final destination
                 )
-
                 if (!success) {
                     throw new Error("File encryption failed")
                 }
+                this.logger.debug(
+                    `File encrypted successfully at: ${finalTargetUri}`,
+                )
 
-                this.logger.debug(`File encrypted for document ${documentId}`)
+                // Clean up intermediate copy if it was created *and* wasn't the original source
+                if (
+                    intermediateCopyPath &&
+                    intermediateCopyPath !== sourceUri
+                ) {
+                    await FileSystem.deleteAsync(intermediateCopyPath, {
+                        idempotent: true,
+                    }).catch((e) =>
+                        this.logger.warn(
+                            `Failed intermediate cleanup ${intermediateCopyPath}`,
+                            e,
+                        ),
+                    )
+                    this.logger.debug(
+                        `Cleaned up intermediate unencrypted file: ${intermediateCopyPath}`,
+                    )
+                }
+            } else {
+                // If not encrypting, the final URI is the intermediate copy or original source
+                finalTargetUri = intermediateCopyPath ?? sourceUri
+                this.logger.debug(
+                    `File saved without encryption: ${finalTargetUri}`,
+                )
             }
 
-            // Verify the final file still exists
-            const savedFileInfo = await FileSystem.getInfoAsync(finalUri, {
-                size: true,
-            })
-
+            // --- Step 3: Final Verification ---
+            const savedFileInfo = await FileSystem.getInfoAsync(
+                finalTargetUri,
+                { size: true },
+            )
             if (
                 !savedFileInfo.exists ||
                 (savedFileInfo.size !== undefined && savedFileInfo.size === 0)
             ) {
-                throw new Error("File was not saved properly")
+                await FileSystem.deleteAsync(finalTargetUri, {
+                    idempotent: true,
+                }).catch((e) =>
+                    this.logger.warn(`Cleanup failed ${finalTargetUri}`, e),
+                )
+                throw new Error(
+                    `File verification failed after save process at ${finalTargetUri}`,
+                )
             }
 
             this.logger.info(
-                `File saved successfully for document ${documentId}`,
+                `File processed successfully for document ${documentId} at ${finalTargetUri}`,
             )
-
             const metadata: FileMetadata = {
                 exists: savedFileInfo.exists,
-                uri: finalUri,
+                uri: finalTargetUri,
+                size: savedFileInfo.size,
             }
-
-            PerformanceMonitoringService.endMeasure(`save_file_${documentId}`)
+            PerformanceMonitoringService.endMeasure(operationName)
             return {
-                uri: finalUri,
+                uri: finalTargetUri,
                 metadata,
+                finalFilename: finalFilename,
             }
         } catch (error) {
             this.logger.error(
                 `Failed to save file for document ${documentId}`,
                 error,
             )
-            PerformanceMonitoringService.endMeasure(`save_file_${documentId}`)
+            PerformanceMonitoringService.endMeasure(operationName)
             throw error
         }
     }
 
-    /**
-     * Get a file from storage
-     * @param documentId The document ID associated with the file
-     * @param filename The filename to retrieve
-     * @returns The file URI and metadata
-     */
-    async getFile(
-        documentId: string,
-        filename: string,
-    ): Promise<{ uri: string; metadata: FileMetadata }> {
-        PerformanceMonitoringService.startMeasure(`get_file_${documentId}`)
-
-        try {
-            this.logger.debug(`Getting file for document ${documentId}`)
-
-            // Check in encrypted directory first
-            let fileUri = `${this.encryptedDirectory}${documentId}_${filename}`
-            let fileInfo = await FileSystem.getInfoAsync(fileUri, {
-                size: true,
-            })
-
-            // If not found, check in documents directory
-            if (!fileInfo.exists) {
-                fileUri = `${this.documentsDirectory}${documentId}_${filename}`
-                fileInfo = await FileSystem.getInfoAsync(fileUri, {
-                    size: true,
-                })
-
-                // If still not found, check the legacy location
-                if (!fileInfo.exists) {
-                    fileUri = `${this.documentDirectory}${documentId}_${filename}`
-                    fileInfo = await FileSystem.getInfoAsync(fileUri, {
-                        size: true,
-                    })
-
-                    if (!fileInfo.exists) {
-                        this.logger.error(
-                            `File not found for document ${documentId}`,
-                        )
-                    }
-                }
-            }
-
-            const metadata: FileMetadata = {
-                exists: fileInfo.exists,
-                uri: fileUri,
-            }
-
-            this.logger.debug(
-                `File retrieved successfully for document ${documentId}`,
-            )
-            PerformanceMonitoringService.endMeasure(`get_file_${documentId}`)
-
-            return {
-                uri: fileUri,
-                metadata,
-            }
-        } catch (error) {
-            this.logger.error(
-                `Failed to get file for document ${documentId}`,
-                error,
-            )
-            PerformanceMonitoringService.endMeasure(`get_file_${documentId}`)
-            throw error
-        }
-    }
-
-    /**
-     * Check if a file exists in storage
-     * @param documentId The document ID associated with the file
-     * @param filename The filename to check
-     * @returns Boolean indicating if the file exists
-     */
-    async fileExists(documentId: string, filename: string): Promise<boolean> {
-        try {
-            // Check encrypted directory
-            let fileUri = `${this.encryptedDirectory}${documentId}_${filename}`
-            let fileInfo = await FileSystem.getInfoAsync(fileUri)
-            if (fileInfo.exists) return true
-
-            // Check documents directory
-            fileUri = `${this.documentsDirectory}${documentId}_${filename}`
-            fileInfo = await FileSystem.getInfoAsync(fileUri)
-            if (fileInfo.exists) return true
-
-            // Check legacy directory
-            fileUri = `${this.documentDirectory}${documentId}_${filename}`
-            fileInfo = await FileSystem.getInfoAsync(fileUri)
-            return fileInfo.exists
-        } catch (error) {
-            this.logger.error(
-                `Failed to check if file exists for document ${documentId}`,
-                error,
-            )
-            return false
-        }
-    }
-
-    /**
-     * Delete a document file from storage
-     * @param documentId The document ID associated with the file
-     * @param filename The filename to delete
-     * @returns Boolean indicating success
-     */
-    async deleteFile(documentId: string, filename: string): Promise<boolean> {
-        PerformanceMonitoringService.startMeasure(`delete_file_${documentId}`)
-
-        try {
-            this.logger.debug(`Deleting file for document ${documentId}`)
-
-            // Try to delete from encrypted directory
-            let fileUri = `${this.encryptedDirectory}${documentId}_${filename}`
-            let fileInfo = await FileSystem.getInfoAsync(fileUri)
-
-            if (fileInfo.exists) {
-                await FileSystem.deleteAsync(fileUri)
-                // Also delete the encryption key
-                await this.encryptionService.deleteEncryptedDocument(documentId)
-
-                this.logger.info(
-                    `Encrypted file deleted for document ${documentId}`,
-                )
-                PerformanceMonitoringService.endMeasure(
-                    `delete_file_${documentId}`,
-                )
-                return true
-            }
-
-            // Try to delete from documents directory
-            fileUri = `${this.documentsDirectory}${documentId}_${filename}`
-            fileInfo = await FileSystem.getInfoAsync(fileUri)
-
-            if (fileInfo.exists) {
-                await FileSystem.deleteAsync(fileUri)
-                this.logger.info(
-                    `Unencrypted file deleted for document ${documentId}`,
-                )
-                PerformanceMonitoringService.endMeasure(
-                    `delete_file_${documentId}`,
-                )
-                return true
-            }
-
-            // Try legacy location
-            fileUri = `${this.documentDirectory}${documentId}_${filename}`
-            fileInfo = await FileSystem.getInfoAsync(fileUri)
-
-            if (fileInfo.exists) {
-                await FileSystem.deleteAsync(fileUri)
-                this.logger.info(
-                    `Legacy file deleted for document ${documentId}`,
-                )
-                PerformanceMonitoringService.endMeasure(
-                    `delete_file_${documentId}`,
-                )
-                return true
-            }
-
-            this.logger.warn(
-                `File not found for deletion: document ${documentId}, filename ${filename}`,
-            )
-            PerformanceMonitoringService.endMeasure(`delete_file_${documentId}`)
-            return false
-        } catch (error) {
-            this.logger.error(
-                `Failed to delete file for document ${documentId}`,
-                error,
-            )
-            PerformanceMonitoringService.endMeasure(`delete_file_${documentId}`)
-            return false
-        }
-    }
-
-    /**
-     * Import and store a document from picker or camera
-     * @param document Document data
-     * @param sourceUri Source URI of the file
-     * @param encrypt Whether to encrypt the file
-     * @returns Updated document with file metadata
-     */
-    async importAndStoreDocument(
-        document: IDocument,
-        sourceUri: string,
-        encrypt: boolean = true,
-    ): Promise<IDocument> {
-        const documentId = document.id
-        const filename = sourceUri.split("/").pop() || `document_${documentId}`
-
-        try {
-            const { uri, metadata } = await this.saveFile(
-                sourceUri,
-                documentId,
-                encrypt,
-                filename,
-            )
-
-            if (!metadata.exists) {
-                throw new Error(`Failed to save document ${filename}`)
-            }
-
-            // Return the document with content pointing to our local copy
-            // and sourceUri updated to the permanent file location
-            return {
-                ...document,
-                id: documentId,
-                sourceUri: uri, // The permanent URI, not the original source
-                title: document.title || filename,
-                content: encrypt ? `encrypted:${documentId}` : uri,
-                metadata: {
-                    createdAt:
-                        document.metadata.createdAt || new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    type: document.metadata.type || DocumentType.UNKNOWN,
-                },
-                tags: document.tags || [],
-            }
-        } catch (error) {
-            this.logger.error(
-                `Failed to import and store document for ${sourceUri}`,
-                error,
-            )
-            throw error
-        }
-    }
-
-    /**
-     * Prepare a document for preview
-     * @param document The document to preview
-     * @returns URI that can be used for preview
-     */
     async getDocumentTempUri(document: IDocument): Promise<string> {
-        try {
-            this.logger.debug("Document to preview:", document)
+        const operationName = `get_preview_uri_${document.id}`
+        PerformanceMonitoringService.startMeasure(operationName)
 
-            if (!document.content) {
-                this.logger.error("Document has no content to preview")
-                throw new Error("Document has no content to preview")
+        // Await initialization before proceeding
+        const initialized = await this.ensureInitialized()
+        if (!initialized) {
+            this.logger.error("Storage not initialized, cannot get temp URI.")
+            throw new Error("Storage service failed to initialize.")
+        }
+
+        try {
+            this.logger.debug("Preparing preview for document:", document.id)
+            if (!document.content && !document.sourceUri) {
+                throw new Error(
+                    "Document has no content reference for preview.",
+                )
             }
 
-            // Handle encrypted vs non-encrypted documents
-            if (document.content.startsWith("encrypted:")) {
-                // For encrypted documents, we need to:
-                // 1. Find the encrypted file
-                // 2. Decrypt it to a temporary location
-
-                const documentId = document.id
-
-                // First check in the documents directory for files with the document ID prefix
-                let documentFiles: string[] = []
-                try {
-                    documentFiles = await FileSystem.readDirectoryAsync(
-                        this.documentsDirectory,
-                    )
-                } catch (error) {
-                    this.logger.debug(
-                        `Could not read documents directory: ${error}`,
-                    )
-                }
-
-                // Then check in the encrypted directory
-                let encryptedFiles: string[] = []
-                try {
-                    encryptedFiles = await FileSystem.readDirectoryAsync(
-                        this.encryptedDirectory,
-                    )
-                } catch (error) {
-                    this.logger.debug(
-                        `Could not read encrypted directory: ${error}`,
-                    )
-                }
-
-                // Check both directories for files with the document ID prefix
-                const allFiles = [...documentFiles, ...encryptedFiles]
-                const documentFile = allFiles.find((file) =>
-                    file.startsWith(`${documentId}_`),
+            const filenameToFind = document.storedFilename
+            if (!filenameToFind) {
+                this.logger.error(
+                    `Stored filename missing for document ${document.id}. Cannot reliably find file.`,
                 )
+                throw new Error(
+                    `Stored filename is missing for document ${document.id}.`,
+                )
+            }
 
-                if (!documentFile) {
-                    // Try another approach - check for the file using the title
-                    const titleBasedName = `${documentId}_${document.title?.replace(
-                        /[/:*?"<>|\\]/g,
-                        "_",
-                    )}`
+            let fileUri: string | null = null
+            const pathsToCheck = [
+                this.encryptedDirectory
+                    ? `${this.encryptedDirectory}${filenameToFind}`
+                    : null,
+                this.documentsDirectory
+                    ? `${this.documentsDirectory}${filenameToFind}`
+                    : null,
+                this.documentDirectory
+                    ? `${this.documentDirectory}${filenameToFind}`
+                    : null, // Legacy
+            ].filter((p) => p !== null) as string[]
 
-                    let fileUri = `${this.documentsDirectory}${titleBasedName}`
-                    let fileInfo = await FileSystem.getInfoAsync(fileUri)
-
-                    if (!fileInfo.exists) {
-                        fileUri = `${this.encryptedDirectory}${titleBasedName}`
-                        fileInfo = await FileSystem.getInfoAsync(fileUri)
-
-                        if (!fileInfo.exists) {
-                            this.logger.error(
-                                `Encrypted file not found for document ${documentId}`,
-                            )
-                            throw new Error("Encrypted file not found")
-                        }
-                    }
-
-                    // Found the file by constructed name
-                    const sanitizedFilename = titleBasedName.replace(
-                        /[/:*?"<>|\\]/g,
-                        "_",
-                    )
-                    const previewUri = `${this.cacheDirectory}preview_${sanitizedFilename}`
-
-                    // Check if a preview already exists
-                    const previewExists = await FileSystem.getInfoAsync(
-                        previewUri,
-                    )
-                    if (previewExists.exists) {
+            for (const path of pathsToCheck) {
+                try {
+                    const fileInfo = await FileSystem.getInfoAsync(path)
+                    if (fileInfo.exists) {
+                        fileUri = path
                         this.logger.debug(
-                            `Using existing preview file at ${previewUri}`,
+                            `Found file for preview at: ${fileUri}`,
                         )
-                        return previewUri
+                        break
                     }
-
-                    // Decrypt the file to the preview location
-                    const success =
-                        await this.encryptionService.decryptFileForPreview(
-                            documentId,
-                            fileUri,
-                            previewUri,
-                        )
-
-                    if (!success) {
-                        this.logger.error(
-                            "Document was not decrypted successfully",
-                        )
-                        throw new Error(
-                            "Failed to decrypt document for preview",
-                        )
-                    }
-
-                    this.logger.debug(
-                        `Created decrypted preview file at ${previewUri}`,
-                    )
-                    return previewUri
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                } catch (e) {
+                    /* ignore */
                 }
+            }
 
-                // Found a file in one of the directories
-                let fileUri: string
-                if (documentFiles.includes(documentFile)) {
-                    fileUri = `${this.documentsDirectory}${documentFile}`
-                } else {
-                    fileUri = `${this.encryptedDirectory}${documentFile}`
-                }
-
-                // Create a preview filename
-                const sanitizedFilename = documentFile.replace(
-                    /[/:*?"<>|\\]/g,
-                    "_",
+            if (!fileUri) {
+                this.logger.error(
+                    `File not found using stored filename: ${filenameToFind}`,
                 )
-                const previewUri = `${this.cacheDirectory}preview_${sanitizedFilename}`
+                throw new Error(
+                    `File for document ${document.id} not found in storage.`,
+                )
+            }
 
-                // Check if a preview already exists
-                const previewExists = await FileSystem.getInfoAsync(previewUri)
-                if (previewExists.exists) {
+            const needsDecryption =
+                document.content === `encrypted:${document.id}` &&
+                fileUri.startsWith(this.encryptedDirectory)
+
+            if (needsDecryption) {
+                this.logger.debug(`Decrypting ${fileUri} for preview`)
+                const previewFilename = `preview_${filenameToFind}`
+                const previewUri = `${this.cacheDirectory}${previewFilename}`
+                const previewExistsInfo = await FileSystem.getInfoAsync(
+                    previewUri,
+                    { size: true },
+                )
+
+                if (
+                    previewExistsInfo.exists &&
+                    previewExistsInfo.size &&
+                    previewExistsInfo.size > 0
+                ) {
                     this.logger.debug(
                         `Using existing preview file at ${previewUri}`,
                     )
+                    PerformanceMonitoringService.endMeasure(operationName)
                     return previewUri
                 }
 
-                // Decrypt the file to the preview location
                 const success =
                     await this.encryptionService.decryptFileForPreview(
-                        documentId,
+                        document.id,
                         fileUri,
                         previewUri,
                     )
-
                 if (!success) {
-                    this.logger.error("Document was not decrypted successfully")
+                    this.logger.error(
+                        `Decryption failed for document ${document.id}`,
+                    )
                     throw new Error("Failed to decrypt document for preview")
                 }
 
                 this.logger.debug(
                     `Created decrypted preview file at ${previewUri}`,
                 )
+                PerformanceMonitoringService.endMeasure(operationName)
                 return previewUri
-            } else if (document.sourceUri) {
-                // Use the source URI directly if it exists and content is not encrypted
+            } else if (
+                fileUri.startsWith(this.documentsDirectory) ||
+                fileUri.startsWith(this.documentDirectory)
+            ) {
+                this.logger.debug(
+                    `Using non-encrypted file directly: ${fileUri}`,
+                )
+                PerformanceMonitoringService.endMeasure(operationName)
+                return fileUri
+            } else if (
+                document.sourceUri &&
+                !document.content?.startsWith("encrypted:")
+            ) {
+                this.logger.warn(
+                    `Using document.sourceUri as fallback for ${document.id}`,
+                )
+                PerformanceMonitoringService.endMeasure(operationName)
                 return document.sourceUri
             } else {
-                // Fallback to content if no sourceUri (unlikely but handling the case)
-                return document.content
+                throw new Error(
+                    `Unexpected state for document ${document.id} - file found at ${fileUri} but mismatch.`,
+                )
             }
         } catch (error) {
-            this.logger.error("Failed to prepare document for preview", error)
+            this.logger.error(
+                `Failed to prepare document preview for ${document.id}:`,
+                error,
+            )
+            PerformanceMonitoringService.endMeasure(operationName)
             throw error
         }
     }
 
-    /**
-     * Delete a specific preview file
-     * @param previewUri URI of the preview file to delete
-     * @returns Whether the deletion was successful
-     */
+    async getFile(
+        documentId: string,
+        storedFilename: string,
+    ): Promise<{ uri: string; metadata: FileMetadata } | null> {
+        if (!storedFilename) {
+            this.logger.error(
+                `Cannot get file: storedFilename missing for document ${documentId}`,
+            )
+            return null
+        }
+        const pathsToCheck = [
+            this.encryptedDirectory
+                ? `${this.encryptedDirectory}${storedFilename}`
+                : null,
+            this.documentsDirectory
+                ? `${this.documentsDirectory}${storedFilename}`
+                : null,
+            this.documentDirectory
+                ? `${this.documentDirectory}${storedFilename}`
+                : null,
+        ].filter((p) => p !== null) as string[]
+        for (const path of pathsToCheck) {
+            try {
+                const fileInfo = await FileSystem.getInfoAsync(path, {
+                    size: true,
+                })
+                if (fileInfo.exists) {
+                    this.logger.debug(`File found for getFile at ${path}`)
+                    return {
+                        uri: path,
+                        metadata: {
+                            exists: true,
+                            uri: path,
+                            size: fileInfo.size,
+                        },
+                    }
+                }
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            } catch (e) {
+                /* Ignore */
+            }
+        }
+        this.logger.warn(`File not found for getFile: ${storedFilename}`)
+        return null
+    }
+    async deleteFile(
+        documentId: string,
+        storedFilename: string,
+    ): Promise<boolean> {
+        if (!storedFilename) {
+            this.logger.error(
+                `Cannot delete file: storedFilename missing for document ${documentId}`,
+            )
+            return false
+        }
+        const pathsToCheck = [
+            this.encryptedDirectory
+                ? `${this.encryptedDirectory}${storedFilename}`
+                : null,
+            this.documentsDirectory
+                ? `${this.documentsDirectory}${storedFilename}`
+                : null,
+            this.documentDirectory
+                ? `${this.documentDirectory}${storedFilename}`
+                : null,
+        ].filter((p) => p !== null) as string[]
+        let deleted = false
+        for (const path of pathsToCheck) {
+            try {
+                const fileInfo = await FileSystem.getInfoAsync(path)
+                if (fileInfo.exists) {
+                    await FileSystem.deleteAsync(path, { idempotent: true })
+                    this.logger.info(`Deleted file at ${path}`)
+                    deleted = true
+                    if (path.startsWith(this.encryptedDirectory)) {
+                        await this.encryptionService.deleteEncryptedDocument(
+                            documentId,
+                        )
+                    }
+                    break
+                }
+            } catch (error) {
+                this.logger.error(`Failed to delete file at ${path}`, error)
+                return false
+            }
+        }
+        if (!deleted) {
+            this.logger.warn(
+                `File not found for deletion with storedFilename: ${storedFilename}`,
+            )
+        }
+        return deleted
+    }
+    async importAndStoreDocument(
+        document: Omit<IDocument, "storedFilename"> & { id: string },
+        sourceUri: string,
+        encrypt: boolean = true,
+    ): Promise<IDocument> {
+        const documentId = document.id
+        const baseFilename =
+            document.title || sourceUri.split("/").pop() || `doc_${documentId}`
+        try {
+            const {
+                uri: finalUri,
+                metadata,
+                finalFilename,
+            } = await this.saveFile(
+                sourceUri,
+                documentId,
+                encrypt,
+                baseFilename,
+            )
+            if (!metadata.exists) {
+                throw new Error(`Failed to save document ${finalFilename}`)
+            }
+            return {
+                ...document,
+                id: documentId,
+                sourceUri: finalUri,
+                title: document.title || baseFilename,
+                content: encrypt ? `encrypted:${documentId}` : finalUri,
+                storedFilename: finalFilename,
+                metadata: {
+                    ...(document.metadata || {}),
+                    createdAt:
+                        document.metadata?.createdAt ||
+                        new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    type: document.metadata?.type || DocumentType.UNKNOWN,
+                },
+                tags: document.tags || [],
+                parameters: document.parameters || [],
+            }
+        } catch (error) {
+            this.logger.error(
+                `Failed to import and store document from ${sourceUri}`,
+                error,
+            )
+            throw error
+        }
+    }
     async deletePreviewFile(previewUri: string): Promise<boolean> {
+        if (
+            !this.cacheDirectory ||
+            !previewUri.startsWith(this.cacheDirectory)
+        ) {
+            this.logger.warn(
+                `Attempted to delete non-cache file as preview: ${previewUri}`,
+            )
+            return false
+        }
         try {
             this.logger.debug(`Deleting preview file: ${previewUri}`)
-
             const fileInfo = await FileSystem.getInfoAsync(previewUri)
             if (fileInfo.exists) {
                 await FileSystem.deleteAsync(previewUri, { idempotent: true })
@@ -611,7 +602,6 @@ export class DocumentStorageService {
                 )
                 return true
             }
-
             this.logger.debug(
                 `Preview file not found for deletion: ${previewUri}`,
             )
@@ -624,11 +614,8 @@ export class DocumentStorageService {
             return false
         }
     }
-
-    /**
-     * Clean up temporary preview files
-     */
     async cleanupPreviewFiles(): Promise<void> {
+        if (!this.cacheDirectory) return
         try {
             const cacheFiles = await FileSystem.readDirectoryAsync(
                 this.cacheDirectory,
@@ -636,20 +623,30 @@ export class DocumentStorageService {
             const previewFiles = cacheFiles.filter((file) =>
                 file.startsWith("preview_"),
             )
-
+            let deletedCount = 0
             for (const file of previewFiles) {
-                await FileSystem.deleteAsync(`${this.cacheDirectory}${file}`, {
-                    idempotent: true,
-                })
+                try {
+                    await FileSystem.deleteAsync(
+                        `${this.cacheDirectory}${file}`,
+                        { idempotent: true },
+                    )
+                    deletedCount++
+                } catch (e) {
+                    this.logger.warn(
+                        `Failed to delete single preview file: ${file}`,
+                        e,
+                    )
+                }
             }
-
-            this.logger.debug(
-                `Cleaned up ${previewFiles.length} temporary preview files`,
-            )
+            if (deletedCount > 0) {
+                this.logger.debug(
+                    `Cleaned up ${deletedCount} temporary preview files`,
+                )
+            }
         } catch (error) {
             this.logger.error("Failed to clean up preview files", error)
         }
     }
 }
 
-export const documentStorage = DocumentStorageService.create()
+export const documentStorage = new DocumentStorageService()

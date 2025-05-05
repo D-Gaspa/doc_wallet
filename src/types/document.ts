@@ -14,6 +14,7 @@ export interface IDocument {
     content?: string
     tags?: string[]
     parameters?: IDocumentParameters[]
+    storedFilename?: string
 }
 
 export interface IDocumentMetadata {
