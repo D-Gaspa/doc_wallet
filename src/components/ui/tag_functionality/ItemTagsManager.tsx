@@ -159,7 +159,7 @@ export function ItemTagsManager({
                                     { color: colors.text },
                                 ]}
                             >
-                                Añadir Etiqueta {/* Translated */}
+                                Añadir etiqueta
                             </Text>
 
                             {availableTags.length > 0 ? (
@@ -253,7 +253,7 @@ export function ItemTagsManager({
                                 { color: colors.text },
                             ]}
                         >
-                            Eliminar Etiqueta {/* Translated */}
+                            Eliminar etiqueta
                         </Text>
                         <Text
                             style={[
@@ -276,8 +276,7 @@ export function ItemTagsManager({
                                 onPress={() => setConfirmDeleteVisible(false)}
                             >
                                 <Text style={{ color: colors.text }}>
-                                    {" "}
-                                    Cancelar {/* Translated */}{" "}
+                                    Cancelar
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
@@ -288,8 +287,7 @@ export function ItemTagsManager({
                                 onPress={handleConfirmDelete}
                             >
                                 <Text style={{ color: colors.background }}>
-                                    {" "}
-                                    Eliminar {/* Translated */}{" "}
+                                    Eliminar
                                 </Text>
                             </TouchableOpacity>
                         </View>

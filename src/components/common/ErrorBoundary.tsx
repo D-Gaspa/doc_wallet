@@ -12,7 +12,7 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-    private logger: { error: (message: string, error: Error) => void }
+    private readonly logger: { error: (message: string, error: Error) => void }
 
     constructor(props: Props) {
         super(props)

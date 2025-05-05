@@ -1,25 +1,43 @@
-// src/components/ui/tags/TagEditModal.tsx
-import React, { useState, useEffect } from "react"
-import { View, StyleSheet, TouchableOpacity } from "react-native"
-import { BaseModal } from "../../common/modal"
+import React, { useEffect, useRef, useState, useCallback } from "react"
+import {
+    StyleSheet,
+    View,
+    Animated,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    Dimensions,
+    Modal,
+    TouchableWithoutFeedback,
+    ScrollView,
+    TouchableOpacity,
+} from "react-native"
+import { useTheme } from "../../../hooks/useTheme"
 import { Stack } from "../layout"
-import { Row } from "../layout"
 import { Text } from "../typography"
 import { TextField } from "../form"
 import { Button } from "../button"
-import { LoggingService } from "../../../services/monitoring/loggingService.ts"
 
-// Predefined tag colors
 const TAG_COLORS = [
-    "#E74C3C", // Red
-    "#F39C12", // Orange
-    "#2ECC71", // Green
-    "#3498DB", // Blue
-    "#9B59B6", // Purple
-    "#1ABC9C", // Teal
-    "#34495E", // Navy
-    "#7F8C8D", // Gray
+    "#E74C3C",
+    "#F39C12",
+    "#2ECC71",
+    "#3498DB",
+    "#9B59B6",
+    "#1ABC9C",
+    "#34495E",
+    "#7F8C8D",
+    "#F1C40F",
+    "#006400",
+    "#D2691E",
+    "#8B0000",
+    "#8FBC8F",
+    "#ADD8E6",
+    "#20B2AA",
+    "#C71585",
 ]
+
+const screenHeight = Dimensions.get("window").height
 
 interface TagEditModalProps {
     isVisible: boolean
@@ -40,16 +58,31 @@ export function TagEditModal({
     initialName = "",
     initialColor = TAG_COLORS[0],
     tagId,
-    title = "Create New Tag",
+    title: incomingTitle,
 }: TagEditModalProps) {
-    const logger = LoggingService.getLogger
-        ? LoggingService.getLogger("TagEditModal")
-        : { debug: console.debug }
+    const { colors } = useTheme()
 
     const [name, setName] = useState(initialName)
     const [selectedColor, setSelectedColor] = useState(initialColor)
 
-    // Reset form when modal opens with new data
+    const translateY = useRef(new Animated.Value(screenHeight)).current
+
+    useEffect(() => {
+        if (isVisible) {
+            Animated.timing(translateY, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }).start()
+        } else {
+            Animated.timing(translateY, {
+                toValue: screenHeight,
+                duration: 250,
+                useNativeDriver: true,
+            }).start()
+        }
+    }, [isVisible, translateY])
+
     useEffect(() => {
         if (isVisible) {
             setName(initialName)
@@ -57,201 +90,303 @@ export function TagEditModal({
         }
     }, [isVisible, initialName, initialColor])
 
-    const handleSave = () => {
-        if (name.trim() === "") {
-            return // Don't save tag with empty name
-        }
-
+    const handleSave = useCallback(() => {
+        if (name.trim() === "") return
         onSave(name.trim(), selectedColor, tagId)
-        logger.debug("Saving tag", { id: tagId, name, color: selectedColor })
-        onClose()
-    }
+    }, [name, selectedColor, tagId, onSave])
 
-    const handleDelete = () => {
+    const handleDelete = useCallback(() => {
         if (tagId && onDelete) {
             onDelete(tagId)
-            logger.debug("Deleting tag", { id: tagId })
-            onClose()
         }
-    }
+    }, [tagId, onDelete])
+
+    const isEditMode = !!tagId
+    const modalTitle =
+        incomingTitle ??
+        (isEditMode ? "Editar Etiqueta" : "Crear Nueva Etiqueta")
+    const saveButtonText = isEditMode ? "Actualizar" : "Crear Etiqueta"
 
     return (
-        <BaseModal isVisible={isVisible} onClose={onClose}>
-            <View style={styles.container} testID="tag-edit-modal">
-                <Text variant="lg" weight="bold" style={styles.title}>
-                    {title}
-                </Text>
+        <Modal
+            transparent
+            animationType="none"
+            visible={isVisible}
+            onRequestClose={onClose}
+        >
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.kavContainer}
+            >
+                <TouchableWithoutFeedback onPress={onClose}>
+                    <View style={styles.backdrop} />
+                </TouchableWithoutFeedback>
 
-                <Stack spacing={16}>
-                    {/* Tag name input */}
-                    <Stack spacing={8}>
-                        <Text weight="medium">Tag Name</Text>
-                        <TextField
-                            placeholder="Enter tag name"
-                            value={name}
-                            onChangeText={setName}
-                            testID="tag-name-input"
+                <Animated.View
+                    style={[
+                        styles.modalContainer,
+                        {
+                            backgroundColor: colors.background,
+                            transform: [{ translateY }],
+                        },
+                    ]}
+                >
+                    {/* Wrap content in SafeAreaView */}
+                    <SafeAreaView style={styles.safeAreaContent}>
+                        <View
+                            style={[
+                                styles.handle,
+                                { backgroundColor: colors.border },
+                            ]}
                         />
-                    </Stack>
+                        <Text
+                            weight="medium"
+                            style={[styles.title, { color: colors.text }]}
+                        >
+                            {modalTitle}
+                        </Text>
 
-                    {/* Color selection */}
-                    <Stack spacing={8}>
-                        <Text weight="medium">Tag Color</Text>
-                        <View style={styles.colorsContainer}>
-                            {TAG_COLORS.map((color) => (
-                                <TouchableOpacity
-                                    key={color}
-                                    style={[
-                                        styles.colorOption,
-                                        { backgroundColor: color },
-                                        selectedColor === color &&
-                                            styles.selectedColor,
-                                    ]}
-                                    onPress={() => setSelectedColor(color)}
-                                    testID={`color-${color.replace("#", "")}`}
-                                />
-                            ))}
-                        </View>
-                    </Stack>
-
-                    {/* Preview */}
-                    <Stack spacing={8}>
-                        <Text weight="medium">Preview</Text>
-                        <View style={styles.previewContainer}>
-                            <View
-                                style={[
-                                    styles.tagPreview,
-                                    {
-                                        backgroundColor: selectedColor + "20",
-                                        borderColor: selectedColor,
-                                    },
-                                ]}
-                            >
-                                <View
-                                    style={[
-                                        styles.dot,
-                                        { backgroundColor: selectedColor },
-                                    ]}
-                                />
-                                <Text>{name || "Tag Preview"}</Text>
-                            </View>
-                        </View>
-                    </Stack>
-
-                    {/* Action buttons */}
-                    {tagId && onDelete ? (
-                        // Edit mode with delete button
-                        <Stack spacing={12}>
-                            <Row justify="space-between" align="center">
-                                <View style={styles.buttonContainer}>
-                                    <Button
-                                        title="Cancel"
-                                        onPress={onClose}
-                                        style={styles.cancelButton}
-                                        testID="cancel-button"
+                        {/* Scrollable main content */}
+                        <ScrollView
+                            contentContainerStyle={
+                                styles.contentScrollContainer
+                            }
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            <Stack spacing={20}>
+                                {/* Tag Name */}
+                                <Stack spacing={6}>
+                                    <Text
+                                        weight="medium"
+                                        style={{ color: colors.text }}
+                                    >
+                                        Nombre de Etiqueta
+                                    </Text>
+                                    <TextField
+                                        placeholder="Ingresa nombre de etiqueta"
+                                        value={name}
+                                        onChangeText={setName}
+                                        testID="tag-name-input"
+                                        returnKeyType="done"
                                     />
-                                </View>
-                                <View style={styles.buttonContainer}>
-                                    <Button
-                                        title="Update"
-                                        onPress={handleSave}
-                                        style={
-                                            name.trim() === ""
-                                                ? styles.disabledButton
-                                                : {}
-                                        }
-                                        testID="save-button"
-                                    />
-                                </View>
-                            </Row>
+                                </Stack>
+
+                                {/* Tag Color */}
+                                <Stack spacing={6}>
+                                    <Text
+                                        weight="medium"
+                                        style={{ color: colors.text }}
+                                    >
+                                        Color de Etiqueta
+                                    </Text>
+                                    <View style={styles.colorsContainer}>
+                                        {TAG_COLORS.map((color) => (
+                                            <TouchableOpacity
+                                                key={color}
+                                                style={[
+                                                    styles.colorOption,
+                                                    {
+                                                        backgroundColor: color,
+                                                        borderColor:
+                                                            colors.border +
+                                                            "50",
+                                                    },
+                                                    selectedColor === color && [
+                                                        styles.selectedColor,
+                                                        {
+                                                            borderColor:
+                                                                colors.primary,
+                                                        },
+                                                    ],
+                                                ]}
+                                                onPress={() =>
+                                                    setSelectedColor(color)
+                                                }
+                                                testID={`color-${color.replace(
+                                                    "#",
+                                                    "",
+                                                )}`}
+                                            />
+                                        ))}
+                                    </View>
+                                </Stack>
+
+                                {/* Preview */}
+                                <Stack spacing={6}>
+                                    <Text
+                                        weight="medium"
+                                        style={{ color: colors.text }}
+                                    >
+                                        Vista Previa
+                                    </Text>
+                                    <View style={styles.previewContainer}>
+                                        <View
+                                            style={[
+                                                styles.tagPreview,
+                                                {
+                                                    backgroundColor:
+                                                        selectedColor + "20",
+                                                    borderColor: selectedColor,
+                                                },
+                                            ]}
+                                        >
+                                            <View
+                                                style={[
+                                                    styles.dot,
+                                                    {
+                                                        backgroundColor:
+                                                            selectedColor,
+                                                    },
+                                                ]}
+                                            />
+                                            <Text
+                                                style={{ color: colors.text }}
+                                            >
+                                                {name.trim() ||
+                                                    "Vista Previa Etiqueta"}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </Stack>
+                            </Stack>
+                        </ScrollView>
+
+                        {/* Action Buttons Footer */}
+                        <View
+                            style={[
+                                styles.footer,
+                                { borderTopColor: colors.border },
+                            ]}
+                        >
                             <Button
-                                title="Delete Tag"
-                                onPress={handleDelete}
-                                testID="delete-button"
+                                title={saveButtonText}
+                                onPress={handleSave}
+                                style={styles.actionButton} // Takes full width
+                                disabled={name.trim() === ""}
+                                testID="save-button"
                             />
-                        </Stack>
-                    ) : (
-                        // Create mode
-                        <Row justify="space-between" align="center">
-                            <View style={styles.buttonContainer}>
+                            <Button
+                                title="Cancelar"
+                                onPress={onClose}
+                                variant="outline"
+                                style={styles.actionButton}
+                                testID="cancel-button"
+                            />
+                            {isEditMode && onDelete && (
                                 <Button
-                                    title="Cancel"
-                                    onPress={onClose}
-                                    style={styles.cancelButton}
-                                    testID="cancel-button"
+                                    title="Eliminar Etiqueta"
+                                    onPress={handleDelete}
+                                    style={styles.deleteButton}
+                                    textStyle={styles.deleteButtonText}
+                                    variant="text"
+                                    testID="delete-button"
                                 />
-                            </View>
-                            <View style={styles.buttonContainer}>
-                                <Button
-                                    title="Create Tag"
-                                    onPress={handleSave}
-                                    style={
-                                        name.trim() === ""
-                                            ? styles.disabledButton
-                                            : {}
-                                    }
-                                    testID="save-button"
-                                />
-                            </View>
-                        </Row>
-                    )}
-                </Stack>
-            </View>
-        </BaseModal>
+                            )}
+                        </View>
+                    </SafeAreaView>
+                </Animated.View>
+            </KeyboardAvoidingView>
+        </Modal>
     )
 }
 
+// Styles
 const styles = StyleSheet.create({
-    container: {
-        padding: 20,
+    kavContainer: {
+        flex: 1,
+        justifyContent: "flex-end",
+    },
+    // eslint-disable-next-line react-native/no-color-literals
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(0,0,0,0.4)",
+    },
+    modalContainer: {
+        flex: 1,
+        width: "100%",
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+    },
+    safeAreaContent: {
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+    },
+    handle: {
+        width: 40,
+        height: 5,
+        borderRadius: 3,
+        alignSelf: "center",
+        marginTop: 8,
+        marginBottom: 10,
     },
     title: {
-        marginBottom: 16,
+        fontSize: 18,
         textAlign: "center",
+        marginBottom: 16,
+        marginTop: 4,
+        paddingHorizontal: 20,
+    },
+    contentScrollContainer: {
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+        flexGrow: 1,
     },
     colorsContainer: {
         flexDirection: "row",
         flexWrap: "wrap",
-        justifyContent: "space-between",
+        justifyContent: "flex-start",
+        paddingVertical: 5,
     },
     colorOption: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         margin: 4,
+        borderWidth: 1,
+        justifyContent: "center",
+        alignItems: "center",
     },
+    // eslint-disable-next-line react-native/no-color-literals
     selectedColor: {
         borderWidth: 3,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 4,
     },
-    previewContainer: {
-        alignItems: "center",
-        padding: 8,
-    },
+    previewContainer: { alignItems: "center", marginTop: 10, marginBottom: 20 }, // Increased bottom margin
     tagPreview: {
         flexDirection: "row",
         alignItems: "center",
-        borderRadius: 16,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        borderRadius: 20,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
         borderWidth: 1,
+        alignSelf: "center",
     },
-    dot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        marginRight: 6,
+    dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
+    footer: {
+        padding: 20,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        paddingBottom: Platform.OS === "ios" ? 30 : 20,
+        width: "100%",
     },
-    buttonContainer: {
-        flex: 0.48,
+    actionButton: {
+        width: "100%",
+        marginBottom: 12,
     },
-    cancelButton: {
-        borderWidth: 1,
+    // eslint-disable-next-line react-native/no-color-literals
+    deleteButton: {
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        marginBottom: 0,
     },
-    disabledButton: {
-        opacity: 0.5,
+    deleteButtonText: {
+        fontWeight: "500",
     },
 })

@@ -120,7 +120,7 @@ export function SplashScreen({ onFinish, duration = 2500 }: SplashScreenProps) {
                     },
                 ]}
             >
-                All your documents, always with you.
+                Tus documentos, siempre contigo.
             </Animated.Text>
         </Animated.View>
     )
