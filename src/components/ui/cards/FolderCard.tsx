@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useMemo } from "react"
 import {
     GestureResponderEvent,
     StyleSheet,
@@ -23,11 +23,12 @@ export interface FolderCardProps {
     customIconId?: Folder["customIconId"]
     isFavorite?: boolean
     selected?: boolean
+    showTags?: boolean
 
     // Handlers
     onPress: () => void
     onLongPress?: () => void
-    onToggleFavorite: () => void
+    onToggleFavorite?: () => void
     onShowOptions?: () => void
 
     onTagPress?: (tagId: string) => void
@@ -43,6 +44,7 @@ export function FolderCard({
     customIconId,
     isFavorite = false,
     selected = false,
+    showTags = true,
     onPress,
     onLongPress,
     onToggleFavorite,
@@ -72,27 +74,28 @@ export function FolderCard({
     const actionIconsNode = React.useMemo(
         () => (
             <View style={styles.actionButtonsContainer}>
-                {/* Favorite Button */}
-                <TouchableOpacity
-                    onPress={handleButtonPress(onToggleFavorite)}
-                    style={styles.actionButton}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 5 }}
-                    testID={`folder-fav-btn-${folderId}`}
-                >
-                    {isFavorite ? (
-                        <StarIcon
-                            width={18}
-                            height={18}
-                            fill={colors.warning}
-                        />
-                    ) : (
-                        <StarOutlineIcon
-                            width={18}
-                            height={18}
-                            stroke={colors.secondaryText}
-                        />
-                    )}
-                </TouchableOpacity>
+                {onToggleFavorite && (
+                    <TouchableOpacity
+                        onPress={handleButtonPress(onToggleFavorite)}
+                        style={styles.actionButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 5 }}
+                        testID={`folder-fav-btn-${folderId}`}
+                    >
+                        {isFavorite ? (
+                            <StarIcon
+                                width={18}
+                                height={18}
+                                fill={colors.warning}
+                            />
+                        ) : (
+                            <StarOutlineIcon
+                                width={18}
+                                height={18}
+                                stroke={colors.secondaryText}
+                            />
+                        )}
+                    </TouchableOpacity>
+                )}
 
                 {/* Options Button */}
                 {onShowOptions && (
@@ -111,28 +114,45 @@ export function FolderCard({
                 )}
             </View>
         ),
-        [isFavorite, onToggleFavorite, onShowOptions, colors, folderId],
+
+        [
+            isFavorite,
+            onToggleFavorite,
+            onShowOptions,
+            colors,
+            folderId,
+            handleButtonPress,
+        ],
     )
 
     // --- Prepare Children (Tags) ---
-    const folderTags = tagContext.getTagsForItem(folderId, "folder")
-    const childrenNode = React.useMemo(
-        () => (
-            <ItemTagsManager
-                itemId={folderId}
-                itemType="folder"
-                tags={folderTags}
-                allTags={tagContext.tags}
-                onTagPress={onTagPress}
-                selectedTagIds={selectedTagIds}
-                horizontal={true}
-                showAddTagButton={true}
-            />
-        ),
-        [folderId, folderTags, tagContext.tags, onTagPress, selectedTagIds],
+    const folderTags = showTags
+        ? tagContext.getTagsForItem(folderId, "folder")
+        : []
+    const childrenNode = useMemo(
+        () =>
+            showTags ? (
+                <ItemTagsManager
+                    itemId={folderId}
+                    itemType="folder"
+                    tags={folderTags}
+                    allTags={tagContext.tags}
+                    onTagPress={onTagPress}
+                    selectedTagIds={selectedTagIds}
+                    horizontal={true}
+                    showAddTagButton={true}
+                />
+            ) : null,
+        [
+            showTags,
+            folderId,
+            folderTags,
+            tagContext.tags,
+            onTagPress,
+            selectedTagIds,
+        ],
     )
 
-    // --- Render Base Component ---
     return (
         <ListItemCard
             id={folderId}
