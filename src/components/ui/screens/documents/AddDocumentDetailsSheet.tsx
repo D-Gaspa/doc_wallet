@@ -207,10 +207,11 @@ export const AddDocumentDetailsSheet = ({
                                         onChangeText={setExpirationDate}
                                         keyboardType="numeric"
                                     />
-                                    {/* eslint-disable-next-line react-native/no-inline-styles */}
+
                                     <Text
                                         style={[
                                             styles.subtitle,
+                                            // eslint-disable-next-line react-native/no-inline-styles
                                             {
                                                 color: colors.text,
                                                 marginTop: 12,
