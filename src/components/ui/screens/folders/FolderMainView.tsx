@@ -629,7 +629,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                             "Hoja de detalles 'Agregar Documento' cerrada.",
                         ) // Traducido
                     }}
-                    //@ts-expect-error ignoring error
                     onSave={handleSaveDocument}
                     folders={folders}
                     setFolders={setFolders}

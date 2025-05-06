@@ -101,7 +101,6 @@ function MainTabsContent() {
                 </Tab.Screen>
                 <Tab.Screen name="Files">
                     {(props) => (
-                        //@ts-expect-error ignore
                         <DocumentsScreen
                             {...props}
                             setActiveTab={setActiveTab}
