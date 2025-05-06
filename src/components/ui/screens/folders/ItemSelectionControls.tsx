@@ -1,56 +1,73 @@
 import React from "react"
-import { View, StyleSheet, TouchableOpacity } from "react-native"
+import {
+    StyleSheet,
+    Text,
+    TextStyle,
+    TouchableOpacity,
+    View,
+    ViewStyle,
+} from "react-native"
 import { Row } from "../../layout"
-import { Text } from "../../typography"
-import { Folder } from "./types"
+import { ListItem } from "./types"
+import { SelectedItem } from "./useSelectionMode"
 import { useTheme } from "../../../../hooks/useTheme"
 
-interface FolderSelectionControlsProps {
+interface ItemSelectionControlsProps {
     selectionMode: boolean
-    selectedFolderIds: string[]
-    filteredFolders: Folder[]
+    selectedItems: SelectedItem[]
+    displayItems: ListItem[]
     toggleSelectionMode: () => void
-    handleSelectAll: (folders: Folder[]) => void
+    handleSelectAll: (items: ListItem[]) => void
     setBatchTagModalVisible: (visible: boolean) => void
     onMovePress?: () => void
+    onDeletePress?: () => void
     testID?: string
 }
 
-export function FolderSelectionControls({
+export function ItemSelectionControls({
     selectionMode,
-    selectedFolderIds,
-    filteredFolders,
+    selectedItems,
+    displayItems,
     toggleSelectionMode,
     handleSelectAll,
     setBatchTagModalVisible,
     onMovePress,
+    onDeletePress,
     testID,
-}: FolderSelectionControlsProps) {
+}: ItemSelectionControlsProps) {
     const { colors } = useTheme()
 
-    const numSelected = selectedFolderIds.length
-    const numTotal = filteredFolders.length
+    const numSelected = selectedItems.length
+    const numTotal = displayItems.length
     const allSelected = numSelected === numTotal && numTotal > 0
 
-    // Helper component for tappable text buttons
+    interface TextButtonProps {
+        title: string
+        onPress: () => void
+        style?: ViewStyle
+        textStyle?: TextStyle
+        testID?: string
+        disabled?: boolean
+    }
+
     const TextButton = ({
         title,
         onPress,
         style,
         textStyle,
         testID,
-    }: {
-        title: string
-        onPress: () => void
-        style?: object
-        textStyle?: object
-        testID?: string
-    }) => (
+        disabled = false,
+    }: TextButtonProps) => (
         <TouchableOpacity
             onPress={onPress}
-            style={[styles.textButtonBase, style]} // Base style + specific overrides
+            disabled={disabled}
+            style={[
+                styles.textButtonBase,
+                style,
+                disabled && styles.disabledButtonOpacity,
+            ]}
             testID={testID}
-            activeOpacity={0.6} // Feedback on press
+            activeOpacity={disabled ? 1 : 0.6}
         >
             <Text
                 style={[
@@ -67,10 +84,9 @@ export function FolderSelectionControls({
     return (
         <View
             style={styles.container}
-            testID={testID ?? "folder-selection-controls"}
+            testID={testID ?? "item-selection-controls"}
         >
             {selectionMode ? (
-                // --- Selection Mode Active ---
                 <Row justify="space-between" align="center" style={styles.row}>
                     {/* Left side: Selection Count */}
                     <View style={styles.infoContainer}>
@@ -82,20 +98,29 @@ export function FolderSelectionControls({
                             numberOfLines={1}
                             ellipsizeMode="tail"
                         >
-                            {`${numSelected} selected`}
+                            {`${numSelected} item${
+                                numSelected !== 1 ? "s" : ""
+                            } selected`}
                         </Text>
                     </View>
 
-                    {/* Right side: Action Buttons (as TextButton) */}
+                    {/* Right side: Action Buttons */}
                     <View style={styles.buttonsContainer}>
-                        {/* Conditionally show Move and +Tags if items are selected */}
                         {numSelected > 0 && (
                             <>
+                                {onDeletePress && (
+                                    <TextButton
+                                        title="Delete"
+                                        onPress={onDeletePress}
+                                        textStyle={{ color: colors.error }}
+                                        testID="batch-delete-button"
+                                    />
+                                )}
                                 {onMovePress && (
                                     <TextButton
-                                        title="Mover"
+                                        title="Move"
                                         onPress={onMovePress}
-                                        testID="move-folders-button"
+                                        testID="move-items-button"
                                     />
                                 )}
                                 <TextButton
@@ -110,52 +135,53 @@ export function FolderSelectionControls({
 
                         {/* Select All / None Button */}
                         <TextButton
-                            title={allSelected ? "Ninguno" : "Todos"}
-                            onPress={() => handleSelectAll(filteredFolders)}
+                            disabled={numTotal === 0}
+                            title={allSelected ? "None" : "All"}
+                            onPress={() => handleSelectAll(displayItems)}
                             testID="select-all-button"
                         />
 
                         {/* Cancel Button */}
                         <TextButton
-                            title="Cancelar"
+                            title="Cancel"
                             onPress={toggleSelectionMode}
-                            // Optionally use a different color for Cancel
                             textStyle={{ color: colors.secondaryText }}
                             testID="cancel-selection-button"
                         />
                     </View>
                 </Row>
-            ) : (
-                <View style={styles.selectButtonContainer}>
-                    <TextButton
-                        title="Seleccionar"
-                        onPress={toggleSelectionMode}
-                        testID="toggle-selection-button"
-                    />
-                </View>
-            )}
+            ) : null}
         </View>
     )
 }
 
 const styles = StyleSheet.create({
+    textButtonBase: {
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        marginLeft: 8,
+        borderRadius: 4,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    textButtonText: {
+        fontSize: 14,
+        fontWeight: "600",
+        textAlign: "center",
+    },
+    disabledButtonOpacity: {
+        opacity: 0.5,
+    },
     container: {
-        marginTop: 8,
-        marginBottom: 12,
         width: "100%",
         minHeight: 44,
         justifyContent: "center",
         paddingHorizontal: 4,
+        marginTop: 8,
+        marginBottom: 4,
     },
-    row: {
-        width: "100%",
-        minHeight: 44,
-    },
-    infoContainer: {
-        flexShrink: 1,
-        justifyContent: "center",
-        paddingRight: 8,
-    },
+    row: { width: "100%", minHeight: 44 },
+    infoContainer: { flexShrink: 1, justifyContent: "center", paddingRight: 8 },
     buttonsContainer: {
         flexGrow: 1,
         flexDirection: "row",
@@ -163,27 +189,5 @@ const styles = StyleSheet.create({
         alignItems: "center",
         flexWrap: "nowrap",
     },
-    selectionText: {
-        fontSize: 14,
-        fontWeight: "500",
-    },
-    // Base style for the tappable text
-    textButtonBase: {
-        paddingVertical: 8, // Vertical padding for touch area
-        paddingHorizontal: 10, // Horizontal padding for touch area and spacing
-        marginLeft: 6, // Space between buttons
-        borderRadius: 4, // Optional: slight rounding
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    // Style for the text inside the tappable area
-    textButtonText: {
-        fontSize: 14,
-        fontWeight: "600", // Make text bold to indicate interactivity
-        textAlign: "center",
-    },
-    // Container for the inactive "Select" button to align it right
-    selectButtonContainer: {
-        alignItems: "flex-end", // Align button to the right
-    },
+    selectionText: { fontSize: 14, fontWeight: "500" },
 })

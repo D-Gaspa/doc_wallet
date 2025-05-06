@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import {
-    StyleSheet,
-    View,
-    ScrollView,
-    ViewStyle,
     Animated,
+    ScrollView,
+    StyleSheet,
     TouchableOpacity,
+    View,
+    ViewStyle,
 } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme"
 import { BaseModal } from "../../../common/modal"
-import { Stack } from "../../layout"
-import { Row } from "../../layout"
+import { Row, Stack } from "../../layout"
 import { Text } from "../../typography"
 import { TextField } from "../../form"
 import { FolderCard } from "../../cards"

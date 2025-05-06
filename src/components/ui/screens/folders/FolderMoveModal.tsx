@@ -21,6 +21,7 @@ import type { Folder, ListItem } from "./types"
 import { ItemsList } from "./ItemsList"
 import RightChevronIcon from "../../assets/svg/chevron-right.svg"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { SelectedItem } from "./useSelectionMode"
 
 const screenHeight = Dimensions.get("window").height
 const sheetHeight = screenHeight * 0.75
@@ -30,7 +31,7 @@ interface FolderMoveModalProps {
     isVisible: boolean
     onClose: () => void
     folders: Folder[]
-    selectedFolderIds: string[]
+    selectedItemsToMove: SelectedItem[]
     onMove: (targetFolderId: string | null) => void
 }
 
@@ -38,7 +39,7 @@ export function FolderMoveModal({
     isVisible,
     onClose,
     folders,
-    selectedFolderIds,
+    selectedItemsToMove,
     onMove,
 }: FolderMoveModalProps) {
     const { colors } = useTheme()
@@ -63,8 +64,7 @@ export function FolderMoveModal({
     }
     useEffect(() => {
         if (isVisible) {
-            animateSheet(0) // Animate In
-            // Reset state
+            animateSheet(0)
             setTargetFolderId(undefined)
             setCurrentViewFolderId(null)
             setFolderPath([])
@@ -101,7 +101,6 @@ export function FolderMoveModal({
 
     // --- Navigation Logic (Used by Breadcrumbs) ---
     const navigateToFolder = (folderId: string | null) => {
-        // Now used
         if (folderId === currentViewFolderId || isLoading) return
         setIsLoading(true)
         setTargetFolderId(undefined)
@@ -119,7 +118,7 @@ export function FolderMoveModal({
                     path.unshift(current)
                     current = folders.find((f) => f.id === current?.parentId)
                 }
-                setFolderPath(path) // folderPath is now used here
+                setFolderPath(path)
             }
         }
         setTimeout(() => setIsLoading(false), 50)
@@ -127,12 +126,18 @@ export function FolderMoveModal({
 
     // --- Data Filtering and Preparation for ItemsList ---
     const folderItemsForList = useMemo((): ListItem[] => {
-        // 1. Filter folders: belonging to current view AND not one of the selected folders being moved
-        const availableFolders = folders.filter(
-            (folder) =>
-                folder.parentId === currentViewFolderId &&
-                !selectedFolderIds.includes(folder.id),
-        )
+        // 1. Filter folders:
+        const availableFolders = folders.filter((folder) => {
+            // a) Belongs to current view
+            const isInCurrentView = folder.parentId === currentViewFolderId
+            // b) Is NOT one of the folders being moved
+            const isBeingMoved = selectedItemsToMove.some(
+                (item) => item.id === folder.id && item.type === "folder",
+            )
+            // c) TODO: Prevent moving into descendants (more complex check, skip for now if not critical)
+
+            return isInCurrentView && !isBeingMoved
+        })
 
         // 2. Sort alphabetically
         availableFolders.sort((a, b) => a.title.localeCompare(b.title))
@@ -141,7 +146,7 @@ export function FolderMoveModal({
         return availableFolders.map(
             (folder): ListItem => ({ type: "folder", data: folder }),
         )
-    }, [folders, currentViewFolderId, selectedFolderIds])
+    }, [folders, currentViewFolderId, selectedItemsToMove])
 
     // --- Selection & Move ---
     const handleSelectTarget = (id: string | null) => {
@@ -303,8 +308,6 @@ export function FolderMoveModal({
                         )}
                     </Row>
                     <Spacer size={16} />
-
-                    {/* Folder List Title */}
                     <Text
                         variant="sm"
                         weight="medium"
@@ -316,6 +319,7 @@ export function FolderMoveModal({
                         Or select a subfolder below:
                     </Text>
 
+                    {/* ItemsList for Destination Folders */}
                     <View
                         style={[
                             styles.folderListContainer,
@@ -334,8 +338,8 @@ export function FolderMoveModal({
                                 selectedItemId={targetFolderId}
                                 onSelectItem={handleSelectTarget}
                                 selectionMode={false}
-                                selectedFolderIds={[]}
-                                emptyListMessage="No subfolders here"
+                                selectedItems={[]}
+                                emptyListMessage="No subfolders available as destination"
                                 testID="move-folder-dest-list"
                             />
                         )}

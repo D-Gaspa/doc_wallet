@@ -6,7 +6,7 @@ import React, {
     useRef,
     useState,
 } from "react"
-import { StyleSheet, View } from "react-native"
+import { Alert, StyleSheet, View } from "react-native"
 import { Container, Stack } from "../../layout"
 import { Alert as AlertComponent, AlertType } from "../../feedback/Alert"
 import { LoggingService } from "../../../../services/monitoring/loggingService"
@@ -15,7 +15,7 @@ import { TagProvider, useTagContext } from "../../tag_functionality/TagContext"
 import { BatchTagManager } from "../../tag_functionality/BatchTagManager"
 import { FolderHeader, FolderSortOption } from "./FolderHeader"
 import { ItemsList } from "./ItemsList"
-import { FolderSelectionControls } from "./FolderSelectionControls.tsx"
+import { ItemSelectionControls } from "./ItemSelectionControls"
 import { TagManagerSection } from "../../tag_functionality/TagManagerSection"
 import { useFolderOperations } from "./useFolderOperations"
 import { useSelectionMode } from "./useSelectionMode"
@@ -101,7 +101,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         handleShareFolder,
         handleDeleteFolder,
         handleToggleFavorite,
-        handleMoveFolders,
+        handleMoveItems
     } = useFolderOperations({
         folders,
         setFolders,
@@ -115,10 +115,10 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
 
     const {
         selectionMode,
-        selectedFolderIds,
+        selectedItems,
         toggleSelectionMode,
         handleSelectAll,
-        handleFolderSelect,
+        handleItemSelect,
     } = useSelectionMode()
 
     // --- Handlers ---
@@ -268,9 +268,28 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     }
 
     const handleMoveSelectedFolders = (targetFolderId: string | null) => {
-        if (selectedFolderIds.length === 0) return
+        // The `handleMoveFolders` hook now needs to work with `selectedItems`
+        // It should filter for folders within the hook or expect only folder IDs.
+        // For now, let's assume the hook `handleMoveFolders` is adapted
+        // to take `selectedItems` or we filter here first.
+        const folderIdsToMove = selectedItems
+            .filter((item) => item.type === "folder")
+            .map((item) => item.id)
+
+        if (folderIdsToMove.length === 0) {
+            // TODO: Handle moving documents if required in the future
+            logger.warn("No folders selected to move.")
+            setAlert({
+                visible: true,
+                message: "No folders selected to move.",
+                type: "info",
+            })
+            setMoveFolderModalVisible(false)
+            toggleSelectionMode()
+            return
+        }
         try {
-            handleMoveFolders(selectedFolderIds, targetFolderId)
+            // handleMoveFolders(folderIdsToMove, targetFolderId)
             setAlert({
                 visible: true,
                 message: "Carpeta(s) movida(s) exitosamente.",
@@ -279,7 +298,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
             setMoveFolderModalVisible(false)
             toggleSelectionMode()
         } catch (error) {
-            logger.error("Error durante la operación de mover carpetas:", error)
+            logger.error("Error during folder move operation:", error)
             setAlert({
                 visible: true,
                 message: "Ocurrió un error al mover las carpetas.",
@@ -289,66 +308,76 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     }
 
     const handleDocumentPress = async (doc: IDocument) => {
-        setLoading(true)
-        try {
-            const docStoreState = useDocStore.getState()
-            // Optional short delay can sometimes help UI responsiveness before native view opens
-            await new Promise((resolve) => setTimeout(resolve, 100))
-            const previewResult = await docStoreState.getDocumentPreview(doc.id)
+        if (selectionMode) {
+            handleItemSelect(doc.id, "document")
+        } else {
+            setLoading(true)
+            try {
+                const docStoreState = useDocStore.getState()
+                await new Promise((resolve) => setTimeout(resolve, 100))
+                const previewResult = await docStoreState.getDocumentPreview(
+                    doc.id,
+                )
 
-            if (!previewResult || !previewResult.sourceUri) {
+                if (!previewResult || !previewResult.sourceUri) {
+                    setAlert({
+                        visible: true,
+                        message:
+                            "No se encontró vista previa para este documento.",
+                        type: "error",
+                    })
+                    setLoading(false)
+                    return
+                }
+                const mimeType = documentPreview.getMimeTypeForDocumentType(
+                    previewResult.metadata?.type ?? DocumentType.PDF,
+                )
+                const fileInfo = await FileSystem.getInfoAsync(
+                    previewResult.sourceUri,
+                )
+
+                if (!fileInfo.exists || fileInfo.size === 0) {
+                    setAlert({
+                        visible: true,
+                        message:
+                            "El archivo de vista previa falta o está vacío.",
+                        type: "error",
+                    })
+                    setLoading(false)
+                    return
+                }
+
+                await documentPreview.viewDocumentByUri(
+                    previewResult.sourceUri,
+                    mimeType,
+                    async () => {
+                        await documentStorage.deletePreviewFile(
+                            previewResult.sourceUri,
+                        )
+                        logger.debug(
+                            "Archivo de vista previa limpiado después de la visualización.",
+                        )
+                    },
+                )
+            } catch (err) {
+                logger.error(
+                    "Error al abrir la vista previa del documento",
+                    err,
+                )
                 setAlert({
                     visible: true,
-                    message: "No se encontró vista previa para este documento.",
+                    message: documentPreview.getErrorMessage(err),
                     type: "error",
                 })
+            } finally {
                 setLoading(false)
-                return
             }
-            const mimeType = documentPreview.getMimeTypeForDocumentType(
-                previewResult.metadata?.type ?? DocumentType.PDF,
-            )
-            const fileInfo = await FileSystem.getInfoAsync(
-                previewResult.sourceUri,
-            )
-
-            if (!fileInfo.exists || fileInfo.size === 0) {
-                setAlert({
-                    visible: true,
-                    message: "El archivo de vista previa falta o está vacío.",
-                    type: "error",
-                })
-                setLoading(false)
-                return
-            }
-
-            await documentPreview.viewDocumentByUri(
-                previewResult.sourceUri,
-                mimeType,
-                async () => {
-                    await documentStorage.deletePreviewFile(
-                        previewResult.sourceUri,
-                    )
-                    logger.debug(
-                        "Archivo de vista previa limpiado después de la visualización.",
-                    )
-                },
-            )
-        } catch (err) {
-            logger.error("Error al abrir la vista previa del documento", err)
-            setAlert({
-                visible: true,
-                message: documentPreview.getErrorMessage(err),
-                type: "error",
-            })
-        } finally {
-            setLoading(false)
         }
     }
 
     const handleFolderPress = (folderId: string) => {
         if (selectionMode) {
-            handleFolderSelect(folderId)
+            handleItemSelect(folderId, "folder")
         } else {
             internalNavigateToFolder(folderId)
         }
@@ -403,8 +432,92 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
 
     const handleDeleteAction = (folder: Folder) => {
         if (folder) {
+            // TODO: We might want to use the Alert confirmation here as well,
+            // similar to batch delete, or let handleDeleteFolder handle it.
+            // Assuming handleDeleteFolder already confirms.
             handleDeleteFolder(folder.id)
         }
+    }
+
+    const handleBatchDelete = () => {
+        if (selectedItems.length === 0) return
+
+        Alert.alert(
+            "Confirm Delete",
+            `Are you sure you want to delete ${selectedItems.length} selected item(s)? This cannot be undone. Folders must be empty to be deleted.`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        setLoading(true)
+                        let successCount = 0
+                        let errorCount = 0
+                        let skippedNonEmptyFolders = 0
+                        const itemsToDelete = [...selectedItems]
+
+                        toggleSelectionMode()
+
+                        for (const item of itemsToDelete) {
+                            try {
+                                if (item.type === "folder") {
+                                    const folderToDelete = folders.find(
+                                        (f) => f.id === item.id,
+                                    )
+                                    const hasChildFolders = folders.some(
+                                        (f) => f.parentId === item.id,
+                                    )
+                                    const isEmpty =
+                                        (!folderToDelete?.documentIds ||
+                                            folderToDelete.documentIds
+                                                .length === 0) &&
+                                        !hasChildFolders
+
+                                    if (isEmpty) {
+                                        handleDeleteFolder(item.id)
+                                        successCount++
+                                    } else {
+                                        logger.warn(
+                                            `Skipping non-empty folder delete in batch: ${item.id}`,
+                                        )
+                                        skippedNonEmptyFolders++
+                                        errorCount++
+                                    }
+                                } else if (item.type === "document") {
+                                    await docStore.deleteDocument(item.id)
+                                    successCount++
+                                }
+                            } catch (e) {
+                                logger.error(
+                                    `Failed to delete item ${item.type} ${item.id}`,
+                                    e,
+                                )
+                                errorCount++
+                            }
+                        }
+                        setLoading(false)
+
+                        let message = `${successCount} item(s) deleted.`
+                        if (errorCount > 0) {
+                            message += ` ${errorCount} failed`
+                            if (skippedNonEmptyFolders > 0) {
+                                message += ` (${skippedNonEmptyFolders} non-empty folder(s) skipped)`
+                            }
+                            message += `.`
+                        } else if (skippedNonEmptyFolders > 0) {
+                            message += ` ${skippedNonEmptyFolders} non-empty folder(s) skipped.`
+                        }
+
+                        setAlert({
+                            visible: true,
+                            message: message,
+                            type: errorCount > 0 ? "warning" : "success",
+                        })
+                    },
+                },
+            ],
+        )
     }
 
     // --- Navigation Effects ---
@@ -478,20 +591,12 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         })
 
         const folderItems = filteredItems.filter(
-            (
-                item,
-            ): item is ListItem & {
-                type: "folder"
-                data: Folder
-            } => item.type === "folder",
+            (item): item is ListItem & { type: "folder"; data: Folder } =>
+                item.type === "folder",
         )
         const documentItems = filteredItems.filter(
-            (
-                item,
-            ): item is ListItem & {
-                type: "document"
-                data: IDocument
-            } => item.type === "document",
+            (item): item is ListItem & { type: "document"; data: IDocument } =>
+                item.type === "document",
         )
 
         folderItems.sort((a, b) => {
@@ -508,6 +613,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 )
             return 0
         })
+
         documentItems.sort((a, b) =>
             (a.data.title || "").localeCompare(b.data.title || ""),
         )
@@ -527,12 +633,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         tagContext.associations,
         tagContext.tags,
     ])
-
-    const foldersForSelection = useMemo(() => {
-        return displayItems
-            .filter((item) => item.type === "folder")
-            .map((item) => item.data as Folder)
-    }, [displayItems])
 
     const emptyListMessage = useMemo(() => {
         const isFiltering = searchQuery !== "" || selectedTagFilters.length > 0
@@ -562,29 +662,33 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         sortOption={sortOption}
                         setSortOption={setSortOption}
                     />
-                    <FolderSelectionControls
-                        selectionMode={selectionMode}
-                        selectedFolderIds={selectedFolderIds}
-                        filteredFolders={foldersForSelection}
-                        toggleSelectionMode={toggleSelectionMode}
-                        handleSelectAll={() =>
-                            handleSelectAll(foldersForSelection)
-                        }
-                        setBatchTagModalVisible={setBatchTagModalVisible}
-                        onMovePress={() => setMoveFolderModalVisible(true)}
-                    />
-                    {/* Render the unified list */}
+
+                    {selectionMode && (
+                        <ItemSelectionControls
+                            selectionMode={selectionMode}
+                            selectedItems={selectedItems}
+                            displayItems={displayItems}
+                            toggleSelectionMode={toggleSelectionMode}
+                            handleSelectAll={() =>
+                                handleSelectAll(displayItems)
+                            }
+                            setBatchTagModalVisible={setBatchTagModalVisible}
+                            onMovePress={() => setMoveFolderModalVisible(true)}
+                            onDeletePress={handleBatchDelete}
+                        />
+                    )}
+
                     <ItemsList
                         items={displayItems}
                         selectionMode={selectionMode}
-                        selectedFolderIds={selectedFolderIds}
+                        selectedItems={selectedItems}
+                        onItemSelect={handleItemSelect}
                         isSelectionList={false}
                         onFolderPress={handleFolderPress}
                         onDocumentPress={handleDocumentPress}
                         onFolderOptionsPress={handleShowActionModal}
                         onDocumentOptionsPress={showDocumentOptions}
                         onFolderToggleFavorite={handleToggleFavorite}
-                        onFolderSelect={handleFolderSelect}
                         emptyListMessage={emptyListMessage}
                         testID="folder-items-list"
                     />
@@ -644,8 +748,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 <BatchTagManager
                     isVisible={batchTagModalVisible}
                     onClose={() => setBatchTagModalVisible(false)}
-                    itemIds={selectedFolderIds}
-                    itemType="folder"
+                    items={selectedItems}
                     onTagsApplied={() => {
                         toggleSelectionMode()
                     }}
@@ -654,7 +757,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                     isVisible={moveFolderModalVisible}
                     onClose={() => setMoveFolderModalVisible(false)}
                     folders={folders}
-                    selectedFolderIds={selectedFolderIds}
+                    selectedItemsToMove={selectedItems}
                     onMove={handleMoveSelectedFolders}
                 />
                 <FolderActionModal
@@ -675,7 +778,11 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         visible={alert.visible}
                         onClose={() => setAlert({ ...alert, visible: false })}
                         autoDismiss={true}
-                        duration={3000}
+                        duration={
+                            alert.type === "error" || alert.type === "warning"
+                                ? 5000
+                                : 3000
+                        }
                     />
                 </View>
             )}
@@ -702,6 +809,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         flexGrow: 1,
+        paddingBottom: 80,
     },
     alertContainer: {
         position: "absolute",

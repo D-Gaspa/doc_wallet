@@ -1,35 +1,30 @@
-import React, { useState } from "react"
-import { View, StyleSheet, Modal, Text } from "react-native"
+import React, { useEffect, useState } from "react"
+import { Modal, StyleSheet, Text, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTagContext } from "./TagContext"
-import { Stack } from "../layout"
-import { Row } from "../layout"
+import { Row, Stack } from "../layout"
 import { Button } from "../button"
 import { Alert } from "../feedback"
 import { Checkbox } from "../form"
+import { SelectedItem } from "../screens/folders/useSelectionMode"
 
 interface BatchTagManagerProps {
     isVisible: boolean
     onClose: () => void
-    itemIds: string[]
-    itemType: "folder" | "document"
+    items: SelectedItem[]
     onTagsApplied?: () => void
 }
 
 export function BatchTagManager({
     isVisible,
     onClose,
-    itemIds,
-    itemType,
+    items,
     onTagsApplied,
 }: BatchTagManagerProps) {
     const { colors } = useTheme()
     const { tags, batchAssociateTags, batchDisassociateTags } = useTagContext()
 
-    // State for selected tags
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-
-    // Alert state
     const [alert, setAlert] = useState<{
         visible: boolean
         message: string
@@ -40,7 +35,12 @@ export function BatchTagManager({
         type: "info",
     })
 
-    // Toggle tag selection
+    useEffect(() => {
+        if (!isVisible) {
+            setSelectedTagIds([])
+        }
+    }, [isVisible, items])
+
     const handleTagToggle = (tagId: string) => {
         setSelectedTagIds((prevSelected) => {
             if (prevSelected.includes(tagId)) {
@@ -51,30 +51,33 @@ export function BatchTagManager({
         })
     }
 
-    // Apply selected tags to all items
     const handleApplyTags = () => {
         if (selectedTagIds.length === 0) {
             setAlert({
                 visible: true,
-                message: "Please select at least one tag to apply",
-                type: "info",
+                message: "Please select at least one tag",
+                type: "warning",
+            })
+            return
+        }
+        if (items.length === 0) {
+            setAlert({
+                visible: true,
+                message: "No items selected",
+                type: "warning",
             })
             return
         }
 
-        const success = batchAssociateTags(selectedTagIds, itemIds, itemType)
+        const success = batchAssociateTags(selectedTagIds, items)
 
         if (success) {
             setAlert({
                 visible: true,
-                message: `Tags applied to ${itemIds.length} ${itemType}(s)`,
+                message: `Tags applied to ${items.length} item(s)`,
                 type: "success",
             })
-
-            // Clear selection after successful application
             setSelectedTagIds([])
-
-            // Notify parent component
             if (onTagsApplied) {
                 onTagsApplied()
             }
@@ -87,30 +90,33 @@ export function BatchTagManager({
         }
     }
 
-    // Remove selected tags from all items
     const handleRemoveTags = () => {
         if (selectedTagIds.length === 0) {
             setAlert({
                 visible: true,
                 message: "Please select at least one tag to remove",
-                type: "info",
+                type: "warning",
+            })
+            return
+        }
+        if (items.length === 0) {
+            setAlert({
+                visible: true,
+                message: "No items selected",
+                type: "warning",
             })
             return
         }
 
-        const success = batchDisassociateTags(selectedTagIds, itemIds, itemType)
+        const success = batchDisassociateTags(selectedTagIds, items)
 
         if (success) {
             setAlert({
                 visible: true,
-                message: `Tags removed from ${itemIds.length} ${itemType}(s)`,
+                message: `Tags removed from ${items.length} item(s)`,
                 type: "success",
             })
-
-            // Clear selection after successful removal
             setSelectedTagIds([])
-
-            // Notify parent component
             if (onTagsApplied) {
                 onTagsApplied()
             }
@@ -123,7 +129,6 @@ export function BatchTagManager({
         }
     }
 
-    // Reset and close
     const handleClose = () => {
         setSelectedTagIds([])
         onClose()
@@ -145,7 +150,9 @@ export function BatchTagManager({
                 >
                     <Stack spacing={16}>
                         <Text style={[styles.title, { color: colors.text }]}>
-                            {`Manage Tags (${itemIds.length} ${itemType}s selected)`}
+                            {`Manage Tags (${items.length} item${
+                                items.length !== 1 ? "s" : ""
+                            } selected)`}
                         </Text>
 
                         {tags.length > 0 ? (
