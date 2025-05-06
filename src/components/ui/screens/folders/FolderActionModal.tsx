@@ -13,7 +13,7 @@ import { Folder } from "./types"
 
 import ShareIcon from "../../assets/svg/share.svg"
 import EditIcon from "../../assets/svg/edit.svg"
-// import DeleteIcon from "../../assets/svg/trash.svg"
+import DeleteIcon from "../../assets/svg/trash.svg"
 import ExitIcon from "../../assets/svg/close.svg"
 
 interface FolderActionModalProps {
@@ -58,16 +58,18 @@ export function FolderActionModal({
             label: "Share",
             action: handleShare,
             icon: <ShareIcon width={20} height={20} stroke={colors.primary} />,
+            style: { color: colors.primary },
         },
         {
             label: "Edit",
             action: handleEdit,
             icon: <EditIcon width={20} height={20} stroke={colors.primary} />,
+            style: { color: colors.primary },
         },
         {
             label: "Delete",
             action: handleDelete,
-            // icon: <DeleteIcon width={20} height={20} stroke={colors.error} />,
+            icon: <DeleteIcon width={20} height={20} stroke={colors.error} />,
             style: { color: colors.error },
         },
     ]
@@ -100,10 +102,12 @@ export function FolderActionModal({
                         >
                             <Text
                                 style={[styles.title, { color: colors.text }]}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
                             >
                                 {folder.title} Options
                             </Text>
-                            <Stack spacing={0}>
+                            <Stack spacing={0} style={styles.optionsStack}>
                                 {menuOptions.map((option, index) => (
                                     <TouchableOpacity
                                         key={option.label}
@@ -115,8 +119,6 @@ export function FolderActionModal({
                                                 borderBottomWidth:
                                                     StyleSheet.hairlineWidth,
                                             },
-                                            option.label === "Delete" &&
-                                                styles.deleteButton,
                                         ]}
                                         onPress={option.action}
                                         activeOpacity={0.7}
@@ -129,9 +131,7 @@ export function FolderActionModal({
                                         <Text
                                             style={[
                                                 styles.optionText,
-                                                option.style || {
-                                                    color: colors.primary,
-                                                },
+                                                option.style,
                                             ]}
                                         >
                                             {option.label}
@@ -170,6 +170,7 @@ export function FolderActionModal({
     )
 }
 
+// TODO: Reuse styles from DocumentActionModal
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
@@ -194,7 +195,9 @@ const styles = StyleSheet.create({
         textAlign: "center",
         marginBottom: 15,
         paddingHorizontal: 15,
-        // color applied inline using theme
+    },
+    optionsStack: {
+        marginBottom: 5,
     },
     optionButton: {
         flexDirection: "row",
@@ -211,12 +214,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "500",
     },
-    deleteButton: {
-        // No specific style needed here now, color handled inline
-        // Still needed to avoid error in the map function
-    },
     closeButton: {
         borderTopWidth: StyleSheet.hairlineWidth,
-        marginTop: 5,
     },
 })

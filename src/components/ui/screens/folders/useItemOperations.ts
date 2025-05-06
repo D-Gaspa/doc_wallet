@@ -18,7 +18,7 @@ interface TaggedLogger {
     error: (message: string, ...optionalParams: unknown[]) => void
 }
 
-interface UseFolderOperationsProps {
+interface UseItemOperationsProps {
     folders: Folder[]
     setFolders: (folders: Folder[]) => void
     currentFolderId: string | null
@@ -29,7 +29,7 @@ interface UseFolderOperationsProps {
     logger: TaggedLogger
 }
 
-export function useFolderOperations({
+export function useItemOperations({
     folders,
     setFolders,
     currentFolderId,
@@ -38,7 +38,7 @@ export function useFolderOperations({
     setFolderToEdit,
     setFolderModalVisible,
     logger,
-}: UseFolderOperationsProps) {
+}: UseItemOperationsProps) {
     const getCurrentFolders = () => {
         return folders.filter((folder) => folder.parentId === currentFolderId)
     }

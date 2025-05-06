@@ -39,6 +39,7 @@ export interface DocumentCardProps {
     onDelete?: () => void
     // TODO: Add other actions as needed, e.g., onViewDetails
 
+    selected?: boolean
     showAddTagButton?: boolean
     selectedTagIds?: string[]
     onTagPress?: (tagId: string) => void
@@ -54,6 +55,7 @@ export function DocumentCard({
     onToggleFavorite,
     onShare,
     onDelete,
+    selected = false,
     showAddTagButton = true,
     selectedTagIds = [],
     onTagPress,
@@ -61,7 +63,7 @@ export function DocumentCard({
 }: DocumentCardProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
-    const [actionModalVisible, setActionModalVisible] = useState(false) // State for modal
+    const [actionModalVisible, setActionModalVisible] = useState(false)
 
     const isExpired = (() => {
         const expirationParam = document.parameters?.find(
@@ -208,6 +210,7 @@ export function DocumentCard({
                 onPress={onPress}
                 onLongPress={onLongPress}
                 actionIcons={actionIconsNode}
+                selected={selected}
                 testID={testID}
             >
                 {childrenNode}
