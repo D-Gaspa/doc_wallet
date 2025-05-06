@@ -240,6 +240,7 @@ export function UnifiedFolderModal({
                                             ]}
                                         >
                                             <FolderCard
+                                                folderId={item.type}
                                                 title={item.label}
                                                 type={item.type}
                                                 onPress={() =>
