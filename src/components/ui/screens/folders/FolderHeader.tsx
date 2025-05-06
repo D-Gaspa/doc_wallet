@@ -64,7 +64,7 @@ export function FolderHeader({
                 >
                     <TouchableOpacity onPress={handleBackPress}>
                         <Text variant="sm" weight="medium">
-                            {"< Back to " +
+                            {"< Regresar a " +
                                 (folders.find(
                                     (f) =>
                                         f.id ===
@@ -121,7 +121,8 @@ export function FolderHeader({
 
 const styles = StyleSheet.create({
     breadcrumb: {
-        paddingVertical: 8,
+        marginTop: 24,
+        paddingVertical: 10,
     },
     titleRow: {
         marginBottom: 12,

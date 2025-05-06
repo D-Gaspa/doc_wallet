@@ -649,6 +649,8 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         }
     }, [searchQuery, selectedTagFilters.length, currentFolderId])
 
+    const createInitialData = useMemo(() => ({}), [])
+
     // JSX Rendering
     return (
         <Container testID="folder-main-view">
@@ -740,19 +742,21 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                     isVisible={folderModalVisible}
                     onClose={() => {
                         setFolderModalVisible(false)
-                        setFolderToEdit(null)
+                        setFolderToEdit(null) // Reset folderToEdit when closing
                     }}
                     onSave={handleSaveFolder}
                     mode={folderModalMode}
                     initialData={
-                        folderToEdit
+                        folderModalMode === "create"
+                            ? createInitialData
+                            : folderToEdit
                             ? {
                                   id: folderToEdit.id,
                                   name: folderToEdit.title,
                                   type: folderToEdit.type || "custom",
                                   customIconId: folderToEdit.customIconId,
                               }
-                            : {}
+                            : createInitialData
                     }
                     parentFolderId={currentFolderId}
                 />
