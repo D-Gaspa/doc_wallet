@@ -150,6 +150,7 @@ export function ItemsList({
                 const isDocFavorite = getIsDocumentFavorite
                     ? getIsDocumentFavorite(document.id)
                     : false
+
                 return (
                     <DocumentCard
                         key={`document-${document.id}`}
@@ -160,6 +161,7 @@ export function ItemsList({
                         )}
                         onPress={handlePress}
                         onLongPress={handleLongPress}
+                        selected={isSelected}
                         isFavorite={isDocFavorite}
                         onToggleFavorite={() =>
                             onDocumentToggleFavorite?.(document.id)

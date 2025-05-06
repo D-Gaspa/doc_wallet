@@ -144,7 +144,6 @@ export function ItemSelectionControls({
                     <TextButton
                         title="Cancel"
                         onPress={toggleSelectionMode}
-                        // Override text color for cancel action
                         textStyle={{ color: colors.secondaryText }}
                         testID="cancel-selection-button"
                     />
@@ -182,13 +181,22 @@ const styles = StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
     },
     row: { width: "100%", minHeight: 44 },
-    infoContainer: { flexShrink: 1, justifyContent: "center", paddingRight: 8 },
+    infoContainer: {
+        flexShrink: 1,
+        flexBasis: "30%",
+        justifyContent: "center",
+        paddingRight: 8,
+    },
     buttonsContainer: {
         flexGrow: 1,
+        flexShrink: 0,
         flexDirection: "row",
         justifyContent: "flex-end",
         alignItems: "center",
         flexWrap: "nowrap",
     },
-    selectionText: { fontSize: 14, fontWeight: "500" },
+    selectionText: {
+        fontSize: 14,
+        fontWeight: "500",
+    },
 })

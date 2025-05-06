@@ -14,7 +14,7 @@ import StarIcon from "../../assets/svg/starfilled.svg"
 import StarOutlineIcon from "../../assets/svg/favorite.svg"
 import ShareIcon from "../../assets/svg/share.svg"
 import InfoIcon from "../../assets/svg/info.svg"
-import DeleteIcon from "../../assets/svg/delete.svg"
+import TrashIcon from "../../assets/svg/trash.svg"
 import ExitIcon from "../../assets/svg/close.svg"
 
 interface DocumentActionModalProps {
@@ -94,8 +94,8 @@ export function DocumentActionModal({
         {
             label: "Delete",
             action: handleDelete,
-            icon: <DeleteIcon width={20} height={20} stroke={colors.error} />, // Use stroke or fill based on SVG
-            style: { color: colors.error }, // Destructive action color
+            icon: <TrashIcon width={20} height={20} stroke={colors.error} />,
+            style: { color: colors.error },
         },
     ]
 
@@ -132,7 +132,7 @@ export function DocumentActionModal({
                             >
                                 {document.title || "Document"} Options
                             </Text>
-                            <Stack spacing={0}>
+                            <Stack spacing={0} style={styles.optionsStack}>
                                 {menuOptions.map((option, index) => (
                                     <TouchableOpacity
                                         key={option.label}
@@ -144,11 +144,8 @@ export function DocumentActionModal({
                                                 borderBottomWidth:
                                                     StyleSheet.hairlineWidth,
                                             },
-                                            option.label === "Delete" &&
-                                                styles.deleteButton,
                                         ]}
                                         onPress={option.action}
-                                        activeOpacity={0.7}
                                     >
                                         {option.icon && (
                                             <View style={styles.iconWrapper}>
@@ -166,7 +163,6 @@ export function DocumentActionModal({
                                     </TouchableOpacity>
                                 ))}
                             </Stack>
-                            {/* Close Button */}
                             <TouchableOpacity
                                 style={[
                                     styles.optionButton,
@@ -174,7 +170,6 @@ export function DocumentActionModal({
                                     { borderTopColor: colors.border },
                                 ]}
                                 onPress={onClose}
-                                activeOpacity={0.7}
                             >
                                 <ExitIcon
                                     width={20}
@@ -224,6 +219,9 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         paddingHorizontal: 15,
     },
+    optionsStack: {
+        marginBottom: 5,
+    },
     optionButton: {
         flexDirection: "row",
         alignItems: "center",
@@ -239,11 +237,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "500",
     },
-    deleteButton: {
-        // Style for delete button text is applied directly via option.style
-    },
     closeButton: {
         borderTopWidth: StyleSheet.hairlineWidth,
-        marginTop: 5,
     },
 })

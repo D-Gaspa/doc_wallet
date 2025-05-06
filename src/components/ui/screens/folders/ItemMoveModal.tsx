@@ -25,7 +25,7 @@ const screenHeight = Dimensions.get("window").height
 const sheetHeight = screenHeight * 0.75
 const dragThreshold = sheetHeight * 0.3
 
-interface FolderMoveModalProps {
+interface ItemMoveModalProps {
     isVisible: boolean
     onClose: () => void
     folders: Folder[]
@@ -33,13 +33,13 @@ interface FolderMoveModalProps {
     onMove: (targetFolderId: string | null) => void
 }
 
-export function FolderMoveModal({
+export function ItemMoveModal({
     isVisible,
     onClose,
     folders,
     selectedItemsToMove,
     onMove,
-}: FolderMoveModalProps) {
+}: ItemMoveModalProps) {
     const { colors } = useTheme()
     const insets = useSafeAreaInsets()
     const translateY = useRef(new Animated.Value(screenHeight)).current
@@ -244,16 +244,28 @@ export function FolderMoveModal({
 
                     <Spacer size={10} />
 
-                    {/* Selection Buttons */}
+                    {/* --- Selection Buttons --- */}
                     <Row style={styles.selectionButtonRow}>
                         <Button
                             title="Select Root"
                             variant="text"
                             onPress={() => setFinalTargetFolderId(null)}
-                            style={styles.selectButton}
+                            style={
+                                finalTargetFolderId === null
+                                    ? {
+                                          ...styles.selectButton,
+                                          backgroundColor:
+                                              colors.primary + "20",
+                                      }
+                                    : styles.selectButton
+                            }
                             textStyle={
                                 finalTargetFolderId === null
-                                    ? styles.activeSelectButtonText
+                                    ? // eslint-disable-next-line react-native/no-inline-styles
+                                      {
+                                          fontWeight: "bold",
+                                          color: colors.primary,
+                                      }
                                     : { color: colors.primary }
                             }
                         />
@@ -264,10 +276,22 @@ export function FolderMoveModal({
                                 onPress={() =>
                                     setFinalTargetFolderId(currentViewFolderId)
                                 }
-                                style={styles.selectButton}
+                                style={
+                                    finalTargetFolderId === currentViewFolderId
+                                        ? {
+                                              ...styles.selectButton,
+                                              backgroundColor:
+                                                  colors.primary + "20",
+                                          }
+                                        : styles.selectButton
+                                }
                                 textStyle={
                                     finalTargetFolderId === currentViewFolderId
-                                        ? styles.activeSelectButtonText
+                                        ? // eslint-disable-next-line react-native/no-inline-styles
+                                          {
+                                              fontWeight: "bold",
+                                              color: colors.primary,
+                                          }
                                         : { color: colors.primary }
                                 }
                             />
@@ -365,15 +389,15 @@ const styles = StyleSheet.create({
         flexWrap: "wrap",
         marginBottom: 10,
     },
+    // eslint-disable-next-line react-native/no-color-literals
     selectButton: {
         width: "auto",
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         minHeight: 0,
         borderWidth: 0,
-    },
-    activeSelectButtonText: {
-        fontWeight: "bold",
+        borderRadius: 6,
+        backgroundColor: "transparent",
     },
     folderListContainer: {
         flex: 1,

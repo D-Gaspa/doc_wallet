@@ -17,7 +17,7 @@ import { FolderHeader, FolderSortOption } from "./FolderHeader"
 import { ItemsList } from "./ItemsList"
 import { ItemSelectionControls } from "./ItemSelectionControls"
 import { TagManagerSection } from "../../tag_functionality/TagManagerSection"
-import { useFolderOperations } from "./useFolderOperations"
+import { useItemOperations } from "./useItemOperations.ts"
 import { useSelectionMode } from "./useSelectionMode"
 import { RouteProp, useIsFocused, useRoute } from "@react-navigation/native"
 import { Folder, ListItem } from "./types"
@@ -28,7 +28,7 @@ import { documentPreview } from "../../../../services/document/preview.ts"
 import { documentStorage } from "../../../../services/document/storage.ts"
 import * as FileSystem from "expo-file-system"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
-import { FolderMoveModal } from "./FolderMoveModal"
+import { ItemMoveModal } from "./ItemMoveModal.tsx"
 import { TabParamList } from "../../../../App"
 import { FolderActionModal } from "./FolderActionModal.tsx"
 import { AddDocumentDetailsSheet } from "../documents/AddDocumentDetailsSheet.tsx"
@@ -103,7 +103,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         handleDeleteFolder,
         handleToggleFolderFavorite,
         handleMoveItems,
-    } = useFolderOperations({
+    } = useItemOperations({
         folders,
         setFolders,
         currentFolderId,
@@ -766,7 +766,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         toggleSelectionMode()
                     }}
                 />
-                <FolderMoveModal
+                <ItemMoveModal
                     isVisible={moveFolderModalVisible}
                     onClose={() => setMoveFolderModalVisible(false)}
                     folders={folders}
