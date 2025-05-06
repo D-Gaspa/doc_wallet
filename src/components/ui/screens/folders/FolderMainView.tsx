@@ -1,25 +1,26 @@
 import React, {
     forwardRef,
-    useImperativeHandle,
-    useState,
     useEffect,
+    useImperativeHandle,
+    useMemo,
     useRef,
+    useState,
 } from "react"
 import { StyleSheet, View } from "react-native"
-import { Container, Spacer, Stack } from "../../layout"
+import { Container, Stack } from "../../layout"
 import { Alert as AlertComponent, AlertType } from "../../feedback/Alert"
 import { LoggingService } from "../../../../services/monitoring/loggingService"
 import { FolderType, UnifiedFolderModal } from "./FolderModal"
 import { TagProvider, useTagContext } from "../../tag_functionality/TagContext"
 import { BatchTagManager } from "../../tag_functionality/BatchTagManager"
 import { FolderHeader, FolderSortOption } from "./FolderHeader"
-import { FoldersList } from "./FolderList.tsx"
+import { ItemsList } from "./ItemsList"
 import { FolderSelectionControls } from "./FolderSelectionControls.tsx"
 import { TagManagerSection } from "../../tag_functionality/TagManagerSection"
 import { useFolderOperations } from "./useFolderOperations"
 import { useSelectionMode } from "./useSelectionMode"
-import { useRoute, useIsFocused, RouteProp } from "@react-navigation/native"
-import { Folder } from "./types"
+import { RouteProp, useIsFocused, useRoute } from "@react-navigation/native"
+import { Folder, ListItem } from "./types"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { useDocStore } from "../../../../store"
 import { DocumentType, IDocument } from "../../../../types/document.ts"
@@ -27,22 +28,21 @@ import { documentPreview } from "../../../../services/document/preview.ts"
 import { documentStorage } from "../../../../services/document/storage.ts"
 import * as FileSystem from "expo-file-system"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
-import { DocumentCard } from "../../cards"
 import { showDocumentOptions } from "../documents/useDocumentOperations.ts"
 import { FolderMoveModal } from "./FolderMoveModal"
-// Se eliminó la importación no utilizada de useTheme si 'colors' era lo único que se usaba
-// import { useTheme } from "../../../../hooks/useTheme";
 import { TabParamList } from "../../../../App"
 import { FolderActionModal } from "./FolderActionModal.tsx"
 import { AddDocumentDetailsSheet } from "../documents/AddDocumentDetailsSheet.tsx"
-import { ExpandingFab } from "../../../ExpandingFab.tsx" // Ruta ajustada asumiendo que está en ui/button
-import { documentImport } from "../../../../services/document/import.ts" // <-- Importación agregada
-import { types } from "@react-native-documents/picker" // <-- Importación agregada
+import { ExpandingFab } from "../../../ExpandingFab.tsx"
+import { documentImport } from "../../../../services/document/import.ts"
+import { types } from "@react-native-documents/picker"
 
 export interface FolderMainViewRef {
     resetToRootFolder(): void
+
     navigateToFolder(folderId: string): void
 }
+
 type FolderMainViewRouteProp = RouteProp<TabParamList, "Home">
 
 const FolderMainViewContent = forwardRef((_props, ref) => {
@@ -55,11 +55,12 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
               error: console.error,
           }
 
+    // --- State and Hooks ---
     const tagContext = useTagContext()
     const folders = useFolderStore((state) => state.folders)
     const setFolders = useFolderStore((state) => state.setFolders)
-    const docStore = useDocStore() // <-- Obtener instancia de docStore
-    const documents = useDocStore((state) => state.documents) // Mantener esto si necesitas acceso reactivo
+    const docStore = useDocStore()
+    const documents = useDocStore((state) => state.documents)
 
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
@@ -80,11 +81,51 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         "create",
     )
     const [folderToEdit, setFolderToEdit] = useState<Folder | null>(null)
+    const [alert, setAlert] = useState<{
+        visible: boolean
+        message: string
+        type: AlertType
+    }>({
+        visible: false,
+        message: "",
+        type: "info",
+    })
+    const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([])
+    const [batchTagModalVisible, setBatchTagModalVisible] = useState(false)
 
+    // --- Operations Hooks ---
+    const {
+        handleCreateFolder,
+        handleUpdateFolder,
+        getCurrentFolderName,
+        handleShareFolder,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        handleDeleteFolder,
+        handleToggleFavorite,
+        handleMoveFolders,
+    } = useFolderOperations({
+        folders,
+        setFolders,
+        currentFolderId,
+        setAlert,
+        setFolderModalMode,
+        setFolderToEdit,
+        setFolderModalVisible,
+        logger,
+    })
+
+    const {
+        selectionMode,
+        selectedFolderIds,
+        toggleSelectionMode,
+        handleSelectAll,
+        handleFolderSelect,
+    } = useSelectionMode()
+
+    // --- Handlers ---
     const handleAddDocumentPress = async () => {
         setLoading(true)
         try {
-            // Ahora documentImport y types están definidos
             const importedDocs = await documentImport.importDocument({
                 allowMultiple: false,
                 fileTypes: [types.pdf, types.images, types.docx],
@@ -94,20 +135,19 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 const doc = importedDocs[0]
                 const tempDoc: IDocument = {
                     id: `temp_${Date.now()}`,
-                    title: doc.name ?? `Document_${Date.now()}`,
+                    title: doc.name ?? `Documento_${Date.now()}`,
                     sourceUri: doc.localUri ?? doc.uri,
                     metadata: {
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
-                        type: doc.type ?? DocumentType.UNKNOWN,
+                        type:
+                            (doc.type as DocumentType) ?? DocumentType.UNKNOWN,
                     },
                     tags: [],
                 }
                 logger.debug(
                     "Documento seleccionado, mostrando hoja de detalles",
-                    {
-                        tempId: tempDoc.id,
-                    },
+                    { tempId: tempDoc.id },
                 )
                 setPendingDocument(tempDoc)
                 setShowAddDocSheet(true)
@@ -123,7 +163,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 message:
                     error instanceof Error
                         ? error.message
-                        : "Error al seleccionar el documento.", // Traducido
+                        : "Error al seleccionar el documento.",
                 type: "error",
             })
         } finally {
@@ -140,12 +180,12 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         setShowAddDocSheet(false)
         setPendingDocument(null)
         try {
-            // Ahora docStore está definido
             const storedDocument = await docStore.addDocument({
                 title: doc.title,
                 sourceUri: doc.sourceUri,
                 tags: selectedTagIds,
                 metadata: doc.metadata,
+                parameters: doc.parameters ?? [],
             })
             const updatedFolders = folders.map((folder) =>
                 folder.id === selectedFolderId
@@ -170,24 +210,23 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
             logger.info(
                 "Documento agregado exitosamente mediante FolderMainView",
                 {
-                    // Traducido
                     docId: storedDocument.id,
                     folderId: selectedFolderId,
                 },
             )
             setAlert({
                 visible: true,
-                message: "¡Documento agregado exitosamente!", // Traducido
+                message: "¡Documento agregado exitosamente!",
                 type: "success",
             })
         } catch (error) {
-            logger.error("Error al guardar el documento:", error) // Traducido
+            logger.error("Error al guardar el documento:", error)
             setAlert({
                 visible: true,
                 message:
                     error instanceof Error
                         ? error.message
-                        : "Error al guardar el documento.", // Traducido
+                        : "Error al guardar el documento.",
                 type: "error",
             })
         } finally {
@@ -196,93 +235,8 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     }
 
     const internalNavigateToFolder = (folderId: string) => {
-        logger.debug("Navegando internamente a la carpeta:", folderId) // Traducido
+        logger.debug("Navegando internamente a la carpeta:", folderId)
         setCurrentFolderId(folderId)
-    }
-
-    useEffect(() => {
-        const targetFolderId = route.params?.folderId
-        if (isFocused && targetFolderId && !navigatedFromParams.current) {
-            logger.debug(
-                `FolderMainView enfocado con parámetro folderId: ${targetFolderId}`, // Traducido
-            )
-            internalNavigateToFolder(targetFolderId)
-            navigatedFromParams.current = true
-        } else if (!isFocused) {
-            navigatedFromParams.current = false
-        }
-    }, [isFocused, route.params?.folderId])
-
-    useImperativeHandle(ref, () => ({
-        resetToRootFolder: () => {
-            logger.debug("Restableciendo a la vista de carpeta raíz") // Traducido
-            setCurrentFolderId(null)
-        },
-        navigateToFolder: internalNavigateToFolder,
-    }))
-
-    const [alert, setAlert] = useState<{
-        visible: boolean
-        message: string
-        type: AlertType
-    }>({
-        visible: false,
-        message: "", // Mensaje inicial vacío, sin traducción necesaria
-        type: "info",
-    })
-
-    const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([])
-    const [batchTagModalVisible, setBatchTagModalVisible] = useState(false)
-
-    const {
-        handleCreateFolder,
-        handleUpdateFolder,
-        getCurrentFolders,
-        handleShareFolder,
-        handleDeleteFolder,
-        getCurrentFolderName,
-        handleToggleFavorite,
-        handleMoveFolders,
-    } = useFolderOperations({
-        folders,
-        setFolders,
-        currentFolderId,
-        setAlert, // El hook manejará los mensajes que establezca
-        setFolderModalMode,
-        setFolderToEdit,
-        setFolderModalVisible,
-        logger, // El logger se pasa, las traducciones están donde se llama a logger.debug/info etc.
-    })
-
-    const {
-        selectionMode,
-        selectedFolderIds,
-        toggleSelectionMode,
-        handleSelectAll,
-        handleFolderSelect,
-    } = useSelectionMode()
-
-    const sortFolders = (foldersToSort: Folder[]) => {
-        // Variable renombrada internamente, sin texto de usuario
-        return [...foldersToSort].sort((a, b) => {
-            if (sortOption === "name") {
-                return a.title.localeCompare(b.title)
-            } else if (sortOption === "date") {
-                const timeA = a.updatedAt?.getTime() ?? 0
-                const timeB = b.updatedAt?.getTime() ?? 0
-                return timeB - timeA
-            } else if (sortOption === "type") {
-                if (a.type && b.type) {
-                    return a.type.localeCompare(b.type)
-                } else if (a.type) {
-                    return -1
-                } else if (b.type) {
-                    return 1
-                }
-                return 0
-            }
-            return 0
-        })
     }
 
     const handleShowActionModal = (folder: Folder) => {
@@ -290,7 +244,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         setActionModalVisible(true)
         logger.debug("Mostrando modal de acción para la carpeta", {
             folderId: folder.id,
-        }) // Traducido
+        })
     }
 
     const handleCloseActionModal = () => {
@@ -303,15 +257,13 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         setFolderToEdit(folder)
         setFolderModalVisible(true)
         logger.debug("Activando edición desde modal de acción", {
-            // Traducido
             folderId: folder.id,
         })
     }
 
     const handleShareAction = (folder: Folder) => {
-        handleShareFolder(folder)
+        handleShareFolder(folder).then((r) => r)
         logger.debug("Activando compartir desde modal de acción", {
-            // Traducido
             folderId: folder.id,
         })
     }
@@ -322,13 +274,13 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
             handleMoveFolders(selectedFolderIds, targetFolderId)
             setAlert({
                 visible: true,
-                message: "Se ha movido exitosamente",
+                message: "Carpeta(s) movida(s) exitosamente.",
                 type: "success",
             })
             setMoveFolderModalVisible(false)
             toggleSelectionMode()
         } catch (error) {
-            logger.error("Error durante la operación:", error)
+            logger.error("Error durante la operación de mover carpetas:", error)
             setAlert({
                 visible: true,
                 message: "Ocurrió un error al mover las carpetas.",
@@ -340,17 +292,18 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     const handleDocumentPress = async (doc: IDocument) => {
         setLoading(true)
         try {
-            const docStoreState = useDocStore.getState() // Obtener estado actual directamente si es necesario
-            await new Promise((resolve) => setTimeout(resolve, 200))
+            const docStoreState = useDocStore.getState()
+            // Optional short delay can sometimes help UI responsiveness before native view opens
+            await new Promise((resolve) => setTimeout(resolve, 100))
             const previewResult = await docStoreState.getDocumentPreview(doc.id)
 
             if (!previewResult || !previewResult.sourceUri) {
                 setAlert({
                     visible: true,
-                    message: "No hay vista previa para este contenido.", // Ya estaba en español
+                    message: "No se encontró vista previa para este documento.",
                     type: "error",
                 })
-                setLoading(false) // Asegurar que la carga se detenga
+                setLoading(false)
                 return
             }
             const mimeType = documentPreview.getMimeTypeForDocumentType(
@@ -359,43 +312,39 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
             const fileInfo = await FileSystem.getInfoAsync(
                 previewResult.sourceUri,
             )
+
             if (!fileInfo.exists || fileInfo.size === 0) {
                 setAlert({
                     visible: true,
-                    message: "El archivo de vista previa falta o está vacío.", // Traducido
+                    message: "El archivo de vista previa falta o está vacío.",
                     type: "error",
                 })
-                setLoading(false) // Asegurar que la carga se detenga
+                setLoading(false)
                 return
             }
+
             await documentPreview.viewDocumentByUri(
                 previewResult.sourceUri,
                 mimeType,
                 async () => {
-                    const storage = await documentStorage
-                    await storage.deletePreviewFile(previewResult.sourceUri)
+                    await documentStorage.deletePreviewFile(
+                        previewResult.sourceUri,
+                    )
                     logger.debug(
-                        "Archivo de vista previa limpiado después de la visualización",
-                    ) // Traducido
+                        "Archivo de vista previa limpiado después de la visualización.",
+                    )
                 },
             )
         } catch (err) {
-            logger.debug("Error al abrir el documento", err) // Traducido
+            logger.error("Error al abrir la vista previa del documento", err)
             setAlert({
                 visible: true,
-                message: documentPreview.getErrorMessage(err), // Asume que esta función podría devolver texto traducido o se maneja externamente
+                message: documentPreview.getErrorMessage(err),
                 type: "error",
             })
         } finally {
             setLoading(false)
         }
-    }
-
-    const getDocumentsForCurrentFolder = (): IDocument[] => {
-        const current = folders.find((f) => f.id === currentFolderId)
-        if (!current || !current.documentIds) return []
-        // Usar los documentos reactivos del store directamente
-        return documents.filter((doc) => current.documentIds!.includes(doc.id))
     }
 
     const handleFolderPress = (folderId: string) => {
@@ -415,7 +364,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         const currentFolder = folders.find((f) => f.id === currentFolderId)
         if (currentFolder) {
             logger.debug("Navegando a la carpeta padre", {
-                // Traducido
                 from: currentFolderId,
                 to: currentFolder.parentId,
             })
@@ -431,7 +379,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
 
     const handleSaveFolder = (
         folderName: string,
-        folderType: FolderType, // No traducir 'FolderType'
+        folderType: FolderType,
         customIconId?: string,
         folderId?: string,
     ) => {
@@ -454,64 +402,149 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         }
     }
 
-    const handleAddTagToFolder = (tagId: string, folderId: string) => {
-        tagContext.associateTag(tagId, folderId, "folder") // 'folder' probablemente es un identificador interno, no traducir
-        setAlert({
-            visible: true,
-            message: "Etiqueta agregada a la carpeta", // Traducido
-            type: "success",
-        })
-        logger.debug("Etiqueta agregada a la carpeta", { tagId, folderId }) // Traducido
-    }
-
-    const filteredFolders = (() => {
-        if (!searchQuery && selectedTagFilters.length === 0) {
-            return getCurrentFolders()
+    // --- Navigation Effects ---
+    useEffect(() => {
+        const targetFolderId = route.params?.folderId
+        if (isFocused && targetFolderId && !navigatedFromParams.current) {
+            logger.debug(
+                `FolderMainView enfocado con parámetro folderId: ${targetFolderId}`,
+            )
+            internalNavigateToFolder(targetFolderId)
+            navigatedFromParams.current = true
+        } else if (!isFocused) {
+            navigatedFromParams.current = false
         }
-        return folders.filter((folder) => {
+    }, [isFocused, route.params?.folderId])
+
+    useImperativeHandle(ref, () => ({
+        resetToRootFolder: () => {
+            logger.debug("Restableciendo a la vista de carpeta raíz")
+            setCurrentFolderId(null)
+            setSearchQuery("")
+            setSelectedTagFilters([])
+            if (selectionMode) toggleSelectionMode()
+        },
+        navigateToFolder: internalNavigateToFolder,
+    }))
+
+    // --- Memoized Calculations ---
+    const displayItems = useMemo(() => {
+        logger.debug("Recalculando elementos a mostrar", {
+            currentFolderId,
+            searchQuery,
+            selectedTagFilters: selectedTagFilters.length,
+            sortOption,
+        })
+        const currentLevelFolders = folders.filter(
+            (f) => f.parentId === currentFolderId,
+        )
+        const currentFolderData = folders.find((f) => f.id === currentFolderId)
+        const currentLevelDocumentIds = currentFolderData?.documentIds || []
+        const currentLevelDocuments = documents.filter((doc) =>
+            currentLevelDocumentIds.includes(doc.id),
+        )
+
+        const allPotentialItems: ListItem[] = [
+            ...currentLevelFolders.map(
+                (folder): ListItem => ({ type: "folder", data: folder }),
+            ),
+            ...currentLevelDocuments.map(
+                (doc): ListItem => ({ type: "document", data: doc }),
+            ),
+        ]
+
+        const filteredItems = allPotentialItems.filter((item) => {
+            const title = item.data.title || ""
             const matchesSearch =
                 !searchQuery ||
-                folder.title.toLowerCase().includes(searchQuery.toLowerCase())
+                title.toLowerCase().includes(searchQuery.toLowerCase())
             let matchesTags = true
             if (selectedTagFilters.length > 0) {
-                const folderTags = tagContext.getTagsForItem(
-                    folder.id,
-                    "folder", // Probablemente identificador interno
+                const itemTags = tagContext.getTagsForItem(
+                    item.data.id,
+                    item.type,
                 )
-                const folderTagIds = folderTags.map((tag) => tag.id)
+                const itemTagIds = itemTags.map((tag) => tag.id)
                 matchesTags = selectedTagFilters.every((tagId) =>
-                    folderTagIds.includes(tagId),
+                    itemTagIds.includes(tagId),
                 )
             }
-            const inCurrentDirectory = folder.parentId === currentFolderId
-            return searchQuery
-                ? matchesSearch && matchesTags
-                : inCurrentDirectory && matchesTags
+            return matchesSearch && matchesTags
         })
-    })()
 
-    const sortedFolders = sortFolders(filteredFolders)
-
-    const getFilteredDocuments = () => {
-        if (!searchQuery) {
-            return getDocumentsForCurrentFolder()
-        }
-        // Usar los documentos reactivos del store directamente
-        return documents.filter(
-            (doc) =>
-                doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) ??
-                false,
+        const folderItems = filteredItems.filter(
+            (
+                item,
+            ): item is ListItem & {
+                type: "folder"
+                data: Folder
+            } => item.type === "folder",
         )
-    }
+        const documentItems = filteredItems.filter(
+            (
+                item,
+            ): item is ListItem & {
+                type: "document"
+                data: IDocument
+            } => item.type === "document",
+        )
 
-    const documentsToShow = searchQuery
-        ? getFilteredDocuments()
-        : getDocumentsForCurrentFolder()
+        folderItems.sort((a, b) => {
+            if (sortOption === "name")
+                return (a.data.title || "").localeCompare(b.data.title || "")
+            if (sortOption === "date")
+                return (
+                    (b.data.updatedAt?.getTime() ?? 0) -
+                    (a.data.updatedAt?.getTime() ?? 0)
+                )
+            if (sortOption === "type")
+                return (a.data.type || "custom").localeCompare(
+                    b.data.type || "custom",
+                )
+            return 0
+        })
+        documentItems.sort((a, b) =>
+            (a.data.title || "").localeCompare(b.data.title || ""),
+        )
 
+        const finalSortedList = [...folderItems, ...documentItems]
+        logger.debug(
+            `Calculados ${finalSortedList.length} elementos para mostrar.`,
+        )
+        return finalSortedList
+    }, [
+        folders,
+        documents,
+        currentFolderId,
+        searchQuery,
+        selectedTagFilters,
+        sortOption,
+        tagContext.associations,
+        tagContext.tags,
+    ])
+
+    const foldersForSelection = useMemo(() => {
+        return displayItems
+            .filter((item) => item.type === "folder")
+            .map((item) => item.data as Folder)
+    }, [displayItems])
+
+    const emptyListMessage = useMemo(() => {
+        const isFiltering = searchQuery !== "" || selectedTagFilters.length > 0
+        if (isFiltering) {
+            return "No hay elementos que coincidan con tus criterios."
+        } else if (currentFolderId) {
+            return "Esta carpeta está vacía."
+        } else {
+            return "No hay carpetas o documentos en el nivel raíz."
+        }
+    }, [searchQuery, selectedTagFilters.length, currentFolderId])
+
+    // --- JSX Rendering ---
     return (
         <Container testID="folder-main-view">
             <View style={styles.contentContainer}>
-                <Stack spacing={16} style={styles.scrollContent}>
+                <Stack spacing={0} style={styles.scrollContent}>
                     <FolderHeader
                         currentFolderId={currentFolderId}
                         getCurrentFolderName={getCurrentFolderName}
@@ -524,73 +557,43 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         sortOption={sortOption}
                         setSortOption={setSortOption}
                     />
-                    {documentsToShow.length > 0 && (
-                        <>
-                            <Spacer size={16} />
-                            {documentsToShow.map((doc) => {
-                                const parent = folders.find((f) =>
-                                    f.documentIds?.includes(doc.id),
-                                )
-                                return (
-                                    <DocumentCard
-                                        key={doc.id}
-                                        document={doc}
-                                        tags={tagContext.getTagsForItem(
-                                            doc.id,
-                                            "document", // Probablemente identificador interno
-                                        )}
-                                        onPress={() => {
-                                            if (searchQuery && parent) {
-                                                setSearchQuery("")
-                                                setCurrentFolderId(parent.id)
-                                            } else {
-                                                handleDocumentPress(doc)
-                                            }
-                                        }}
-                                        onLongPress={() =>
-                                            showDocumentOptions(doc)
-                                        }
-                                        testID={`document-${doc.id}`}
-                                        showAddTagButton={true}
-                                        maxTags={3}
-                                    />
-                                )
-                            })}
-                        </>
-                    )}
                     <FolderSelectionControls
                         selectionMode={selectionMode}
                         selectedFolderIds={selectedFolderIds}
-                        filteredFolders={filteredFolders}
+                        filteredFolders={foldersForSelection}
                         toggleSelectionMode={toggleSelectionMode}
-                        handleSelectAll={() => handleSelectAll(filteredFolders)} // Pasar filteredFolders aquí
+                        handleSelectAll={() =>
+                            handleSelectAll(foldersForSelection)
+                        }
                         setBatchTagModalVisible={setBatchTagModalVisible}
                         onMovePress={() => setMoveFolderModalVisible(true)}
                     />
-                    <Spacer size={8} />
-                    <FoldersList
-                        folders={sortedFolders}
-                        selectedFolderIds={selectedFolderIds}
-                        selectedTagFilters={selectedTagFilters}
-                        handleToggleFavorite={handleToggleFavorite}
-                        handleFolderPress={handleFolderPress}
-                        handleDeleteFolder={handleDeleteFolder}
-                        handleFolderSelect={handleFolderSelect}
-                        showFolderOptions={handleShowActionModal}
+                    {/* Render the unified list */}
+                    <ItemsList
+                        items={displayItems}
                         selectionMode={selectionMode}
-                        handleAddTagToFolder={handleAddTagToFolder}
-                        isFiltering={
-                            searchQuery !== "" || selectedTagFilters.length > 0
-                        }
-                        hasDocuments={documentsToShow.length > 0}
+                        selectedFolderIds={selectedFolderIds}
+                        isSelectionList={false}
+                        onFolderPress={handleFolderPress}
+                        onDocumentPress={handleDocumentPress}
+                        onFolderOptionsPress={handleShowActionModal}
+                        onDocumentOptionsPress={showDocumentOptions}
+                        onFolderToggleFavorite={handleToggleFavorite}
+                        onFolderSelect={handleFolderSelect}
+                        emptyListMessage={emptyListMessage}
+                        testID="folder-items-list"
                     />
                 </Stack>
+
+                {/* FAB */}
                 {!selectionMode && (
                     <ExpandingFab
                         onAddFolder={handleCreateFolderPress}
                         onAddDocument={handleAddDocumentPress}
                     />
                 )}
+
+                {/* TAG MANAGER */}
                 {currentFolderId && !selectionMode && (
                     <TagManagerSection
                         folderId={currentFolderId}
@@ -599,6 +602,8 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         selectedTagFilters={selectedTagFilters}
                     />
                 )}
+
+                {/* MODALS */}
                 <UnifiedFolderModal
                     isVisible={folderModalVisible}
                     onClose={() => {
@@ -606,13 +611,13 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         setFolderToEdit(null)
                     }}
                     onSave={handleSaveFolder}
-                    mode={folderModalMode} // 'create' | 'edit' son identificadores
+                    mode={folderModalMode}
                     initialData={
                         folderToEdit
                             ? {
                                   id: folderToEdit.id,
                                   name: folderToEdit.title,
-                                  type: folderToEdit.type || "custom", // 'custom' probablemente identificador interno
+                                  type: folderToEdit.type || "custom",
                                   customIconId: folderToEdit.customIconId,
                               }
                             : {}
@@ -626,18 +631,18 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         setShowAddDocSheet(false)
                         setPendingDocument(null)
                         logger.debug(
-                            "Hoja de detalles 'Agregar Documento' cerrada.",
-                        ) // Traducido
+                            "Hoja 'Agregar Detalles de Documento' cerrada.",
+                        )
                     }}
                     onSave={handleSaveDocument}
                     folders={folders}
-                    setFolders={setFolders}
+                    setFolders={setFolders} // Check if needed or if AddDocumentDetailsSheet should use store directly
                 />
                 <BatchTagManager
                     isVisible={batchTagModalVisible}
                     onClose={() => setBatchTagModalVisible(false)}
                     itemIds={selectedFolderIds}
-                    itemType="folder" // Probablemente identificador interno
+                    itemType="folder"
                     onTagsApplied={() => {
                         toggleSelectionMode()
                     }}
@@ -662,7 +667,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 <View style={styles.alertContainer}>
                     <AlertComponent
                         type={alert.type}
-                        message={alert.message} // El mensaje ya se estableció traducido
+                        message={alert.message}
                         visible={alert.visible}
                         onClose={() => setAlert({ ...alert, visible: false })}
                         autoDismiss={true}
@@ -674,7 +679,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
     )
 })
 
-FolderMainViewContent.displayName = "FolderMainViewContent" // No traducir displayName
+FolderMainViewContent.displayName = "FolderMainViewContent"
 
 export const FolderMainView = forwardRef<FolderMainViewRef, unknown>(
     (_props, ref) => (
@@ -684,7 +689,7 @@ export const FolderMainView = forwardRef<FolderMainViewRef, unknown>(
     ),
 )
 
-FolderMainView.displayName = "FolderMainView" // No traducir displayName
+FolderMainView.displayName = "FolderMainView"
 
 const styles = StyleSheet.create({
     contentContainer: {
@@ -692,24 +697,13 @@ const styles = StyleSheet.create({
         position: "relative",
     },
     scrollContent: {
-        // Cambiado de flex: 1 para permitir que el contenido se desplace naturalmente si excede la altura de la pantalla
         flexGrow: 1,
-        paddingBottom: 100, // Agregar relleno en la parte inferior para asegurar que el FAB no se superponga a los elementos finales
-    },
-    buttonContainer: {
-        // Comentarios de estilos dejados en inglés
-        position: "absolute",
-        bottom: 60,
-        left: 20,
-        right: 20,
-        zIndex: 1,
     },
     alertContainer: {
         position: "absolute",
-        bottom: 90, // Adjust position based on FAB and TabBar
+        bottom: 90,
         left: 20,
         right: 20,
-        zIndex: 100, // Ensure alert is above FAB
+        zIndex: 100,
     },
-    // Remove the old fab style if it exists
 })
