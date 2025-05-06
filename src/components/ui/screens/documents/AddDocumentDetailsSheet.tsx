@@ -9,8 +9,10 @@ import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { Folder } from "../folders/types.ts"
 import { FolderCard } from "../../cards"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
-import { TouchableOpacity, TextInput, Alert } from "react-native"
+import { TouchableOpacity, Alert } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme.ts"
+import DateTimePicker from "@react-native-community/datetimepicker"
+import { Platform } from "react-native"
 
 interface Props {
     visible: boolean
@@ -42,6 +44,7 @@ export const AddDocumentDetailsSheet = ({
     const [hasExpiration, setHasExpiration] = useState(false)
     const [expirationDate, setExpirationDate] = useState<string>("")
     const [notificationTimes, setNotificationTimes] = useState<number[]>([]) // days before
+    const [showDatePicker, setShowDatePicker] = useState(false)
 
     const notificationChoices = [
         { label: "1 day before", value: 1 },
@@ -213,23 +216,59 @@ export const AddDocumentDetailsSheet = ({
                                     >
                                         Expiration Date (YYYY-MM-DD):
                                     </Text>
-                                    <TextInput
+                                    <TouchableOpacity
+                                        onPress={() => setShowDatePicker(true)}
                                         style={[
                                             styles.expirationDateInput,
                                             {
                                                 borderColor: colors.border,
-                                                color: colors.text,
                                                 backgroundColor: colors.card,
                                             },
                                         ]}
-                                        placeholder="YYYY-MM-DD"
-                                        placeholderTextColor={
-                                            colors.text + "99"
-                                        }
-                                        value={expirationDate}
-                                        onChangeText={setExpirationDate}
-                                        keyboardType="numeric"
-                                    />
+                                    >
+                                        <Text
+                                            style={{
+                                                color: expirationDate
+                                                    ? colors.text
+                                                    : colors.text + "99",
+                                            }}
+                                        >
+                                            {expirationDate || "YYYY-MM-DD"}
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    {showDatePicker && (
+                                        <DateTimePicker
+                                            value={
+                                                expirationDate
+                                                    ? new Date(expirationDate)
+                                                    : new Date()
+                                            }
+                                            mode="date"
+                                            display={
+                                                Platform.OS === "ios"
+                                                    ? "inline"
+                                                    : "default"
+                                            }
+                                            onChange={(event, selectedDate) => {
+                                                setShowDatePicker(false)
+                                                if (selectedDate) {
+                                                    const year =
+                                                        selectedDate.getFullYear()
+                                                    const month = String(
+                                                        selectedDate.getMonth() +
+                                                            1,
+                                                    ).padStart(2, "0")
+                                                    const day = String(
+                                                        selectedDate.getDate(),
+                                                    ).padStart(2, "0")
+                                                    setExpirationDate(
+                                                        `${year}-${month}-${day}`,
+                                                    )
+                                                }
+                                            }}
+                                        />
+                                    )}
 
                                     {}
                                     <Text
