@@ -1,20 +1,6 @@
 import { FolderType } from "./FolderModal"
+import { IDocument } from "../../../../types/document"
 
-// Define document data structure
-export interface Document {
-    id: string
-    title: string
-    folderId: string // The parent folder ID that contains this document
-    type: string // Document type (PDF, image, etc.)
-    fileUrl?: string // Path to the actual file
-    size?: number // File size
-    isShared?: boolean
-    sharedWith?: string[]
-    createdAt: Date
-    updatedAt: Date
-}
-
-// Define folder data structure with document support
 export interface Folder {
     id: string
     title: string
@@ -26,6 +12,13 @@ export interface Folder {
     createdAt: Date
     updatedAt: Date
     favorite: boolean
-    childFolderIds?: string[] // Array of child folder IDs
-    documentIds?: string[] // Array of document IDs contained in this folder
+    childFolderIds?: string[]
+    documentIds?: string[]
+}
+
+export type ListItemData = Folder | IDocument
+
+export interface ListItem {
+    type: "folder" | "document"
+    data: ListItemData
 }
