@@ -20,6 +20,7 @@ interface DocumentActionModalProps {
     onViewDetails: (document: IDocument) => void
     onDelete: (document: IDocument) => void
     isFavorite: boolean
+    onReplace?: (document: IDocument) => void
 }
 
 export function DocumentActionModal({
@@ -31,6 +32,7 @@ export function DocumentActionModal({
     onViewDetails,
     onDelete,
     isFavorite,
+    onReplace,
 }: DocumentActionModalProps) {
     const { colors } = useTheme()
 
@@ -40,6 +42,22 @@ export function DocumentActionModal({
     const handleShare = () => onShare(document)
     const handleViewDetails = () => onViewDetails(document)
     const handleDelete = () => onDelete(document)
+
+    const isExpired = (() => {
+        const expirationParam = document.parameters?.find(
+            (p) => p.key === "expiration_date",
+        )
+        if (!expirationParam?.value) return false
+        try {
+            const expirationDate = new Date(expirationParam.value)
+            return (
+                expirationDate.setHours(0, 0, 0, 0) <
+                new Date().setHours(0, 0, 0, 0)
+            )
+        } catch {
+            return false
+        }
+    })()
 
     const documentMenuOptions: ActionOption[] = [
         {
@@ -71,6 +89,23 @@ export function DocumentActionModal({
             style: { color: colors.primary },
             testID: "doc-action-details",
         },
+        ...(isExpired && onReplace
+            ? [
+                  {
+                      label: "Replace",
+                      action: () => onReplace(document),
+                      icon: (
+                          <ShareIcon
+                              width={20}
+                              height={20}
+                              stroke={colors.primary}
+                          />
+                      ), // You can swap this icon
+                      style: { color: colors.primary },
+                      testID: "doc-action-replace",
+                  },
+              ]
+            : []),
         {
             label: "Delete",
             action: handleDelete,

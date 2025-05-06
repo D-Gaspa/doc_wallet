@@ -30,6 +30,7 @@ interface ItemsListProps {
     onDocumentLongPress?: (documentId: string) => void
 
     testID?: string
+    onDocumentReplace?: (doc: IDocument) => void
 }
 
 export function ItemsList({
@@ -53,6 +54,7 @@ export function ItemsList({
     onFolderLongPress,
     onDocumentLongPress,
     testID,
+    onDocumentReplace,
 }: ItemsListProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
@@ -170,6 +172,7 @@ export function ItemsList({
                         onDelete={() => onDocumentDelete?.(document)}
                         showAddTagButton={true}
                         testID={`document-${document.id}`}
+                        onReplace={() => onDocumentReplace?.(document)}
                     />
                 )
             }

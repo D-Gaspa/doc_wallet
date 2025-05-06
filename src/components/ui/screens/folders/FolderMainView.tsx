@@ -37,6 +37,10 @@ import { documentImport } from "../../../../services/document/import.ts"
 import { types } from "@react-native-documents/picker"
 import { useDocumentOperations } from "../documents/useDocumentOperations"
 import { useFavoriteDocumentsStore } from "../../../../store/useFavoriteDocumentsStore"
+import { promptReplaceSource } from "../../../../utils/promptReplaceSource.ts"
+import DocumentScanner, {
+    ResponseType,
+} from "react-native-document-scanner-plugin"
 
 export interface FolderMainViewRef {
     resetToRootFolder(): void
@@ -443,6 +447,96 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         }
     }
 
+    const handleReplaceDocument = async (expiredDoc: IDocument) => {
+        promptReplaceSource(async (option) => {
+            if (option === "cancel") return
+
+            let importedFile: {
+                uri: string
+                name?: string
+                type?: string
+            } | null = null
+
+            try {
+                if (option === "upload") {
+                    const results = await documentImport.importDocument({
+                        allowMultiple: false,
+                        fileTypes: [types.pdf, types.images, types.docx],
+                        allowVirtualFiles: true,
+                    })
+
+                    if (!results.length) return
+                    const imported = results[0]
+                    importedFile = {
+                        uri: imported.localUri ?? imported.uri,
+                        name: imported.name ?? undefined, // <- converts null to undefined
+                        type: imported.type ?? undefined,
+                    }
+                }
+
+                if (option === "scan") {
+                    const scannerResult = await DocumentScanner.scanDocument({
+                        croppedImageQuality: 100,
+                        maxNumDocuments: 1,
+                        responseType: ResponseType.ImageFilePath,
+                    })
+
+                    if (
+                        scannerResult &&
+                        scannerResult.status === "success" &&
+                        Array.isArray(scannerResult.scannedImages) &&
+                        scannerResult.scannedImages.length > 0
+                    ) {
+                        importedFile = {
+                            uri: scannerResult.scannedImages[0],
+                            name: `Scan_${Date.now()}.jpg`,
+                            type: "image/jpeg",
+                        }
+                    } else {
+                        return
+                    }
+                }
+
+                if (!importedFile) return
+
+                // ✅ Pre-fill document with metadata (EXCLUDING expiration params)
+                const preservedParams = (expiredDoc.parameters || []).filter(
+                    (p) =>
+                        p.key !== "expiration_date" &&
+                        p.key !== "expiration_notifications",
+                )
+
+                const replacedDoc: IDocument = {
+                    id: `temp_${Date.now()}`,
+                    title:
+                        expiredDoc.title ??
+                        importedFile.name ??
+                        `Document_${Date.now()}`,
+                    sourceUri: importedFile.uri,
+                    metadata: {
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        type:
+                            (importedFile.type as DocumentType) ??
+                            DocumentType.UNKNOWN,
+                    },
+                    tags: expiredDoc.tags ?? [],
+                    parameters: preservedParams,
+                }
+
+                setPendingDocument(replacedDoc)
+                setShowAddDocSheet(true)
+            } catch (err) {
+                logger.error("Error replacing document:", err)
+                setAlert({
+                    visible: true,
+                    type: "error",
+                    message: "Failed to replace the document.",
+                })
+            }
+        })
+    }
+
     const handleBatchDelete = () => {
         if (selectedItems.length === 0) return
 
@@ -716,6 +810,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         onFolderToggleFavorite={handleToggleFolderFavorite}
                         emptyListMessage={emptyListMessage}
                         testID="folder-items-list"
+                        onDocumentReplace={handleReplaceDocument}
                     />
                 </Stack>
 

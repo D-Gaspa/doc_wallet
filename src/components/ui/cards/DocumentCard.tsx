@@ -45,6 +45,7 @@ export interface DocumentCardProps {
     onTagPress?: (tagId: string) => void
 
     testID?: string
+    onReplace?: () => void
 }
 
 export function DocumentCard({
@@ -60,6 +61,7 @@ export function DocumentCard({
     selectedTagIds = [],
     onTagPress,
     testID,
+    onReplace,
 }: DocumentCardProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
@@ -237,6 +239,10 @@ export function DocumentCard({
                     }}
                     onViewDetails={() => {
                         console.log("view details pressed")
+                    }}
+                    onReplace={() => {
+                        setActionModalVisible(false)
+                        if (onReplace) onReplace()
                     }}
                 />
             )}
