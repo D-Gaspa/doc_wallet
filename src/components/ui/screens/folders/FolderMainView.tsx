@@ -55,7 +55,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
               error: console.error,
           }
 
-    // --- State and Hooks ---
+    // State and Hooks
     const tagContext = useTagContext()
     const folders = useFolderStore((state) => state.folders)
     const setFolders = useFolderStore((state) => state.setFolders)
@@ -101,7 +101,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         handleShareFolder,
         handleDeleteFolder,
         handleToggleFavorite,
-        handleMoveItems
+        handleMoveItems,
     } = useFolderOperations({
         folders,
         setFolders,
@@ -121,7 +121,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         handleItemSelect,
     } = useSelectionMode()
 
-    // --- Handlers ---
+    // Handlers
     const handleAddDocumentPress = async () => {
         setLoading(true)
         try {
@@ -267,44 +267,15 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         })
     }
 
-    const handleMoveSelectedFolders = (targetFolderId: string | null) => {
-        // The `handleMoveFolders` hook now needs to work with `selectedItems`
-        // It should filter for folders within the hook or expect only folder IDs.
-        // For now, let's assume the hook `handleMoveFolders` is adapted
-        // to take `selectedItems` or we filter here first.
-        const folderIdsToMove = selectedItems
-            .filter((item) => item.type === "folder")
-            .map((item) => item.id)
-
-        if (folderIdsToMove.length === 0) {
-            // TODO: Handle moving documents if required in the future
-            logger.warn("No folders selected to move.")
-            setAlert({
-                visible: true,
-                message: "No folders selected to move.",
-                type: "info",
-            })
+    const handleConfirmMoveInModal = (targetFolderId: string | null) => {
+        if (selectedItems.length > 0) {
+            handleMoveItems(selectedItems, targetFolderId)
+        } else {
+            logger.warn("Attempted to move with no items selected.")
             setMoveFolderModalVisible(false)
-            toggleSelectionMode()
-            return
         }
-        try {
-            // handleMoveFolders(folderIdsToMove, targetFolderId)
-            setAlert({
-                visible: true,
-                message: "Carpeta(s) movida(s) exitosamente.",
-                type: "success",
-            })
-            setMoveFolderModalVisible(false)
-            toggleSelectionMode()
-        } catch (error) {
-            logger.error("Error during folder move operation:", error)
-            setAlert({
-                visible: true,
-                message: "Ocurrió un error al mover las carpetas.",
-                type: "error",
-            })
-        }
+        toggleSelectionMode()
+        setMoveFolderModalVisible(false)
     }
 
     const handleDocumentPress = async (doc: IDocument) => {
@@ -381,6 +352,20 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         } else {
             internalNavigateToFolder(folderId)
         }
+    }
+
+    const handleFolderLongPress = (folderId: string) => {
+        if (!selectionMode) {
+            toggleSelectionMode()
+        }
+        handleItemSelect(folderId, "folder")
+    }
+
+    const handleDocumentLongPress = (documentId: string) => {
+        if (!selectionMode) {
+            toggleSelectionMode()
+        }
+        handleItemSelect(documentId, "document")
     }
 
     const handleBackPress = () => {
@@ -520,7 +505,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         )
     }
 
-    // --- Navigation Effects ---
+    // Navigation Effects
     useEffect(() => {
         const targetFolderId = route.params?.folderId
         if (isFocused && targetFolderId && !navigatedFromParams.current) {
@@ -545,7 +530,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         navigateToFolder: internalNavigateToFolder,
     }))
 
-    // --- Memoized Calculations ---
+    // Memoized Calculations
     const displayItems = useMemo(() => {
         logger.debug("Recalculando elementos a mostrar", {
             currentFolderId,
@@ -645,7 +630,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         }
     }, [searchQuery, selectedTagFilters.length, currentFolderId])
 
-    // --- JSX Rendering ---
+    // JSX Rendering
     return (
         <Container testID="folder-main-view">
             <View style={styles.contentContainer}>
@@ -665,7 +650,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
 
                     {selectionMode && (
                         <ItemSelectionControls
-                            selectionMode={selectionMode}
                             selectedItems={selectedItems}
                             displayItems={displayItems}
                             toggleSelectionMode={toggleSelectionMode}
@@ -673,7 +657,17 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                                 handleSelectAll(displayItems)
                             }
                             setBatchTagModalVisible={setBatchTagModalVisible}
-                            onMovePress={() => setMoveFolderModalVisible(true)}
+                            onMovePress={() => {
+                                if (selectedItems.length > 0) {
+                                    setMoveFolderModalVisible(true)
+                                } else {
+                                    setAlert({
+                                        visible: true,
+                                        message: "Select items to move.",
+                                        type: "info",
+                                    })
+                                }
+                            }}
                             onDeletePress={handleBatchDelete}
                         />
                     )}
@@ -686,6 +680,8 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         isSelectionList={false}
                         onFolderPress={handleFolderPress}
                         onDocumentPress={handleDocumentPress}
+                        onFolderLongPress={handleFolderLongPress}
+                        onDocumentLongPress={handleDocumentLongPress}
                         onFolderOptionsPress={handleShowActionModal}
                         onDocumentOptionsPress={showDocumentOptions}
                         onFolderToggleFavorite={handleToggleFavorite}
@@ -758,7 +754,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                     onClose={() => setMoveFolderModalVisible(false)}
                     folders={folders}
                     selectedItemsToMove={selectedItems}
-                    onMove={handleMoveSelectedFolders}
+                    onMove={handleConfirmMoveInModal}
                 />
                 <FolderActionModal
                     isVisible={actionModalVisible}

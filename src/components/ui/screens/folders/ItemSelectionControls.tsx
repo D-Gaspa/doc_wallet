@@ -13,7 +13,6 @@ import { SelectedItem } from "./useSelectionMode"
 import { useTheme } from "../../../../hooks/useTheme"
 
 interface ItemSelectionControlsProps {
-    selectionMode: boolean
     selectedItems: SelectedItem[]
     displayItems: ListItem[]
     toggleSelectionMode: () => void
@@ -25,7 +24,6 @@ interface ItemSelectionControlsProps {
 }
 
 export function ItemSelectionControls({
-    selectionMode,
     selectedItems,
     displayItems,
     toggleSelectionMode,
@@ -83,74 +81,75 @@ export function ItemSelectionControls({
 
     return (
         <View
-            style={styles.container}
+            style={[
+                styles.container,
+                {
+                    backgroundColor: colors.card,
+                    borderTopColor: colors.border,
+                    borderBottomColor: colors.border,
+                },
+            ]}
             testID={testID ?? "item-selection-controls"}
         >
-            {selectionMode ? (
-                <Row justify="space-between" align="center" style={styles.row}>
-                    {/* Left side: Selection Count */}
-                    <View style={styles.infoContainer}>
-                        <Text
-                            style={[
-                                styles.selectionText,
-                                { color: colors.text },
-                            ]}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                        >
-                            {`${numSelected} item${
-                                numSelected !== 1 ? "s" : ""
-                            } selected`}
-                        </Text>
-                    </View>
+            <Row justify="space-between" align="center" style={styles.row}>
+                {/* Left side: Selection Count */}
+                <View style={styles.infoContainer}>
+                    <Text
+                        style={[styles.selectionText, { color: colors.text }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                    >
+                        {`${numSelected} item${
+                            numSelected !== 1 ? "s" : ""
+                        } selected`}
+                    </Text>
+                </View>
 
-                    {/* Right side: Action Buttons */}
-                    <View style={styles.buttonsContainer}>
-                        {numSelected > 0 && (
-                            <>
-                                {onDeletePress && (
-                                    <TextButton
-                                        title="Delete"
-                                        onPress={onDeletePress}
-                                        textStyle={{ color: colors.error }}
-                                        testID="batch-delete-button"
-                                    />
-                                )}
-                                {onMovePress && (
-                                    <TextButton
-                                        title="Move"
-                                        onPress={onMovePress}
-                                        testID="move-items-button"
-                                    />
-                                )}
+                {/* Right side: Action Buttons */}
+                <View style={styles.buttonsContainer}>
+                    {numSelected > 0 && (
+                        <>
+                            {onDeletePress && (
                                 <TextButton
-                                    title="+ Tags"
-                                    onPress={() =>
-                                        setBatchTagModalVisible(true)
-                                    }
-                                    testID="batch-tags-button"
+                                    title="Delete"
+                                    onPress={onDeletePress}
+                                    textStyle={{ color: colors.error }}
+                                    testID="batch-delete-button"
                                 />
-                            </>
-                        )}
+                            )}
+                            {onMovePress && (
+                                <TextButton
+                                    title="Move"
+                                    onPress={onMovePress}
+                                    testID="move-items-button"
+                                />
+                            )}
+                            <TextButton
+                                title="+ Tags"
+                                onPress={() => setBatchTagModalVisible(true)}
+                                testID="batch-tags-button"
+                            />
+                        </>
+                    )}
 
-                        {/* Select All / None Button */}
-                        <TextButton
-                            disabled={numTotal === 0}
-                            title={allSelected ? "None" : "All"}
-                            onPress={() => handleSelectAll(displayItems)}
-                            testID="select-all-button"
-                        />
+                    {/* Select All / None Button */}
+                    <TextButton
+                        disabled={numTotal === 0}
+                        title={allSelected ? "None" : "All"}
+                        onPress={() => handleSelectAll(displayItems)}
+                        testID="select-all-button"
+                    />
 
-                        {/* Cancel Button */}
-                        <TextButton
-                            title="Cancel"
-                            onPress={toggleSelectionMode}
-                            textStyle={{ color: colors.secondaryText }}
-                            testID="cancel-selection-button"
-                        />
-                    </View>
-                </Row>
-            ) : null}
+                    {/* Cancel Button */}
+                    <TextButton
+                        title="Cancel"
+                        onPress={toggleSelectionMode}
+                        // Override text color for cancel action
+                        textStyle={{ color: colors.secondaryText }}
+                        testID="cancel-selection-button"
+                    />
+                </View>
+            </Row>
         </View>
     )
 }
@@ -179,6 +178,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
         marginTop: 8,
         marginBottom: 4,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     row: { width: "100%", minHeight: 44 },
     infoContainer: { flexShrink: 1, justifyContent: "center", paddingRight: 8 },

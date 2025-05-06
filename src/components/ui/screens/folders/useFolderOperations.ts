@@ -305,13 +305,13 @@ export function useFolderOperations({
         const folderIdsToMove = folderItemsToMove.map((i) => i.id)
         const documentIdsToMove = documentItemsToMove.map((i) => i.id)
 
-        logger.debug("Moving items", {
+        logger.debug("Initiating move operation", {
             folderCount: folderIdsToMove.length,
             documentCount: documentIdsToMove.length,
-            folderIdsToMove,
-            documentIdsToMove,
             targetParentId,
         })
+
+        // Validations
 
         // 1. Cannot move documents to root
         if (targetParentId === null && documentIdsToMove.length > 0) {
@@ -320,41 +320,14 @@ export function useFolderOperations({
             })
             setAlert({
                 visible: true,
-                message: "Cannot move documents to the root level.",
+                message:
+                    "Documents cannot be moved to the root level. Please select a folder.",
                 type: "error",
             })
             return
         }
 
-        // 2. Check for circular folder moves
-        const wouldCreateCircularReference = (
-            folderId: string,
-            targetId: string | null,
-        ): boolean => {
-            if (targetId === null) return false
-            if (folderId === targetId) return true
-            const targetFolder = folders.find((f) => f.id === targetId)
-            if (!targetFolder || !targetFolder.parentId) return false
-            return wouldCreateCircularReference(folderId, targetFolder.parentId)
-        }
-
-        const anyCircularReference = folderIdsToMove.some((id) =>
-            wouldCreateCircularReference(id, targetParentId),
-        )
-        if (anyCircularReference) {
-            logger.warn("Move cancelled due to circular reference", {
-                folderIdsToMove,
-                targetParentId,
-            })
-            setAlert({
-                visible: true,
-                message: "Cannot move a folder into its own subfolder.",
-                type: "error",
-            })
-            return
-        }
-
-        // 3. Check if target exists (if not null)
+        // 2. Check if target folder exists (if not moving to root)
         if (
             targetParentId !== null &&
             !folders.some((f) => f.id === targetParentId)
@@ -368,96 +341,169 @@ export function useFolderOperations({
             return
         }
 
+        // 3. Check for circular folder moves (moving a folder into itself or a descendant)
+        const wouldCreateCircularReference = (
+            folderId: string,
+            targetId: string | null,
+        ): boolean => {
+            if (targetId === null) return false
+            if (folderId === targetId) return true
+            let currentAncestorId: string | null = targetId
+            while (currentAncestorId !== null) {
+                const ancestorFolder = folders.find(
+                    (f) => f.id === currentAncestorId,
+                )
+                if (!ancestorFolder) return false
+                if (ancestorFolder.id === folderId) return true
+                currentAncestorId = ancestorFolder.parentId
+            }
+            return false
+        }
+
+        const anyCircularReference = folderIdsToMove.some((id) =>
+            wouldCreateCircularReference(id, targetParentId),
+        )
+
+        if (anyCircularReference) {
+            logger.warn("Move cancelled due to circular reference attempt", {
+                folderIdsToMove,
+                targetParentId,
+            })
+            setAlert({
+                visible: true,
+                message:
+                    "Cannot move a folder into itself or one of its subfolders.",
+                type: "error",
+            })
+            return
+        }
+
+        const now = new Date()
+        let foldersStateChanged = false
+
         const originalFolderParents = new Map<string, string | null>()
-        folders.forEach((f) => {
-            if (folderIdsToMove.includes(f.id))
-                originalFolderParents.set(f.id, f.parentId)
+        folderIdsToMove.forEach((id) => {
+            const folder = folders.find((f) => f.id === id)
+            if (folder) originalFolderParents.set(id, folder.parentId)
         })
 
-        const originalDocumentParents = new Map<string, string | null>()
-        folders.forEach((f) => {
-            f.documentIds?.forEach((docId) => {
-                if (documentIdsToMove.includes(docId))
-                    originalDocumentParents.set(docId, f.id)
+        const originalDocumentParents = new Map<string, string>()
+        folders.forEach((folder) => {
+            folder.documentIds?.forEach((docId) => {
+                if (documentIdsToMove.includes(docId)) {
+                    originalDocumentParents.set(docId, folder.id)
+                }
             })
         })
 
         const updatedFolders = folders.map((folder) => {
             const updatedFolder = { ...folder }
+            let thisFolderUpdated = false
 
-            // A. Update moved FOLDERS: change parentId
-            if (
-                folderIdsToMove.includes(updatedFolder.id) &&
-                updatedFolder.parentId !== targetParentId
-            ) {
-                updatedFolder.parentId = targetParentId
-                updatedFolder.updatedAt = new Date()
+            // A. Update parentId for moved FOLDERS
+            if (folderIdsToMove.includes(folder.id)) {
+                if (updatedFolder.parentId !== targetParentId) {
+                    updatedFolder.parentId = targetParentId
+                    thisFolderUpdated = true
+                    logger.debug(
+                        `Updated parentId for folder ${folder.id} to ${targetParentId}`,
+                    )
+                }
             }
 
-            // B. Update ORIGINAL PARENTS of moved FOLDERS: remove from childFolderIds
-            const originalParentIdForThisFolder = originalFolderParents.get(
-                updatedFolder.id,
-            )
+            // B. Remove moved FOLDERS from their ORIGINAL parent's childFolderIds
+            const originalParentId = originalFolderParents.get(folder.id)
             if (
-                originalParentIdForThisFolder === updatedFolder.id &&
+                folder.id === originalParentId &&
                 updatedFolder.childFolderIds
             ) {
+                const initialChildCount = updatedFolder.childFolderIds.length
                 updatedFolder.childFolderIds =
                     updatedFolder.childFolderIds.filter(
-                        (id) => !folderIdsToMove.includes(id),
+                        (childId) => !folderIdsToMove.includes(childId),
                     )
+                if (updatedFolder.childFolderIds.length !== initialChildCount) {
+                    thisFolderUpdated = true
+                    logger.debug(
+                        `Removed moved folders from original parent ${folder.id}`,
+                    )
+                }
             }
 
-            // C. Update ORIGINAL PARENTS of moved DOCUMENTS: remove from documentIds
-            const originalDocParentFolderIds = Array.from(
-                originalDocumentParents.values(),
-            )
+            // C. Remove moved DOCUMENTS from their ORIGINAL parent's documentIds
             if (
-                originalDocParentFolderIds.includes(updatedFolder.id) &&
+                originalDocumentParents.get(folder.id) &&
                 updatedFolder.documentIds
             ) {
+                const initialDocCount = updatedFolder.documentIds.length
                 updatedFolder.documentIds = updatedFolder.documentIds.filter(
-                    (id) => !documentIdsToMove.includes(id),
+                    (docId) => !documentIdsToMove.includes(docId),
                 )
+                if (updatedFolder.documentIds.length !== initialDocCount) {
+                    thisFolderUpdated = true
+                    logger.debug(
+                        `Removed moved documents from original parent ${folder.id}`,
+                    )
+                }
             }
 
-            // D. Update TARGET PARENT: add folders/docs
-            if (updatedFolder.id === targetParentId) {
-                const initialChildCount =
-                    updatedFolder.childFolderIds?.length ?? 0
-                const initialDocCount = updatedFolder.documentIds?.length ?? 0
-
-                const currentChildFolders = new Set(
+            // D. Add moved FOLDERS and DOCUMENTS to the TARGET parent's lists
+            if (folder.id === targetParentId) {
+                const currentChildIds = new Set(
                     updatedFolder.childFolderIds || [],
                 )
-                folderIdsToMove.forEach((id) => currentChildFolders.add(id))
-                updatedFolder.childFolderIds = Array.from(currentChildFolders)
+                const initialChildCount = currentChildIds.size
+                folderIdsToMove.forEach((id) => currentChildIds.add(id))
+                if (currentChildIds.size !== initialChildCount) {
+                    updatedFolder.childFolderIds = Array.from(currentChildIds)
+                    thisFolderUpdated = true
+                    logger.debug(
+                        `Added moved folders to target parent ${folder.id}`,
+                    )
+                }
 
                 const currentDocIds = new Set(updatedFolder.documentIds || [])
+                const initialDocCount = currentDocIds.size
                 documentIdsToMove.forEach((id) => currentDocIds.add(id))
-                updatedFolder.documentIds = Array.from(currentDocIds)
-
-                if (
-                    updatedFolder.childFolderIds.length !== initialChildCount ||
-                    updatedFolder.documentIds.length !== initialDocCount
-                ) {
-                    updatedFolder.updatedAt = new Date()
+                if (currentDocIds.size !== initialDocCount) {
+                    updatedFolder.documentIds = Array.from(currentDocIds)
+                    thisFolderUpdated = true
+                    logger.debug(
+                        `Added moved documents to target parent ${folder.id}`,
+                    )
                 }
+            }
+
+            if (thisFolderUpdated) {
+                updatedFolder.updatedAt = now
+                foldersStateChanged = true
             }
 
             return updatedFolder
         })
 
-        setFolders(updatedFolders)
-        setAlert({
-            visible: true,
-            message: `${itemsToMove.length} item(s) moved successfully`,
-            type: "success",
-        })
-        logger.info("Moved items successfully", {
-            count: itemsToMove.length,
-            targetParentId,
-        })
+        if (foldersStateChanged) {
+            setFolders(updatedFolders)
+            setAlert({
+                visible: true,
+                message: `${itemsToMove.length} item(s) moved successfully.`,
+                type: "success",
+            })
+            logger.info("Move operation completed successfully", {
+                count: itemsToMove.length,
+                targetParentId,
+            })
+        } else {
+            logger.info(
+                "Move operation resulted in no changes to folder state.",
+            )
+            setAlert({
+                visible: true,
+                message:
+                    "Items are already in the target location or no valid moves.",
+                type: "info",
+            })
+        }
     }
 
     const showFolderOptions = (

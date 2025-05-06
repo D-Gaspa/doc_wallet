@@ -104,6 +104,8 @@ const styles = StyleSheet.create({
     },
     contentRow: {
         flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
         marginLeft: 4,
     },
     iconWrapper: {
