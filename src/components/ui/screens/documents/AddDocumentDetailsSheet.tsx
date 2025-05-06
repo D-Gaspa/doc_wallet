@@ -1,54 +1,47 @@
 import React, { JSX, useEffect, useState } from "react"
-import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-    TouchableOpacity,
-    TextInput,
-    Alert as RNAlert,
-} from "react-native"
+import { Modal, ScrollView, StyleSheet, Text, View } from "react-native"
 import { Button } from "../../button"
-import { useTagContext } from "../../tag_functionality/TagContext.tsx"
+import { IDocument } from "../../../../types/document.ts"
+import { Tag, useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { TagList } from "../../tag_functionality/TagList.tsx"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { FolderCard } from "../../cards"
-import { useTheme } from "../../../../hooks/useTheme.ts"
+import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { Folder } from "../folders/types.ts"
+import { FolderCard } from "../../cards"
+import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
+import { TouchableOpacity, TextInput, Alert } from "react-native"
+import { useTheme } from "../../../../hooks/useTheme.ts"
 
-interface CommonDetails {
-    folderId: string
-    tagIds: string[]
-    expirationDate?: string
-    notificationTimes?: number[]
-}
-
-// 2. Update Props Interface
 interface Props {
     visible: boolean
+    document: IDocument | null
     onClose: () => void
-    onSave: (details: CommonDetails) => void
+    onSave: (doc: IDocument, folderId: string, tagIds: string[]) => void
     folders: Folder[]
-    setFolders?: (folders: Folder[]) => void
+    setFolders: (folders: Folder[]) => void
 }
 
 export const AddDocumentDetailsSheet = ({
     visible,
+    document,
     onClose,
     onSave,
-    folders,
 }: Props) => {
     const tagContext = useTagContext()
-    const allTags = tagContext?.tags ?? []
+    const tags = tagContext?.tags
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
         null,
     )
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
     const { colors } = useTheme()
+    const folders = useFolderStore((s) => s.folders)
+    const [isLoading, setLoading] = useState(false)
+
+    const [, setHydratedTags] = useState<Tag[]>([])
+
     const [hasExpiration, setHasExpiration] = useState(false)
     const [expirationDate, setExpirationDate] = useState<string>("")
-    const [notificationTimes, setNotificationTimes] = useState<number[]>([])
+    const [notificationTimes, setNotificationTimes] = useState<number[]>([]) // days before
 
     const notificationChoices = [
         { label: "1 day before", value: 1 },
@@ -59,13 +52,13 @@ export const AddDocumentDetailsSheet = ({
         { label: "2 months before", value: 60 },
     ]
 
+    // Notification toggle
     const toggleNotification = (val: number) => {
         setNotificationTimes((prev) =>
             prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
         )
     }
 
-    // Reset local state when visibility changes
     useEffect(() => {
         if (!visible) {
             setSelectedFolderId(null)
@@ -73,16 +66,23 @@ export const AddDocumentDetailsSheet = ({
             setHasExpiration(false)
             setExpirationDate("")
             setNotificationTimes([])
-            // setLoading(false); // REMOVED
         }
     }, [visible])
 
+    useEffect(() => {
+        if (document?.id) {
+            const tags = tagContext.getTagsForItem(document.id, "document")
+            console.log("📦 useEffect hydration:", tags)
+            setHydratedTags(tags)
+        }
+    }, [tagContext.associations.length, document?.id])
+
     const renderFolderTree = (
-        foldersToRender: Folder[],
+        folders: Folder[],
         parentId: string | null = null,
         level: number = 0,
     ): JSX.Element[] => {
-        return foldersToRender
+        return folders
             .filter((f) => f.parentId === parentId)
             .map((folder) => (
                 <View key={folder.id} style={{ marginLeft: level * 16 }}>
@@ -92,16 +92,13 @@ export const AddDocumentDetailsSheet = ({
                         folderId={folder.id}
                         selected={selectedFolderId === folder.id}
                         onPress={() => setSelectedFolderId(folder.id)}
-                        onToggleFavorite={function (): void {
-                            throw new Error("Function not implemented.")
-                        }}
+                        onToggleFavorite={() => setSelectedFolderId(folder.id)}
                     />
-                    {renderFolderTree(foldersToRender, folder.id, level + 1)}
+                    {renderFolderTree(folders, folder.id, level + 1)}
                 </View>
             ))
     }
 
-    // handleTagToggle remains the same
     const handleTagToggle = (tagId: string) => {
         setSelectedTagIds((prev) =>
             prev.includes(tagId)
@@ -110,35 +107,60 @@ export const AddDocumentDetailsSheet = ({
         )
     }
 
-    // 5. Modify handleSave
-    const handleSave = () => {
-        // Removed async
-        // Check only for selectedFolderId (document is gone)
-        if (!selectedFolderId) {
-            RNAlert.alert("Folder required", "Please select a folder.")
-            return
-        }
+    const handleSave = async () => {
+        if (!document || !selectedFolderId) return
 
         if (hasExpiration && !/^\d{4}-\d{2}-\d{2}$/.test(expirationDate)) {
-            RNAlert.alert("Invalid date", "Please use YYYY-MM-DD format.")
+            Alert.alert(
+                "Invalid date",
+                "Please use YYYY-MM-DD format for the expiration date.",
+            )
             return
         }
 
-        // setLoading(true); // REMOVED
+        setLoading(true)
 
-        // Construct the details object from local state
-        const details: CommonDetails = {
-            folderId: selectedFolderId,
-            tagIds: selectedTagIds,
-            expirationDate: hasExpiration ? expirationDate : undefined,
-            notificationTimes: hasExpiration ? notificationTimes : undefined,
+        try {
+            // Pass the relevant data to the parent component
+            //onSave(document, selectedFolderId, selectedTagIds)
+            const updatedDoc = {
+                ...document,
+                parameters: [
+                    ...(document.parameters || []),
+                    ...(hasExpiration
+                        ? [
+                              {
+                                  key: "expiration_date",
+                                  value: expirationDate,
+                                  id: "expiration_date",
+                                  documentId: document.id,
+                                  type: "date",
+                                  isSearchable: true,
+                                  isSystem: false,
+                              },
+                              {
+                                  key: "expiration_notifications",
+                                  value: JSON.stringify(notificationTimes),
+                                  id: "expiration_notifications",
+                                  documentId: document.id,
+                                  type: "json",
+                                  isSearchable: false,
+                                  isSystem: false,
+                              },
+                          ]
+                        : []),
+                ],
+            }
+            onSave(updatedDoc, selectedFolderId, selectedTagIds)
+        } catch (error) {
+            console.error("Error in handleSave:", error)
+        } finally {
+            setLoading(false)
         }
-
-        onSave(details)
     }
 
     return (
-        <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+        <Modal visible={visible} animationType="slide">
             <SafeAreaView
                 style={[styles.sheet, { backgroundColor: colors.background }]}
             >
@@ -150,23 +172,23 @@ export const AddDocumentDetailsSheet = ({
                         </Text>
 
                         <Text style={[styles.subtitle, { color: colors.text }]}>
-                            Choose a Folder (Required):
+                            Choose a Folder:
                         </Text>
                         <View style={styles.folderTreeContainer}>
                             {renderFolderTree(folders)}
                         </View>
-
+                        {/* Tag List */}
                         <Text style={[styles.subtitle, { color: colors.text }]}>
-                            Select Tags (Optional):
+                            Select Tags:
                         </Text>
+
                         <TagList
-                            tags={allTags}
+                            tags={tags}
                             selectedTags={selectedTagIds}
                             onTagPress={handleTagToggle}
                             showAddTagButton={false}
                         />
 
-                        {/* Expiration Section */}
                         <View style={styles.expirationContainer}>
                             <TouchableOpacity
                                 onPress={() => setHasExpiration(!hasExpiration)}
@@ -176,9 +198,10 @@ export const AddDocumentDetailsSheet = ({
                                     {hasExpiration ? "☑️" : "⬜️"}
                                 </Text>
                                 <Text style={{ color: colors.text }}>
-                                    Set expiration date for documents
+                                    This document has an expiration date
                                 </Text>
                             </TouchableOpacity>
+
                             {hasExpiration && (
                                 // eslint-disable-next-line react-native/no-inline-styles
                                 <View style={{ marginTop: 16 }}>
@@ -207,17 +230,19 @@ export const AddDocumentDetailsSheet = ({
                                         onChangeText={setExpirationDate}
                                         keyboardType="numeric"
                                     />
-                                    {/* eslint-disable-next-line react-native/no-inline-styles */}
+
+                                    {}
                                     <Text
                                         style={[
                                             styles.subtitle,
+                                            // eslint-disable-next-line react-native/no-inline-styles
                                             {
                                                 color: colors.text,
                                                 marginTop: 12,
                                             },
                                         ]}
                                     >
-                                        Notify:
+                                        When do you want to be notified?
                                     </Text>
                                     <View style={styles.notifyContainer}>
                                         {notificationChoices.map((opt) => (
@@ -255,22 +280,22 @@ export const AddDocumentDetailsSheet = ({
                             )}
                         </View>
 
-                        {/* Save Button calls modified handleSave */}
+                        {/* Save Button */}
                         <Button
-                            title="Save Documents"
+                            title="Save Document"
                             onPress={handleSave}
                             style={styles.saveBtn}
-                            disabled={!selectedFolderId}
                         />
                         <Button title="Cancel" onPress={onClose} />
                     </View>
                 </ScrollView>
+
+                <LoadingOverlay visible={isLoading} />
             </SafeAreaView>
         </Modal>
     )
 }
 
-// Styles remain the same as the previous multi-doc version
 const styles = StyleSheet.create({
     sheet: {
         flex: 1,
