@@ -22,6 +22,8 @@ interface ItemsListProps {
     onFolderToggleFavorite?: (folderId: string) => void
     onItemSelect?: (id: string, type: "folder" | "document") => void
     onSelectItem?: (id: string, type: "folder" | "document") => void
+    onFolderLongPress?: (folderId: string) => void
+    onDocumentLongPress?: (documentId: string) => void
 
     testID?: string
 }
@@ -40,6 +42,8 @@ export function ItemsList({
     onFolderToggleFavorite,
     onItemSelect,
     onSelectItem,
+    onFolderLongPress,
+    onDocumentLongPress,
     testID,
 }: ItemsListProps) {
     const { colors } = useTheme()
@@ -73,18 +77,14 @@ export function ItemsList({
                 }
 
                 const handleLongPress = () => {
-                    if (
+                    if (onFolderLongPress) {
+                        onFolderLongPress(folder.id)
+                    } else if (
                         !isSelectionList &&
                         !selectionMode &&
                         onFolderOptionsPress
                     ) {
                         onFolderOptionsPress(folder)
-                    } else if (
-                        !isSelectionList &&
-                        selectionMode &&
-                        onItemSelect
-                    ) {
-                        onItemSelect(folder.id, "folder")
                     }
                 }
 
@@ -105,7 +105,9 @@ export function ItemsList({
                                 : () => {}
                         }
                         onShowOptions={
-                            !isSelectionList && onFolderOptionsPress
+                            !isSelectionList &&
+                            onFolderOptionsPress &&
+                            !selectionMode
                                 ? () => onFolderOptionsPress(folder)
                                 : undefined
                         }
@@ -124,18 +126,14 @@ export function ItemsList({
                 }
 
                 const handleLongPress = () => {
-                    if (
+                    if (onDocumentLongPress) {
+                        onDocumentLongPress(document.id)
+                    } else if (
                         !isSelectionList &&
                         !selectionMode &&
                         onDocumentOptionsPress
                     ) {
                         onDocumentOptionsPress(document)
-                    } else if (
-                        !isSelectionList &&
-                        selectionMode &&
-                        onItemSelect
-                    ) {
-                        onItemSelect(document.id, "document")
                     }
                 }
 
@@ -151,9 +149,6 @@ export function ItemsList({
                         )}
                         onPress={handlePress}
                         onLongPress={handleLongPress}
-                        // TODO: DocumentCard doesn't visually show selection state currently.
-                        //        If needed, the `selected` prop should be added to DocumentCard
-                        //        and passed down to its ListItemCard: selected={isSelected}
                         showAddTagButton={true}
                         testID={`document-${document.id}`}
                     />
@@ -174,6 +169,8 @@ export function ItemsList({
             onFolderOptionsPress,
             onDocumentOptionsPress,
             onFolderToggleFavorite,
+            onFolderLongPress,
+            onDocumentLongPress,
             colors,
             tagContext,
         ],
