@@ -394,7 +394,6 @@ export function UnifiedFolderModal({
                                     onPress={() => handleTypeSelect(item.type)}
                                     style={[
                                         styles.folderCardWrapper,
-
                                         {
                                             borderColor:
                                                 selectedType === item.type
@@ -408,10 +407,10 @@ export function UnifiedFolderModal({
                                         title={item.label}
                                         type={item.type}
                                         selected={selectedType === item.type}
+                                        showTags={false}
                                         onPress={() =>
                                             handleTypeSelect(item.type)
                                         }
-                                        onToggleFavorite={() => {}}
                                         testID={`folder-type-${item.type}`}
                                     />
                                 </Pressable>
