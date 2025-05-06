@@ -640,8 +640,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         )
                     }}
                     onSave={handleSaveDocument}
-                    folders={folders}
-                    setFolders={setFolders} // Check if needed or if AddDocumentDetailsSheet should use store directly
                 />
                 <BatchTagManager
                     isVisible={batchTagModalVisible}
