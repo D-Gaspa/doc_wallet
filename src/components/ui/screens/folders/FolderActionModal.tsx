@@ -13,7 +13,7 @@ import { Folder } from "./types"
 
 import ShareIcon from "../../assets/svg/share.svg"
 import EditIcon from "../../assets/svg/edit.svg"
-import DeleteIcon from "../../assets/svg/trash.svg"
+// import DeleteIcon from "../../assets/svg/trash.svg"
 import ExitIcon from "../../assets/svg/close.svg"
 
 interface FolderActionModalProps {
@@ -67,7 +67,7 @@ export function FolderActionModal({
         {
             label: "Delete",
             action: handleDelete,
-            icon: <DeleteIcon width={20} height={20} stroke={colors.error} />,
+            // icon: <DeleteIcon width={20} height={20} stroke={colors.error} />,
             style: { color: colors.error },
         },
     ]

@@ -1,24 +1,31 @@
-import React, { JSX, useEffect, useState } from "react"
-import { Modal, ScrollView, StyleSheet, Text, View } from "react-native"
+import React, { useEffect, useMemo, useState } from "react"
+import {
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native"
 import { Button } from "../../button"
 import { IDocument } from "../../../../types/document.ts"
 import { Tag, useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { TagList } from "../../tag_functionality/TagList.tsx"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
-import { Folder } from "../folders/types.ts"
-import { FolderCard } from "../../cards"
+import { ListItem } from "../folders/types.ts"
+import { ItemsList } from "../folders/ItemsList"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
-import { TouchableOpacity, TextInput, Alert } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme.ts"
+import { Spacer } from "../../layout"
 
 interface Props {
     visible: boolean
     document: IDocument | null
     onClose: () => void
     onSave: (doc: IDocument, folderId: string, tagIds: string[]) => void
-    folders: Folder[]
-    setFolders: (folders: Folder[]) => void
 }
 
 export const AddDocumentDetailsSheet = ({
@@ -34,14 +41,12 @@ export const AddDocumentDetailsSheet = ({
     )
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
     const { colors } = useTheme()
-    const folders = useFolderStore((s) => s.folders)
+    const allFolders = useFolderStore((s) => s.folders)
     const [isLoading, setLoading] = useState(false)
-
     const [, setHydratedTags] = useState<Tag[]>([])
-
     const [hasExpiration, setHasExpiration] = useState(false)
     const [expirationDate, setExpirationDate] = useState<string>("")
-    const [notificationTimes, setNotificationTimes] = useState<number[]>([]) // days before
+    const [notificationTimes, setNotificationTimes] = useState<number[]>([])
 
     const notificationChoices = [
         { label: "1 day before", value: 1 },
@@ -52,13 +57,13 @@ export const AddDocumentDetailsSheet = ({
         { label: "2 months before", value: 60 },
     ]
 
-    // Notification toggle
     const toggleNotification = (val: number) => {
         setNotificationTimes((prev) =>
             prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
         )
     }
 
+    // Reset state on visibility change
     useEffect(() => {
         if (!visible) {
             setSelectedFolderId(null)
@@ -69,35 +74,14 @@ export const AddDocumentDetailsSheet = ({
         }
     }, [visible])
 
+    // Optional: Keep tag hydration if needed
     useEffect(() => {
         if (document?.id) {
-            const tags = tagContext.getTagsForItem(document.id, "document")
-            console.log("📦 useEffect hydration:", tags)
-            setHydratedTags(tags)
+            const docTags = tagContext.getTagsForItem(document.id, "document")
+            console.log("📦 AddDocumentDetailsSheet: Hydrating tags", docTags)
+            setHydratedTags(docTags)
         }
-    }, [tagContext.associations.length, document?.id])
-
-    const renderFolderTree = (
-        folders: Folder[],
-        parentId: string | null = null,
-        level: number = 0,
-    ): JSX.Element[] => {
-        return folders
-            .filter((f) => f.parentId === parentId)
-            .map((folder) => (
-                <View key={folder.id} style={{ marginLeft: level * 16 }}>
-                    <FolderCard
-                        title={folder.title}
-                        type={folder.type}
-                        folderId={folder.id}
-                        selected={selectedFolderId === folder.id}
-                        onPress={() => setSelectedFolderId(folder.id)}
-                        onToggleFavorite={() => setSelectedFolderId(folder.id)}
-                    />
-                    {renderFolderTree(folders, folder.id, level + 1)}
-                </View>
-            ))
-    }
+    }, [tagContext.associations.length, document?.id, visible])
 
     const handleTagToggle = (tagId: string) => {
         setSelectedTagIds((prev) =>
@@ -106,7 +90,6 @@ export const AddDocumentDetailsSheet = ({
                 : [...prev, tagId],
         )
     }
-
     const handleSave = async () => {
         if (!document || !selectedFolderId) return
 
@@ -159,36 +142,58 @@ export const AddDocumentDetailsSheet = ({
         }
     }
 
+    const folderItems = useMemo(() => {
+        const sortedFolders = [...allFolders].sort((a, b) =>
+            a.title.localeCompare(b.title),
+        )
+        return sortedFolders.map(
+            (folder): ListItem => ({ type: "folder", data: folder }),
+        )
+    }, [allFolders])
+
     return (
-        <Modal visible={visible} animationType="slide">
+        <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
             <SafeAreaView
                 style={[styles.sheet, { backgroundColor: colors.background }]}
             >
-                {/* eslint-disable-next-line react-native/no-inline-styles */}
-                <ScrollView style={{ flex: 1 }}>
-                    <View>
+                <ScrollView
+                    /* eslint-disable-next-line react-native/no-inline-styles */
+                    style={{ flex: 1 }}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.contentContainer}>
                         <Text style={[styles.title, { color: colors.text }]}>
                             Add Document Details
                         </Text>
-
+                        {/* Folder Selection Section */}
                         <Text style={[styles.subtitle, { color: colors.text }]}>
                             Choose a Folder:
                         </Text>
-                        <View style={styles.folderTreeContainer}>
-                            {renderFolderTree(folders)}
+                        <View style={styles.listContainer}>
+                            <ItemsList
+                                items={folderItems}
+                                isSelectionList={true}
+                                selectedItemId={selectedFolderId}
+                                onSelectItem={(id) => setSelectedFolderId(id)}
+                                selectionMode={false}
+                                selectedFolderIds={[]}
+                                emptyListMessage="No folders available to select."
+                                testID="add-doc-folder-select-list"
+                            />
                         </View>
-                        {/* Tag List */}
+                        {/* Tag Selection Section */}
                         <Text style={[styles.subtitle, { color: colors.text }]}>
                             Select Tags:
                         </Text>
-
                         <TagList
                             tags={tags}
                             selectedTags={selectedTagIds}
                             onTagPress={handleTagToggle}
                             showAddTagButton={false}
+                            horizontal={false}
+                            testID="add-doc-tag-select-list"
                         />
-
+                        {/* Expiration Section */}
                         <View style={styles.expirationContainer}>
                             <TouchableOpacity
                                 onPress={() => setHasExpiration(!hasExpiration)}
@@ -231,7 +236,6 @@ export const AddDocumentDetailsSheet = ({
                                         keyboardType="numeric"
                                     />
 
-                                    {}
                                     <Text
                                         style={[
                                             styles.subtitle,
@@ -279,18 +283,23 @@ export const AddDocumentDetailsSheet = ({
                                 </View>
                             )}
                         </View>
-
-                        {/* Save Button */}
+                        <Spacer size={24} />
                         <Button
                             title="Save Document"
                             onPress={handleSave}
+                            disabled={!selectedFolderId || isLoading}
                             style={styles.saveBtn}
+                            loading={isLoading}
                         />
-                        <Button title="Cancel" onPress={onClose} />
+                        <Button
+                            title="Cancel"
+                            variant="outline"
+                            onPress={onClose}
+                        />
+                        <Spacer size={20} />
                     </View>
                 </ScrollView>
-
-                <LoadingOverlay visible={isLoading} />
+                <LoadingOverlay visible={isLoading && !visible} />
             </SafeAreaView>
         </Modal>
     )
@@ -299,27 +308,39 @@ export const AddDocumentDetailsSheet = ({
 const styles = StyleSheet.create({
     sheet: {
         flex: 1,
-        padding: 20,
+    },
+    contentContainer: {
+        paddingHorizontal: 20,
+        paddingBottom: 20,
     },
     title: {
         fontSize: 20,
         fontWeight: "bold",
+        marginTop: 10,
         marginBottom: 20,
+        textAlign: "center",
     },
     subtitle: {
         fontSize: 16,
         fontWeight: "600",
         marginTop: 16,
+        marginBottom: 8,
+    },
+    listContainer: {
+        height: 200,
+        borderWidth: 1,
+        borderRadius: 8,
+        marginBottom: 16,
     },
     saveBtn: {
         marginTop: 24,
         marginBottom: 12,
     },
-    folderTreeContainer: {
-        marginTop: 8,
-    },
     expirationContainer: {
         marginVertical: 16,
+        padding: 10,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     expirationToggle: {
         flexDirection: "row",
@@ -331,22 +352,24 @@ const styles = StyleSheet.create({
     },
     expirationDateInput: {
         borderWidth: 1,
-        padding: 8,
+        padding: 10,
         borderRadius: 8,
         marginTop: 6,
+        height: 44,
     },
     notifyContainer: {
         flexDirection: "row",
         flexWrap: "wrap",
+        marginTop: 8,
     },
     notifyItem: {
         flexDirection: "row",
         alignItems: "center",
-        marginRight: 12,
-        marginBottom: 8,
+        marginRight: 16,
+        marginBottom: 10,
     },
     notifyCheckbox: {
         fontSize: 18,
-        marginRight: 3,
+        marginRight: 5,
     },
 })
