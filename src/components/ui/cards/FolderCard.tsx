@@ -19,11 +19,13 @@ import SettingsIcon from "../assets/svg/threedots.svg"
 export interface FolderCardProps {
     folderId: string
     title: string
+    subtitle?: string
     type?: Folder["type"]
     customIconId?: Folder["customIconId"]
     isFavorite?: boolean
     selected?: boolean
     showTags?: boolean
+    displayIconId?: string
 
     // Handlers
     onPress: () => void
@@ -40,11 +42,13 @@ export interface FolderCardProps {
 export function FolderCard({
     folderId,
     title,
+    subtitle,
     type = "custom",
     customIconId,
     isFavorite = false,
     selected = false,
     showTags = true,
+    displayIconId,
     onPress,
     onLongPress,
     onToggleFavorite,
@@ -57,13 +61,22 @@ export function FolderCard({
     const tagContext = useTagContext()
 
     const iconNode = React.useMemo(() => {
-        // TODO: Using getIconById for now, will be replaced by Lucide later
+        const iconSizeForCard = 28
+
+        if (displayIconId) {
+            return getIconById(
+                displayIconId,
+                colors as ThemeColors,
+                iconSizeForCard,
+            )
+        }
+
         return getIconById(
             type === "custom" && customIconId ? customIconId : type,
             colors as ThemeColors,
-            28, // Icon size for the card
+            iconSizeForCard,
         )
-    }, [type, customIconId, colors])
+    }, [type, customIconId, colors, displayIconId])
 
     const handleButtonPress =
         (handler?: () => void) => (event: GestureResponderEvent) => {
@@ -157,6 +170,7 @@ export function FolderCard({
         <ListItemCard
             id={folderId}
             title={title}
+            subtitle={subtitle}
             icon={iconNode}
             actionIcons={actionIconsNode}
             onPress={onPress}

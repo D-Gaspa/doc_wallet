@@ -758,7 +758,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                               }
                             : createInitialData
                     }
-                    parentFolderId={currentFolderId}
                 />
                 <AddDocumentDetailsSheet
                     visible={showAddDocSheet}

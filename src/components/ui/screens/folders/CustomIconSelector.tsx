@@ -143,12 +143,11 @@ const styles = StyleSheet.create({
     },
 })
 
-// Function to get icon component by ID for external use with proper typing
 export function getIconById(
     iconId: string,
     colors: ThemeColors,
-    size: number = 24, // Add optional size prop
-    colorOverride?: string, // Add optional color override prop
+    size: number = 24,
+    colorOverride?: string,
 ): React.ReactNode {
     switch (iconId) {
         case "travel":

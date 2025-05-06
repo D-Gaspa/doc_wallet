@@ -6,6 +6,7 @@ import { Row, Stack } from "../layout"
 interface ListItemCardProps {
     id: string
     title: string
+    subtitle?: string
     icon: ReactNode
     actionIcons?: ReactNode
     children?: ReactNode
@@ -18,6 +19,7 @@ interface ListItemCardProps {
 export function ListItemCard({
     id,
     title,
+    subtitle,
     icon,
     actionIcons,
     children,
@@ -46,7 +48,6 @@ export function ListItemCard({
             testID={testID ?? `list-item-${id}`}
             activeOpacity={0.7}
         >
-            {/* Optional: Selection indicator bar */}
             {selected && (
                 <View
                     style={[
@@ -55,27 +56,32 @@ export function ListItemCard({
                     ]}
                 />
             )}
-
             <Row align="center" style={styles.contentRow} spacing={0}>
-                {/* 1. Icon Area (Fixed Width) */}
                 <View style={styles.iconWrapper}>{icon}</View>
-
-                {/* 2. Center Content Area (Title + Children) */}
-                <Stack style={styles.centerContent} spacing={4}>
+                <Stack style={styles.centerContent} spacing={subtitle ? 2 : 4}>
                     <Text
                         style={[styles.title, { color: colors.text }]}
-                        numberOfLines={1}
+                        numberOfLines={subtitle ? 2 : 1}
                         ellipsizeMode="tail"
                     >
                         {title}
                     </Text>
-                    {/* Render secondary content if provided */}
+                    {subtitle && (
+                        <Text
+                            style={[
+                                styles.subtitle,
+                                { color: colors.secondaryText },
+                            ]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                        >
+                            {subtitle}
+                        </Text>
+                    )}
                     {children && (
                         <View style={styles.childrenContainer}>{children}</View>
                     )}
                 </Stack>
-
-                {/* 3. Right Action Icons Area */}
                 {actionIcons && (
                     <View style={styles.actionIconsWrapper}>{actionIcons}</View>
                 )}
@@ -122,6 +128,11 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 16,
         fontWeight: "500",
+    },
+    subtitle: {
+        fontSize: 12,
+        fontWeight: "400",
+        marginTop: 0,
     },
     childrenContainer: {
         marginTop: 2,
