@@ -1,8 +1,8 @@
 import React, { createContext, ReactNode, useContext, useEffect } from "react"
-import { LoggingService } from "../../../services/monitoring/loggingService.ts"
 import { useTagStore } from "../../../store/useTagStore"
+import { SelectedItem } from "../screens/folders/useSelectionMode.ts"
+import { LoggingService } from "../../../services/monitoring/loggingService.ts"
 
-// Tag type definition
 export interface Tag {
     id: string
     name: string
@@ -11,7 +11,6 @@ export interface Tag {
     updatedAt: Date
 }
 
-// Tag association with items
 export interface TagAssociation {
     tagId: string
     itemId: string
@@ -41,24 +40,14 @@ interface TagContextType {
         tagId: string,
         itemType?: "folder" | "document",
     ) => string[]
-    // Tag suggestion related functions
     getFrequentlyUsedTags: (limit?: number) => Tag[]
     getRecentlyUsedTags: (limit?: number) => Tag[]
     getSuggestedTags: (
         itemType: "folder" | "document",
         itemName: string,
     ) => Tag[]
-    // Batch operations
-    batchAssociateTags: (
-        tagIds: string[],
-        itemIds: string[],
-        itemType: "folder" | "document",
-    ) => boolean
-    batchDisassociateTags: (
-        tagIds: string[],
-        itemIds: string[],
-        itemType: "folder" | "document",
-    ) => boolean
+    batchAssociateTags: (tagIds: string[], items: SelectedItem[]) => boolean
+    batchDisassociateTags: (tagIds: string[], items: SelectedItem[]) => boolean
     syncTagsForItem: (
         itemId: string,
         itemType: "folder" | "document",
@@ -83,14 +72,13 @@ export function TagProvider({ children }: { children: ReactNode }) {
         addAssociation,
         removeAssociation,
         syncItemTags,
+        addAssociations,
     } = tagStore
 
-    // Initialize default tags if none exist
     useEffect(() => {
         if (tags.length === 0) {
             logger.debug("Creating default tags")
 
-            // Default tags that should always be available
             const defaultTags: Omit<Tag, "id" | "createdAt" | "updatedAt">[] = [
                 {
                     name: "Important",
@@ -114,7 +102,6 @@ export function TagProvider({ children }: { children: ReactNode }) {
                 },
             ]
 
-            // Create each default tag
             const now = new Date()
             const createdTags: Tag[] = defaultTags.map((tag, index) => ({
                 id: `tag-default-${index + 1}`,
@@ -124,7 +111,6 @@ export function TagProvider({ children }: { children: ReactNode }) {
                 updatedAt: now,
             }))
 
-            // Add to store
             tagStore.setTags(createdTags)
 
             logger.debug("Created default tags", { count: createdTags.length })
@@ -407,9 +393,10 @@ export function TagProvider({ children }: { children: ReactNode }) {
 
     const batchAssociateTags = (
         tagIds: string[],
-        itemIds: string[],
-        itemType: "folder" | "document",
+        items: SelectedItem[],
     ): boolean => {
+        if (tagIds.length === 0 || items.length === 0) return true
+
         const allTagsExist = tagIds.every((tagId) =>
             tags.some((tag) => tag.id === tagId),
         )
@@ -419,22 +406,23 @@ export function TagProvider({ children }: { children: ReactNode }) {
         }
 
         const newAssociations: TagAssociation[] = []
+        const now = new Date()
 
         tagIds.forEach((tagId) => {
-            itemIds.forEach((itemId) => {
+            items.forEach((item) => {
                 const exists = associations.some(
                     (assoc) =>
                         assoc.tagId === tagId &&
-                        assoc.itemId === itemId &&
-                        assoc.itemType === itemType,
+                        assoc.itemId === item.id &&
+                        assoc.itemType === item.type,
                 )
 
                 if (!exists) {
                     newAssociations.push({
                         tagId,
-                        itemId,
-                        itemType,
-                        createdAt: new Date(),
+                        itemId: item.id,
+                        itemType: item.type,
+                        createdAt: now,
                     })
                 }
             })
@@ -442,14 +430,14 @@ export function TagProvider({ children }: { children: ReactNode }) {
 
         if (newAssociations.length === 0) {
             logger.debug("Batch associate: No new associations to create")
-            return true // Consider this a success (nothing to do)
+            return true
         }
 
-        tagStore.addAssociations(newAssociations)
+        addAssociations(newAssociations)
 
         logger.debug("Batch associated tags", {
             tagCount: tagIds.length,
-            itemCount: itemIds.length,
+            itemCount: items.length,
             newAssociations: newAssociations.length,
         })
 
@@ -458,39 +446,39 @@ export function TagProvider({ children }: { children: ReactNode }) {
 
     const batchDisassociateTags = (
         tagIds: string[],
-        itemIds: string[],
-        itemType: "folder" | "document",
+        items: SelectedItem[],
     ): boolean => {
-        const hasAssociations = associations.some(
-            (assoc) =>
-                tagIds.includes(assoc.tagId) &&
-                itemIds.includes(assoc.itemId) &&
-                assoc.itemType === itemType,
-        )
+        if (tagIds.length === 0 || items.length === 0) return true
 
-        if (!hasAssociations) {
-            logger.debug("Batch disassociate: No matching associations found")
-            return false
-        }
+        let associationsRemoved = 0
 
         tagIds.forEach((tagId) => {
-            itemIds.forEach((itemId) => {
+            items.forEach((item) => {
                 const exists = associations.some(
                     (assoc) =>
                         assoc.tagId === tagId &&
-                        assoc.itemId === itemId &&
-                        assoc.itemType === itemType,
+                        assoc.itemId === item.id &&
+                        assoc.itemType === item.type,
                 )
 
                 if (exists) {
-                    tagStore.removeAssociation(tagId, itemId, itemType)
+                    removeAssociation(tagId, item.id, item.type)
+                    associationsRemoved++
                 }
             })
         })
 
+        if (associationsRemoved === 0) {
+            logger.debug(
+                "Batch disassociate: No matching associations found to remove",
+            )
+            return true
+        }
+
         logger.debug("Batch disassociated tags", {
             tagCount: tagIds.length,
-            itemCount: itemIds.length,
+            itemCount: items.length,
+            removedCount: associationsRemoved,
         })
 
         return true

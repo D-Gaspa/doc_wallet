@@ -1,19 +1,21 @@
 import React from "react"
 import { Alert as RNAlert } from "react-native"
 import { Folder } from "./types"
+import { SelectedItem } from "./useSelectionMode"
 import { FolderType } from "./FolderModal"
 import { AlertType } from "../../feedback/Alert"
 
-// Using the existing Alert component's types
 interface AlertState {
     visible: boolean
     message: string
     type: AlertType
 }
 
-// Define a more specific logger interface instead of using 'any'
-interface Logger {
-    debug: (message: string, data?: Record<string, unknown>) => void
+interface TaggedLogger {
+    debug: (message: string, ...optionalParams: unknown[]) => void
+    info: (message: string, ...optionalParams: unknown[]) => void
+    warn: (message: string, ...optionalParams: unknown[]) => void
+    error: (message: string, ...optionalParams: unknown[]) => void
 }
 
 interface UseFolderOperationsProps {
@@ -24,7 +26,7 @@ interface UseFolderOperationsProps {
     setFolderModalMode: React.Dispatch<React.SetStateAction<"create" | "edit">>
     setFolderToEdit: React.Dispatch<React.SetStateAction<Folder | null>>
     setFolderModalVisible: React.Dispatch<React.SetStateAction<boolean>>
-    logger: Logger
+    logger: TaggedLogger
 }
 
 export function useFolderOperations({
@@ -37,26 +39,23 @@ export function useFolderOperations({
     setFolderModalVisible,
     logger,
 }: UseFolderOperationsProps) {
-    // Get folders for current view (root or nested)
     const getCurrentFolders = () => {
         return folders.filter((folder) => folder.parentId === currentFolderId)
     }
 
-    // Get current folder name (for breadcrumb)
     const getCurrentFolderName = () => {
         if (!currentFolderId) return "Folders"
         const folder = folders.find((f) => f.id === currentFolderId)
         return folder ? folder.title : "Unknown Folder"
     }
 
-    // Create a new folder
     const handleCreateFolder = (
         folderName: string,
         folderType: FolderType,
         customIconId?: string,
     ) => {
         const newFolder: Folder = {
-            id: `folder-${Date.now()}`, // Simple ID generation for UI prototype
+            id: `folder-${Date.now()}`,
             title: folderName,
             parentId: currentFolderId,
             type: folderType,
@@ -69,7 +68,6 @@ export function useFolderOperations({
             documentIds: [],
         }
 
-        // Update parent folder's childFolderIds if there is a parent
         const updatedFolders = [...folders]
         if (currentFolderId) {
             const parentIndex = updatedFolders.findIndex(
@@ -82,7 +80,12 @@ export function useFolderOperations({
                         ...(updatedFolders[parentIndex].childFolderIds || []),
                         newFolder.id,
                     ],
+                    updatedAt: new Date(),
                 }
+            } else {
+                logger.warn("Parent folder not found during create", {
+                    parentId: currentFolderId,
+                })
             }
         }
 
@@ -109,11 +112,10 @@ export function useFolderOperations({
                           ...folder,
                           favorite: !folder.favorite,
                           updatedAt: new Date(),
-                      } // Toggle favorite and update date
+                      }
                     : folder,
             ),
         )
-        // Optional: Show a success alert
         setAlert({
             visible: true,
             message: "Favorite status updated",
@@ -122,7 +124,6 @@ export function useFolderOperations({
         logger.debug("Toggled favorite status", { folderId })
     }
 
-    // Update an existing folder
     const handleUpdateFolder = (
         folderId: string,
         folderName: string,
@@ -157,95 +158,123 @@ export function useFolderOperations({
         })
     }
 
-    // Delete a folder
+    const deleteSingleFolderInternal = (folderId: string): boolean => {
+        logger.debug(`Internal delete check for folder`, { folderId })
+        const folderToDelete = folders.find((f) => f.id === folderId)
+
+        if (!folderToDelete) {
+            logger.error(`Folder not found for internal delete`, { folderId })
+            setAlert({
+                visible: true,
+                message: "Folder not found.",
+                type: "error",
+            })
+            return false
+        }
+
+        const hasSubfolders = folders.some(
+            (folder) => folder.parentId === folderId,
+        )
+        if (hasSubfolders) {
+            logger.warn(`Attempted internal delete on folder with subfolders`, {
+                folderId,
+            })
+            setAlert({
+                visible: true,
+                message: "Cannot delete folder: contains subfolders.",
+                type: "error",
+            })
+            return false
+        }
+
+        const hasDocuments =
+            folderToDelete?.documentIds && folderToDelete.documentIds.length > 0
+        if (hasDocuments) {
+            logger.warn(`Attempted internal delete on folder with documents`, {
+                folderId,
+            })
+            setAlert({
+                visible: true,
+                message: "Cannot delete folder: contains documents.",
+                type: "error",
+            })
+            return false
+        }
+
+        const updatedFolders = folders.filter(
+            (folder) => folder.id !== folderId,
+        )
+
+        if (folderToDelete.parentId) {
+            const parentIndex = updatedFolders.findIndex(
+                (f) => f.id === folderToDelete.parentId,
+            )
+            if (parentIndex >= 0) {
+                const parentFolder = updatedFolders[parentIndex]
+                updatedFolders[parentIndex] = {
+                    ...parentFolder,
+                    childFolderIds:
+                        parentFolder.childFolderIds?.filter(
+                            (id) => id !== folderId,
+                        ) || [],
+                    updatedAt: new Date(),
+                }
+            } else {
+                logger.warn(
+                    `Parent folder not found after filtering during delete`,
+                    {
+                        parentId: folderToDelete.parentId,
+                        deletedFolderId: folderId,
+                    },
+                )
+            }
+        }
+
+        setFolders(updatedFolders)
+        logger.debug(`Internal delete successful for folder`, { folderId })
+        return true
+    }
+
     const handleDeleteFolder = (folderId: string) => {
+        const folderTitle =
+            folders.find((f) => f.id === folderId)?.title ?? "this folder"
         RNAlert.alert(
-            "Delete Folder",
-            "Are you sure you want to delete this folder? This action cannot be undone.",
+            `Delete "${folderTitle}"`,
+            "Are you sure you want to delete this folder? Documents and subfolders must be removed first. This action cannot be undone.",
             [
-                {
-                    text: "Cancel",
-                    style: "cancel",
-                },
+                { text: "Cancel", style: "cancel" },
                 {
                     text: "Delete",
                     style: "destructive",
                     onPress: () => {
-                        // Check if folder has subfolders
-                        const hasSubfolders = folders.some(
-                            (folder) => folder.parentId === folderId,
-                        )
-
-                        // Check if folder has documents
-                        const folderToDelete = folders.find(
-                            (f) => f.id === folderId,
-                        )
-                        const hasDocuments =
-                            folderToDelete?.documentIds &&
-                            folderToDelete.documentIds.length > 0
-
-                        if (hasSubfolders) {
-                            setAlert({
-                                visible: true,
-                                message: "Cannot delete folder with subfolders",
-                                type: "error",
-                            })
-                            return
-                        }
-
-                        if (hasDocuments) {
-                            setAlert({
-                                visible: true,
-                                message: "Cannot delete folder with documents",
-                                type: "error",
-                            })
-                            return
-                        }
-
-                        // Remove the folder
-                        const updatedFolders = folders.filter(
-                            (folder) => folder.id !== folderId,
-                        )
-
-                        // Also update parent folder's childFolderIds if applicable
-                        const folderToRemove = folders.find(
-                            (f) => f.id === folderId,
-                        )
-                        if (folderToRemove && folderToRemove.parentId) {
-                            const parentIndex = updatedFolders.findIndex(
-                                (f) => f.id === folderToRemove.parentId,
-                            )
-                            if (parentIndex >= 0) {
-                                updatedFolders[parentIndex] = {
-                                    ...updatedFolders[parentIndex],
-                                    childFolderIds:
-                                        updatedFolders[
-                                            parentIndex
-                                        ].childFolderIds?.filter(
-                                            (id) => id !== folderId,
-                                        ) || [],
-                                }
-                            }
-                        }
-
-                        setFolders(updatedFolders)
-
-                        setAlert({
-                            visible: true,
-                            message: "Folder deleted successfully",
-                            type: "success",
+                        logger.info(`User initiated delete via RNAlert`, {
+                            folderId,
                         })
-                        logger.debug("Deleted folder", { folderId })
+                        const success = deleteSingleFolderInternal(folderId)
+                        if (success) {
+                            setAlert({
+                                visible: true,
+                                message: "Folder deleted successfully",
+                                type: "success",
+                            })
+                            logger.info(
+                                `User delete confirmed and successful`,
+                                { folderId },
+                            )
+                        } else {
+                            logger.warn(
+                                `User delete confirmed but failed internal checks`,
+                                { folderId },
+                            )
+                        }
                     },
                 },
             ],
         )
     }
 
-    // Handle sharing a folder
     const handleShareFolder = async (folder: Folder) => {
         try {
-            // Placeholder - In the future, replace with actual ZIP file sharing
             RNAlert.alert(
                 "Sharing",
                 `Folder "${folder.title}" will be shared soon!`,
@@ -255,112 +284,189 @@ export function useFolderOperations({
                 title: folder.title,
             })
         } catch (error) {
-            logger.debug("Error sharing folder", { error })
+            logger.error("Error sharing folder", {
+                folderId: folder.id,
+                error: error instanceof Error ? error.message : error,
+            })
             RNAlert.alert("Error", "Failed to share the folder.")
         }
     }
 
-    // Move folders to a new parent
-    const handleMoveFolders = (
-        folderIds: string[],
+    const handleMoveItems = (
+        itemsToMove: SelectedItem[],
         targetParentId: string | null,
     ) => {
-        if (folderIds.length === 0) return
+        if (itemsToMove.length === 0) return
 
-        // Verify we're not creating circular references
-        const wouldCreateCircularReference = (
-            folderId: string,
-            targetParentId: string | null,
-        ): boolean => {
-            if (targetParentId === null) return false
-            if (folderId === targetParentId) return true
-
-            const targetFolder = folders.find((f) => f.id === targetParentId)
-            if (!targetFolder) return false
-
-            // Check if the target is a descendant of the folder being moved
-            return wouldCreateCircularReference(folderId, targetFolder.parentId)
-        }
-
-        // Check if any folder would create a circular reference
-        const anyCircularReference = folderIds.some((id) =>
-            wouldCreateCircularReference(id, targetParentId),
+        const folderItemsToMove = itemsToMove.filter((i) => i.type === "folder")
+        const documentItemsToMove = itemsToMove.filter(
+            (i) => i.type === "document",
         )
-        if (anyCircularReference) {
+        const folderIdsToMove = folderItemsToMove.map((i) => i.id)
+        const documentIdsToMove = documentItemsToMove.map((i) => i.id)
+
+        logger.debug("Moving items", {
+            folderCount: folderIdsToMove.length,
+            documentCount: documentIdsToMove.length,
+            folderIdsToMove,
+            documentIdsToMove,
+            targetParentId,
+        })
+
+        // 1. Cannot move documents to root
+        if (targetParentId === null && documentIdsToMove.length > 0) {
+            logger.warn("Attempted to move documents to root", {
+                count: documentIdsToMove.length,
+            })
             setAlert({
                 visible: true,
-                message: "Cannot move folder into its own subfolder",
+                message: "Cannot move documents to the root level.",
                 type: "error",
             })
             return
         }
 
-        // Store original parents to update childFolderIds
-        const originalParents = new Map<string, string>()
-        folderIds.forEach((id) => {
-            const folder = folders.find((f) => f.id === id)
-            if (folder && folder.parentId !== null) {
-                originalParents.set(id, folder.parentId)
-            }
+        // 2. Check for circular folder moves
+        const wouldCreateCircularReference = (
+            folderId: string,
+            targetId: string | null,
+        ): boolean => {
+            if (targetId === null) return false
+            if (folderId === targetId) return true
+            const targetFolder = folders.find((f) => f.id === targetId)
+            if (!targetFolder || !targetFolder.parentId) return false
+            return wouldCreateCircularReference(folderId, targetFolder.parentId)
+        }
+
+        const anyCircularReference = folderIdsToMove.some((id) =>
+            wouldCreateCircularReference(id, targetParentId),
+        )
+        if (anyCircularReference) {
+            logger.warn("Move cancelled due to circular reference", {
+                folderIdsToMove,
+                targetParentId,
+            })
+            setAlert({
+                visible: true,
+                message: "Cannot move a folder into its own subfolder.",
+                type: "error",
+            })
+            return
+        }
+
+        // 3. Check if target exists (if not null)
+        if (
+            targetParentId !== null &&
+            !folders.some((f) => f.id === targetParentId)
+        ) {
+            logger.error("Target folder for move not found", { targetParentId })
+            setAlert({
+                visible: true,
+                message: "Target folder not found.",
+                type: "error",
+            })
+            return
+        }
+
+        const originalFolderParents = new Map<string, string | null>()
+        folders.forEach((f) => {
+            if (folderIdsToMove.includes(f.id))
+                originalFolderParents.set(f.id, f.parentId)
         })
 
-        // Update all folders
+        const originalDocumentParents = new Map<string, string | null>()
+        folders.forEach((f) => {
+            f.documentIds?.forEach((docId) => {
+                if (documentIdsToMove.includes(docId))
+                    originalDocumentParents.set(docId, f.id)
+            })
+        })
+
         const updatedFolders = folders.map((folder) => {
-            // Update moved folders
-            if (folderIds.includes(folder.id)) {
-                return {
-                    ...folder,
-                    parentId: targetParentId,
-                    updatedAt: new Date(),
+            const updatedFolder = { ...folder }
+
+            // A. Update moved FOLDERS: change parentId
+            if (
+                folderIdsToMove.includes(updatedFolder.id) &&
+                updatedFolder.parentId !== targetParentId
+            ) {
+                updatedFolder.parentId = targetParentId
+                updatedFolder.updatedAt = new Date()
+            }
+
+            // B. Update ORIGINAL PARENTS of moved FOLDERS: remove from childFolderIds
+            const originalParentIdForThisFolder = originalFolderParents.get(
+                updatedFolder.id,
+            )
+            if (
+                originalParentIdForThisFolder === updatedFolder.id &&
+                updatedFolder.childFolderIds
+            ) {
+                updatedFolder.childFolderIds =
+                    updatedFolder.childFolderIds.filter(
+                        (id) => !folderIdsToMove.includes(id),
+                    )
+            }
+
+            // C. Update ORIGINAL PARENTS of moved DOCUMENTS: remove from documentIds
+            const originalDocParentFolderIds = Array.from(
+                originalDocumentParents.values(),
+            )
+            if (
+                originalDocParentFolderIds.includes(updatedFolder.id) &&
+                updatedFolder.documentIds
+            ) {
+                updatedFolder.documentIds = updatedFolder.documentIds.filter(
+                    (id) => !documentIdsToMove.includes(id),
+                )
+            }
+
+            // D. Update TARGET PARENT: add folders/docs
+            if (updatedFolder.id === targetParentId) {
+                const initialChildCount =
+                    updatedFolder.childFolderIds?.length ?? 0
+                const initialDocCount = updatedFolder.documentIds?.length ?? 0
+
+                const currentChildFolders = new Set(
+                    updatedFolder.childFolderIds || [],
+                )
+                folderIdsToMove.forEach((id) => currentChildFolders.add(id))
+                updatedFolder.childFolderIds = Array.from(currentChildFolders)
+
+                const currentDocIds = new Set(updatedFolder.documentIds || [])
+                documentIdsToMove.forEach((id) => currentDocIds.add(id))
+                updatedFolder.documentIds = Array.from(currentDocIds)
+
+                if (
+                    updatedFolder.childFolderIds.length !== initialChildCount ||
+                    updatedFolder.documentIds.length !== initialDocCount
+                ) {
+                    updatedFolder.updatedAt = new Date()
                 }
             }
 
-            // Update original parent folders (remove from childFolderIds)
-            if (Array.from(originalParents.values()).includes(folder.id)) {
-                const updatedChildFolderIds = (
-                    folder.childFolderIds || []
-                ).filter((id) => !folderIds.includes(id))
-                return {
-                    ...folder,
-                    childFolderIds: updatedChildFolderIds,
-                    updatedAt: new Date(),
-                }
-            }
-
-            // Update target parent folder (add to childFolderIds)
-            if (folder.id === targetParentId) {
-                const updatedChildFolderIds = [
-                    ...(folder.childFolderIds || []),
-                    ...folderIds,
-                ]
-                return {
-                    ...folder,
-                    childFolderIds: updatedChildFolderIds,
-                    updatedAt: new Date(),
-                }
-            }
-
-            return folder
+            return updatedFolder
         })
 
         setFolders(updatedFolders)
         setAlert({
             visible: true,
-            message: `${folderIds.length} folder(s) moved successfully`,
+            message: `${itemsToMove.length} item(s) moved successfully`,
             type: "success",
         })
-        logger.debug("Moved folders", { folderIds, targetParentId })
+        logger.info("Moved items successfully", {
+            count: itemsToMove.length,
+            targetParentId,
+        })
     }
 
-    // Show folder options menu
     const showFolderOptions = (
         folder: Folder,
         selectionMode: boolean,
-        handleFolderSelect: (id: string) => void,
+        handleItemSelect: (id: string, type: "folder" | "document") => void,
     ) => {
         if (selectionMode) {
-            // In selection mode, long press also toggles selection
-            handleFolderSelect(folder.id)
+            handleItemSelect(folder.id, "folder")
             return
         }
 
@@ -374,36 +480,30 @@ export function useFolderOperations({
                     setFolderModalVisible(true)
                 },
             },
-            {
-                text: "Share",
-                onPress: () => handleShareFolder(folder),
-            },
+            { text: "Share", onPress: () => handleShareFolder(folder) },
             {
                 text: "Delete",
                 style: "destructive",
                 onPress: () => handleDeleteFolder(folder.id),
             },
-            {
-                text: "Cancel",
-                style: "cancel",
-            },
+            { text: "Cancel", style: "cancel" },
         ])
     }
 
-    // Return all operations
     return {
         getCurrentFolders,
         getCurrentFolderName,
         handleCreateFolder,
         handleUpdateFolder,
         handleDeleteFolder,
+        deleteSingleFolderInternal,
         handleShareFolder,
         handleToggleFavorite,
-        handleMoveFolders,
+        handleMoveItems,
         showFolderOptions: (
             folder: Folder,
             selectionMode: boolean,
-            handleFolderSelect: (id: string) => void,
-        ) => showFolderOptions(folder, selectionMode, handleFolderSelect),
+            handleItemSelect: (id: string, type: "folder" | "document") => void,
+        ) => showFolderOptions(folder, selectionMode, handleItemSelect),
     }
 }
