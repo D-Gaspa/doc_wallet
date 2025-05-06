@@ -70,7 +70,7 @@ export function ItemSelectionControls({
             <Text
                 style={[
                     styles.textButtonText,
-                    { color: colors.primary },
+                    { color: disabled ? colors.secondaryText : colors.primary },
                     textStyle,
                 ]}
             >
@@ -95,13 +95,15 @@ export function ItemSelectionControls({
                 {/* Left side: Selection Count */}
                 <View style={styles.infoContainer}>
                     <Text
-                        style={[styles.selectionText, { color: colors.text }]}
+                        style={[
+                            styles.selectionText,
+                            /* eslint-disable-next-line react-native/no-inline-styles */
+                            { color: colors.text, fontSize: 14 },
+                        ]}
                         numberOfLines={1}
-                        ellipsizeMode="tail"
+                        ellipsizeMode="clip"
                     >
-                        {`${numSelected} item${
-                            numSelected !== 1 ? "s" : ""
-                        } selected`}
+                        {`${numSelected} Selected`}
                     </Text>
                 </View>
 
@@ -144,7 +146,6 @@ export function ItemSelectionControls({
                     <TextButton
                         title="Cancel"
                         onPress={toggleSelectionMode}
-                        textStyle={{ color: colors.secondaryText }}
                         testID="cancel-selection-button"
                     />
                 </View>
@@ -156,8 +157,8 @@ export function ItemSelectionControls({
 const styles = StyleSheet.create({
     textButtonBase: {
         paddingVertical: 8,
-        paddingHorizontal: 10,
-        marginLeft: 8,
+        paddingHorizontal: 6,
+        marginLeft: 2,
         borderRadius: 4,
         justifyContent: "center",
         alignItems: "center",
@@ -174,29 +175,35 @@ const styles = StyleSheet.create({
         width: "100%",
         minHeight: 44,
         justifyContent: "center",
-        paddingHorizontal: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
         marginTop: 8,
         marginBottom: 4,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderBottomWidth: StyleSheet.hairlineWidth,
     },
-    row: { width: "100%", minHeight: 44 },
+    row: {
+        width: "100%",
+        minHeight: 36,
+        flexWrap: "nowrap",
+    },
     infoContainer: {
         flexShrink: 1,
-        flexBasis: "30%",
+        minWidth: 30,
         justifyContent: "center",
-        paddingRight: 8,
+        paddingRight: 4,
+        marginRight: "auto",
     },
     buttonsContainer: {
-        flexGrow: 1,
-        flexShrink: 0,
+        flexShrink: 1,
         flexDirection: "row",
         justifyContent: "flex-end",
         alignItems: "center",
         flexWrap: "nowrap",
     },
     selectionText: {
-        fontSize: 14,
-        fontWeight: "500",
+        fontSize: 16,
+        fontWeight: "600",
+        textAlign: "center",
     },
 })

@@ -1,21 +1,15 @@
 import React from "react"
-import {
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
-} from "react-native"
 import { useTheme } from "../../../../hooks/useTheme.ts"
-import { Stack } from "../../layout"
 import { IDocument } from "../../../../types/document.ts"
 import StarIcon from "../../assets/svg/starfilled.svg"
 import StarOutlineIcon from "../../assets/svg/favorite.svg"
 import ShareIcon from "../../assets/svg/share.svg"
 import InfoIcon from "../../assets/svg/info.svg"
 import TrashIcon from "../../assets/svg/trash.svg"
-import ExitIcon from "../../assets/svg/close.svg"
+import {
+    ActionModalBase,
+    ActionOption,
+} from "../../../common/modal/ActionModalBase"
 
 interface DocumentActionModalProps {
     isVisible: boolean
@@ -42,29 +36,12 @@ export function DocumentActionModal({
 
     if (!document) return null
 
-    // Action Handlers
-    const handleToggleFavorite = () => {
-        if (!document) return
-        onToggleFavorite(document)
-        onClose()
-    }
-    const handleShare = () => {
-        if (!document) return
-        onShare(document)
-        onClose()
-    }
-    const handleViewDetails = () => {
-        if (!document) return
-        onViewDetails(document)
-        onClose()
-    }
-    const handleDelete = () => {
-        if (!document) return
-        onDelete(document)
-        onClose()
-    }
+    const handleToggleFavorite = () => onToggleFavorite(document)
+    const handleShare = () => onShare(document)
+    const handleViewDetails = () => onViewDetails(document)
+    const handleDelete = () => onDelete(document)
 
-    const menuOptions = [
+    const documentMenuOptions: ActionOption[] = [
         {
             label: isFavorite ? "Remove Favorite" : "Add Favorite",
             action: handleToggleFavorite,
@@ -78,166 +55,37 @@ export function DocumentActionModal({
                 />
             ),
             style: { color: isFavorite ? colors.warning : colors.primary },
+            testID: "doc-action-favorite",
         },
         {
             label: "Share",
             action: handleShare,
             icon: <ShareIcon width={20} height={20} stroke={colors.primary} />,
             style: { color: colors.primary },
+            testID: "doc-action-share",
         },
         {
             label: "View Details",
             action: handleViewDetails,
             icon: <InfoIcon width={20} height={20} stroke={colors.primary} />,
             style: { color: colors.primary },
+            testID: "doc-action-details",
         },
         {
             label: "Delete",
             action: handleDelete,
             icon: <TrashIcon width={20} height={20} stroke={colors.error} />,
             style: { color: colors.error },
+            testID: "doc-action-delete",
         },
     ]
 
     return (
-        <Modal
-            visible={isVisible}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={onClose}
-        >
-            <TouchableWithoutFeedback onPress={onClose}>
-                <View
-                    style={[
-                        styles.overlay,
-                        { backgroundColor: colors.shadow + "60" },
-                    ]}
-                >
-                    <TouchableWithoutFeedback
-                        onPress={(e) => e.stopPropagation()}
-                    >
-                        <View
-                            style={[
-                                styles.modalContent,
-                                {
-                                    backgroundColor: colors.card,
-                                    shadowColor: colors.shadow,
-                                },
-                            ]}
-                        >
-                            <Text
-                                style={[styles.title, { color: colors.text }]}
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                            >
-                                {document.title || "Document"} Options
-                            </Text>
-                            <Stack spacing={0} style={styles.optionsStack}>
-                                {menuOptions.map((option, index) => (
-                                    <TouchableOpacity
-                                        key={option.label}
-                                        style={[
-                                            styles.optionButton,
-                                            index < menuOptions.length - 1 && {
-                                                borderBottomColor:
-                                                    colors.border,
-                                                borderBottomWidth:
-                                                    StyleSheet.hairlineWidth,
-                                            },
-                                        ]}
-                                        onPress={option.action}
-                                    >
-                                        {option.icon && (
-                                            <View style={styles.iconWrapper}>
-                                                {option.icon}
-                                            </View>
-                                        )}
-                                        <Text
-                                            style={[
-                                                styles.optionText,
-                                                option.style,
-                                            ]}
-                                        >
-                                            {option.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </Stack>
-                            <TouchableOpacity
-                                style={[
-                                    styles.optionButton,
-                                    styles.closeButton,
-                                    { borderTopColor: colors.border },
-                                ]}
-                                onPress={onClose}
-                            >
-                                <ExitIcon
-                                    width={20}
-                                    height={20}
-                                    stroke={colors.secondaryText}
-                                />
-                                <Text
-                                    style={[
-                                        styles.optionText,
-                                        { color: colors.secondaryText },
-                                    ]}
-                                >
-                                    Close
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </TouchableWithoutFeedback>
-                </View>
-            </TouchableWithoutFeedback>
-        </Modal>
+        <ActionModalBase
+            isVisible={isVisible}
+            onClose={onClose}
+            title={`${document.title || "Document"} Options`}
+            menuOptions={documentMenuOptions}
+        />
     )
 }
-
-// TODO: Reuse styles from FolderActionModal, potentially move to common location later
-const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    modalContent: {
-        width: "80%",
-        maxWidth: 320,
-        borderRadius: 12,
-        paddingTop: 15,
-        paddingBottom: 0,
-        paddingHorizontal: 0,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: "bold",
-        textAlign: "center",
-        marginBottom: 15,
-        paddingHorizontal: 15,
-    },
-    optionsStack: {
-        marginBottom: 5,
-    },
-    optionButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: 16,
-        paddingHorizontal: 20,
-    },
-    iconWrapper: {
-        marginRight: 15,
-        width: 24,
-        alignItems: "center",
-    },
-    optionText: {
-        fontSize: 16,
-        fontWeight: "500",
-    },
-    closeButton: {
-        borderTopWidth: StyleSheet.hairlineWidth,
-    },
-})
