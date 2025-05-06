@@ -5,12 +5,12 @@ import { useTheme } from "../../../../hooks/useTheme"
 import { Folder, ListItem } from "./types"
 import { IDocument } from "../../../../types/document"
 import { useTagContext } from "../../tag_functionality/TagContext"
-import { getIconById, ThemeColors } from "./CustomIconSelector"
+import { SelectedItem } from "./useSelectionMode"
 
 interface ItemsListProps {
     items: ListItem[]
     selectionMode: boolean
-    selectedFolderIds: string[]
+    selectedItems: SelectedItem[]
     selectedItemId?: string | null
     isSelectionList?: boolean
     emptyListMessage?: string
@@ -20,8 +20,7 @@ interface ItemsListProps {
     onFolderOptionsPress?: (folder: Folder) => void
     onDocumentOptionsPress?: (document: IDocument) => void
     onFolderToggleFavorite?: (folderId: string) => void
-    onFolderSelect?: (folderId: string) => void
-
+    onItemSelect?: (id: string, type: "folder" | "document") => void
     onSelectItem?: (id: string, type: "folder" | "document") => void
 
     testID?: string
@@ -30,7 +29,7 @@ interface ItemsListProps {
 export function ItemsList({
     items,
     selectionMode,
-    selectedFolderIds,
+    selectedItems,
     selectedItemId,
     isSelectionList = false,
     emptyListMessage = "No items found",
@@ -39,33 +38,35 @@ export function ItemsList({
     onFolderOptionsPress,
     onDocumentOptionsPress,
     onFolderToggleFavorite,
-    onFolderSelect,
+    onItemSelect,
     onSelectItem,
     testID,
 }: ItemsListProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
 
-    const getFolderIcon = (folder: Folder) => {
-        if (folder.type === "custom" && folder.customIconId) {
-            return getIconById(folder.customIconId, colors as ThemeColors)
-        }
-        return undefined
-    }
-
     const renderItem = useCallback(
         ({ item }: { item: ListItem }) => {
+            const isSelected = isSelectionList
+                ? item.data.id === selectedItemId
+                : selectionMode &&
+                  selectedItems.some(
+                      (sel) =>
+                          sel.id === item.data.id && sel.type === item.type,
+                  )
+
             if (item.type === "folder") {
                 const folder = item.data as Folder
+
                 const handlePress = () => {
                     if (isSelectionList && onSelectItem) {
                         onSelectItem(folder.id, "folder")
                     } else if (
                         !isSelectionList &&
                         selectionMode &&
-                        onFolderSelect
+                        onItemSelect
                     ) {
-                        onFolderSelect(folder.id)
+                        onItemSelect(folder.id, "folder")
                     } else if (!isSelectionList && onFolderPress) {
                         onFolderPress(folder.id)
                     }
@@ -81,23 +82,19 @@ export function ItemsList({
                     } else if (
                         !isSelectionList &&
                         selectionMode &&
-                        onFolderSelect
+                        onItemSelect
                     ) {
-                        onFolderSelect(folder.id)
+                        onItemSelect(folder.id, "folder")
                     }
                 }
-
-                const isSelected = isSelectionList
-                    ? folder.id === selectedItemId
-                    : selectionMode && selectedFolderIds.includes(folder.id)
 
                 return (
                     <FolderCard
                         key={`folder-${folder.id}`}
+                        folderId={folder.id}
                         title={folder.title}
                         type={folder.type}
-                        customIcon={getFolderIcon(folder)}
-                        folderId={folder.id}
+                        customIconId={folder.customIconId}
                         isFavorite={folder.favorite}
                         selected={isSelected}
                         onPress={handlePress}
@@ -112,39 +109,51 @@ export function ItemsList({
                                 ? () => onFolderOptionsPress(folder)
                                 : undefined
                         }
-                        // If tags needed to be passed explicitly:
-                        // tags={tagContext.getTagsForItem(folder.id, "folder")}
                         testID={`folder-${folder.id}`}
                     />
                 )
             } else if (item.type === "document") {
                 const document = item.data as IDocument
 
-                // Documents are generally not selectable in the 'selectionList' mode
-                if (isSelectionList) return null // Don't render documents in folder selection modals
-
                 const handlePress = () => {
-                    if (onDocumentPress) {
+                    if (!isSelectionList && selectionMode && onItemSelect) {
+                        onItemSelect(document.id, "document")
+                    } else if (!isSelectionList && onDocumentPress) {
                         onDocumentPress(document)
                     }
                 }
 
                 const handleLongPress = () => {
-                    if (onDocumentOptionsPress) {
+                    if (
+                        !isSelectionList &&
+                        !selectionMode &&
+                        onDocumentOptionsPress
+                    ) {
                         onDocumentOptionsPress(document)
+                    } else if (
+                        !isSelectionList &&
+                        selectionMode &&
+                        onItemSelect
+                    ) {
+                        onItemSelect(document.id, "document")
                     }
                 }
+
+                if (isSelectionList) return null
 
                 return (
                     <DocumentCard
                         key={`document-${document.id}`}
                         document={document}
-                        onPress={handlePress}
-                        onLongPress={handleLongPress}
                         tags={tagContext.getTagsForItem(
                             document.id,
                             "document",
                         )}
+                        onPress={handlePress}
+                        onLongPress={handleLongPress}
+                        // TODO: DocumentCard doesn't visually show selection state currently.
+                        //        If needed, the `selected` prop should be added to DocumentCard
+                        //        and passed down to its ListItemCard: selected={isSelected}
                         showAddTagButton={true}
                         testID={`document-${document.id}`}
                     />
@@ -157,14 +166,14 @@ export function ItemsList({
             isSelectionList,
             selectionMode,
             selectedItemId,
-            selectedFolderIds,
+            selectedItems,
+            onItemSelect,
             onSelectItem,
             onFolderPress,
             onDocumentPress,
             onFolderOptionsPress,
             onDocumentOptionsPress,
             onFolderToggleFavorite,
-            onFolderSelect,
             colors,
             tagContext,
         ],
@@ -193,10 +202,7 @@ export function ItemsList({
                 styles.content,
                 items.length === 0 && styles.emptyContent,
             ]}
-            // Performance optimization for lists that don't change size often
-            // removeClippedSubviews={true} // Consider if performance issues arise
-            // maxToRenderPerBatch={10} // Adjust based on testing
-            // windowSize={21} // Adjust based on testing
+            extraData={{ selectionMode, selectedItems, selectedItemId }}
             testID={testID ?? "items-list"}
         />
     )

@@ -1,17 +1,17 @@
-import React, { useState, useRef, useEffect } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    Modal,
     FlatList,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
     TouchableWithoutFeedback,
+    View,
 } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
-import { TagList } from "./TagList"
+import { TagList, TagListProps } from "./TagList"
 import { TagEditModal } from "./TagEditModal"
-import { useTagContext, Tag } from "./TagContext"
+import { Tag, useTagContext } from "./TagContext"
 
 export interface ItemTagsManagerProps {
     itemId: string
@@ -20,10 +20,11 @@ export interface ItemTagsManagerProps {
     allTags: Tag[]
     onTagPress?: (tagId: string) => void
     selectedTagIds?: string[]
-    maxTags?: number
     horizontal?: boolean
     testID?: string
     showAddTagButton?: boolean
+    size?: TagListProps["size"]
+    initiallyExpanded?: boolean
 }
 
 export function ItemTagsManager({
@@ -36,6 +37,8 @@ export function ItemTagsManager({
     horizontal = true,
     testID,
     showAddTagButton = true,
+    size = "small",
+    initiallyExpanded = false,
 }: ItemTagsManagerProps) {
     const { colors } = useTheme()
     const { associateTag, disassociateTag, createTag } = useTagContext()
@@ -44,15 +47,12 @@ export function ItemTagsManager({
     useEffect(() => {
         setCurrentTags(tags)
     }, [tags])
-
     const [tagMenuVisible, setTagMenuVisible] = useState(false)
     const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false)
     const [tagToDelete, setTagToDelete] = useState<string | null>(null)
     const [createTagModalVisible, setCreateTagModalVisible] = useState(false)
-
     const tagListRef = useRef<View>(null)
     const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
-
     const handleShowTagMenu = () => {
         if (tagListRef.current) {
             tagListRef.current.measureInWindow((x, y, width, height) => {
@@ -127,8 +127,8 @@ export function ItemTagsManager({
                 horizontal={horizontal}
                 showAddTagButton={showAddTagButton}
                 onAddTagPress={showAddTagButton ? handleShowTagMenu : undefined}
-                size="small"
-                initiallyExpanded={false} // Keep tags collapsed initially
+                size={size}
+                initiallyExpanded={initiallyExpanded}
             />
 
             {/* Tag dropdown menu */}
@@ -312,9 +312,9 @@ export function ItemTagsManager({
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
-        justifyContent: "flex-start", // Align tags/button to the start
+        justifyContent: "flex-start",
         alignItems: "center",
-        width: "100%", // Ensure it takes available width
+        width: "100%",
     },
     modalOverlay: { flex: 1 },
     tagMenu: {
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 12,
         borderTopWidth: StyleSheet.hairlineWidth,
-        marginTop: 8, // Use StyleSheet.hairlineWidth
+        marginTop: 8,
     },
     createTagIcon: {
         width: 18,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-    }, // Added background dim
+    },
     confirmDialog: {
         width: "80%",
         borderRadius: 8,
@@ -387,5 +387,5 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         borderWidth: 1,
         alignItems: "center",
-    }, // Adjusted padding/radius
+    },
 })

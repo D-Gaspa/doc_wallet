@@ -59,7 +59,7 @@ export const DocumentsScreen = ({ setActiveTab }: DocumentsScreenProps) => {
             const { scannedImages, status } =
                 await DocumentScanner.scanDocument({
                     croppedImageQuality: 100,
-                    maxNumDocuments: 1, // Explicitly limiting to 1 for this flow
+                    maxNumDocuments: 1,
                     responseType: ResponseType.ImageFilePath,
                 })
 
