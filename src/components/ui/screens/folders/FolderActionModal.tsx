@@ -1,11 +1,11 @@
 import React from "react"
 import {
     Modal,
-    View,
-    Text,
     StyleSheet,
+    Text,
     TouchableOpacity,
     TouchableWithoutFeedback,
+    View,
 } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme"
 import { Stack } from "../../layout"
@@ -13,6 +13,7 @@ import { Folder } from "./types"
 
 import ShareIcon from "../../assets/svg/share.svg"
 import EditIcon from "../../assets/svg/edit.svg"
+import DeleteIcon from "../../assets/svg/trash.svg"
 import ExitIcon from "../../assets/svg/close.svg"
 
 interface FolderActionModalProps {
@@ -21,6 +22,7 @@ interface FolderActionModalProps {
     folder: Folder | null
     onShare: (folder: Folder) => void
     onEdit: (folder: Folder) => void
+    onDelete: (folder: Folder) => void
 }
 
 export function FolderActionModal({
@@ -29,24 +31,45 @@ export function FolderActionModal({
     folder,
     onShare,
     onEdit,
+    onDelete,
 }: FolderActionModalProps) {
     const { colors } = useTheme()
 
     if (!folder) return null
+
     const handleShare = () => {
+        if (!folder) return
         onShare(folder)
         onClose()
     }
-
     const handleEdit = () => {
+        if (!folder) return
         onEdit(folder)
+        onClose()
+    }
+    const handleDelete = () => {
+        if (!folder) return
+        onDelete(folder)
         onClose()
     }
 
     const menuOptions = [
-        { label: "Share", action: handleShare, icon: <ShareIcon /> },
-        { label: "Edit", action: handleEdit, icon: <EditIcon /> },
-        { label: "Exit", action: onClose, icon: <ExitIcon /> },
+        {
+            label: "Share",
+            action: handleShare,
+            icon: <ShareIcon width={20} height={20} stroke={colors.primary} />,
+        },
+        {
+            label: "Edit",
+            action: handleEdit,
+            icon: <EditIcon width={20} height={20} stroke={colors.primary} />,
+        },
+        {
+            label: "Delete",
+            action: handleDelete,
+            icon: <DeleteIcon width={20} height={20} stroke={colors.error} />,
+            style: { color: colors.error },
+        },
     ]
 
     return (
@@ -57,12 +80,22 @@ export function FolderActionModal({
             onRequestClose={onClose}
         >
             <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.overlay}>
-                    <TouchableWithoutFeedback>
+                <View
+                    style={[
+                        styles.overlay,
+                        { backgroundColor: colors.shadow + "60" },
+                    ]}
+                >
+                    <TouchableWithoutFeedback
+                        onPress={(e) => e.stopPropagation()}
+                    >
                         <View
                             style={[
                                 styles.modalContent,
-                                { backgroundColor: colors.card },
+                                {
+                                    backgroundColor: colors.card,
+                                    shadowColor: colors.shadow,
+                                },
                             ]}
                         >
                             <Text
@@ -82,18 +115,23 @@ export function FolderActionModal({
                                                 borderBottomWidth:
                                                     StyleSheet.hairlineWidth,
                                             },
-                                            // Style the 'Exit' or 'Delete' differently if needed
-                                            option.label === "Exit" &&
-                                                styles.exitButton,
+                                            option.label === "Delete" &&
+                                                styles.deleteButton,
                                         ]}
                                         onPress={option.action}
+                                        activeOpacity={0.7}
                                     >
+                                        {option.icon && (
+                                            <View style={styles.iconWrapper}>
+                                                {option.icon}
+                                            </View>
+                                        )}
                                         <Text
                                             style={[
                                                 styles.optionText,
-                                                option.label === "Exit"
-                                                    ? { color: colors.error } // Example: Red for Exit
-                                                    : { color: colors.primary },
+                                                option.style || {
+                                                    color: colors.primary,
+                                                },
                                             ]}
                                         >
                                             {option.label}
@@ -101,6 +139,29 @@ export function FolderActionModal({
                                     </TouchableOpacity>
                                 ))}
                             </Stack>
+                            <TouchableOpacity
+                                style={[
+                                    styles.optionButton,
+                                    styles.closeButton,
+                                    { borderTopColor: colors.border },
+                                ]}
+                                onPress={onClose}
+                                activeOpacity={0.7}
+                            >
+                                <ExitIcon
+                                    width={20}
+                                    height={20}
+                                    stroke={colors.secondaryText}
+                                />
+                                <Text
+                                    style={[
+                                        styles.optionText,
+                                        { color: colors.secondaryText },
+                                    ]}
+                                >
+                                    Close
+                                </Text>
+                            </TouchableOpacity>
                         </View>
                     </TouchableWithoutFeedback>
                 </View>
@@ -117,9 +178,10 @@ const styles = StyleSheet.create({
     },
     modalContent: {
         width: "80%",
-        maxWidth: 300,
+        maxWidth: 320,
         borderRadius: 12,
-        paddingVertical: 10, // Padding top/bottom for the whole modal
+        paddingTop: 15,
+        paddingBottom: 0,
         paddingHorizontal: 0,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
@@ -131,20 +193,30 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         textAlign: "center",
         marginBottom: 15,
-        paddingHorizontal: 15, // Add padding for title
+        paddingHorizontal: 15,
+        // color applied inline using theme
     },
     optionButton: {
-        flexDirection: "row", // For icon + text layout
+        flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 15,
-        paddingHorizontal: 20, // Padding inside each button
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+    },
+    iconWrapper: {
+        marginRight: 15,
+        width: 24,
+        alignItems: "center",
     },
     optionText: {
         fontSize: 16,
         fontWeight: "500",
-        marginLeft: 10, // Space between icon and text
     },
-    exitButton: {
-        // Optional: Specific styles for the Exit button if needed
+    deleteButton: {
+        // No specific style needed here now, color handled inline
+        // Still needed to avoid error in the map function
+    },
+    closeButton: {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        marginTop: 5,
     },
 })

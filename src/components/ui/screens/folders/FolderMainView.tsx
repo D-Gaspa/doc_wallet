@@ -99,7 +99,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         handleUpdateFolder,
         getCurrentFolderName,
         handleShareFolder,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         handleDeleteFolder,
         handleToggleFavorite,
         handleMoveFolders,
@@ -402,6 +401,12 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         }
     }
 
+    const handleDeleteAction = (folder: Folder) => {
+        if (folder) {
+            handleDeleteFolder(folder.id)
+        }
+    }
+
     // --- Navigation Effects ---
     useEffect(() => {
         const targetFolderId = route.params?.folderId
@@ -660,6 +665,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                     folder={folderForAction}
                     onShare={handleShareAction}
                     onEdit={handleEditAction}
+                    onDelete={handleDeleteAction}
                 />
             </View>
             <LoadingOverlay visible={isLoading} />
