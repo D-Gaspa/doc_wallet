@@ -490,7 +490,6 @@ export const AddDocumentDetailsSheet = ({
                                         ]}
                                     />
                                 )}
-
                                 <Text
                                     style={[
                                         styles.subtitleSmall,
