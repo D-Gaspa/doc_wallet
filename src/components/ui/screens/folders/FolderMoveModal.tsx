@@ -7,9 +7,7 @@ import {
     Modal,
     PanResponder,
     Platform,
-    ScrollView,
     StyleSheet,
-    TouchableOpacity,
     TouchableWithoutFeedback,
     View,
 } from "react-native"
@@ -19,9 +17,9 @@ import { Button } from "../../button"
 import { Row, Spacer } from "../../layout"
 import type { Folder, ListItem } from "./types"
 import { ItemsList } from "./ItemsList"
-import RightChevronIcon from "../../assets/svg/chevron-right.svg"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { SelectedItem } from "./useSelectionMode"
+import { BreadcrumbItem, BreadcrumbNavigation } from "./BreadcrumbNavigation"
 
 const screenHeight = Dimensions.get("window").height
 const sheetHeight = screenHeight * 0.75
@@ -45,13 +43,13 @@ export function FolderMoveModal({
     const { colors } = useTheme()
     const insets = useSafeAreaInsets()
     const translateY = useRef(new Animated.Value(screenHeight)).current
-    const [targetFolderId, setTargetFolderId] = useState<
+    const [finalTargetFolderId, setFinalTargetFolderId] = useState<
         string | null | undefined
     >(undefined)
-    const [folderPath, setFolderPath] = useState<Folder[]>([])
     const [currentViewFolderId, setCurrentViewFolderId] = useState<
         string | null
     >(null)
+    const [folderPath, setFolderPath] = useState<BreadcrumbItem[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
     // --- Animation Logic ---
@@ -65,7 +63,7 @@ export function FolderMoveModal({
     useEffect(() => {
         if (isVisible) {
             animateSheet(0)
-            setTargetFolderId(undefined)
+            setFinalTargetFolderId(undefined)
             setCurrentViewFolderId(null)
             setFolderPath([])
             setIsLoading(false)
@@ -83,49 +81,52 @@ export function FolderMoveModal({
             },
             onPanResponderRelease: (_, gestureState) => {
                 if (gestureState.dy > dragThreshold || gestureState.vy > 0.5) {
-                    // Animate out fully before calling onClose
                     Animated.timing(translateY, {
                         toValue: screenHeight,
                         duration: 200,
                         useNativeDriver: true,
                     }).start(() => {
-                        // Call onClose *after* animation completes
                         onClose()
                     })
                 } else {
-                    animateSheet(0, 200) // Spring back up
+                    animateSheet(0, 200)
                 }
             },
         }),
     ).current
 
-    // --- Navigation Logic (Used by Breadcrumbs) ---
-    const navigateToFolder = (folderId: string | null) => {
+    // --- Path and Navigation Logic ---
+    const buildFolderPath = (
+        targetFolderId: string | null,
+    ): BreadcrumbItem[] => {
+        if (targetFolderId === null) return []
+
+        const path: BreadcrumbItem[] = []
+        let currentFolder = folders.find((f) => f.id === targetFolderId)
+
+        while (currentFolder) {
+            path.unshift({ id: currentFolder.id, title: currentFolder.title })
+            currentFolder = folders.find(
+                (f) => f.id === currentFolder?.parentId,
+            )
+        }
+        return path
+    }
+
+    const handleNavigate = (folderId: string | null) => {
         if (folderId === currentViewFolderId || isLoading) return
         setIsLoading(true)
-        setTargetFolderId(undefined)
+        setFinalTargetFolderId(undefined)
 
-        if (folderId === null) {
-            setCurrentViewFolderId(null)
-            setFolderPath([])
-        } else {
-            const folder = folders.find((f) => f.id === folderId)
-            if (folder) {
-                setCurrentViewFolderId(folderId)
-                const path: Folder[] = []
-                let current: Folder | undefined = folder
-                while (current) {
-                    path.unshift(current)
-                    current = folders.find((f) => f.id === current?.parentId)
-                }
-                setFolderPath(path)
-            }
-        }
+        setCurrentViewFolderId(folderId)
+        setFolderPath(buildFolderPath(folderId))
+
         setTimeout(() => setIsLoading(false), 50)
     }
 
-    // --- Data Filtering and Preparation for ItemsList ---
+    // --- Data Filtering for ItemsList ---
     const folderItemsForList = useMemo((): ListItem[] => {
+        setIsLoading(true)
         // 1. Filter folders:
         const availableFolders = folders.filter((folder) => {
             // a) Belongs to current view
@@ -134,28 +135,51 @@ export function FolderMoveModal({
             const isBeingMoved = selectedItemsToMove.some(
                 (item) => item.id === folder.id && item.type === "folder",
             )
-            // c) TODO: Prevent moving into descendants (more complex check, skip for now if not critical)
+            // c) Is NOT a descendant of one of the folders being moved (prevent moving into self/child)
+            let isDescendantOfMoved = false
+            const foldersBeingMovedIds = selectedItemsToMove
+                .filter((item) => item.type === "folder")
+                .map((item) => item.id)
 
-            return isInCurrentView && !isBeingMoved
+            if (foldersBeingMovedIds.length > 0) {
+                let parentIdToCheck = folder.parentId
+                while (parentIdToCheck !== null) {
+                    if (foldersBeingMovedIds.includes(parentIdToCheck)) {
+                        isDescendantOfMoved = true
+                        break
+                    }
+                    if (foldersBeingMovedIds.includes(folder.id)) {
+                        isDescendantOfMoved = true
+                        break
+                    }
+                    const parentFolder = folders.find(
+                        (f) => f.id === parentIdToCheck,
+                    )
+                    parentIdToCheck = parentFolder
+                        ? parentFolder.parentId
+                        : null
+                }
+                if (foldersBeingMovedIds.includes(folder.id)) {
+                    isDescendantOfMoved = true
+                }
+            }
+
+            return isInCurrentView && !isBeingMoved && !isDescendantOfMoved
         })
 
         // 2. Sort alphabetically
         availableFolders.sort((a, b) => a.title.localeCompare(b.title))
 
+        setIsLoading(false)
         // 3. Map to ListItem structure
         return availableFolders.map(
             (folder): ListItem => ({ type: "folder", data: folder }),
         )
     }, [folders, currentViewFolderId, selectedItemsToMove])
 
-    // --- Selection & Move ---
-    const handleSelectTarget = (id: string | null) => {
-        setTargetFolderId(id)
-    }
-
-    const handleMove = () => {
-        if (targetFolderId !== undefined) {
-            onMove(targetFolderId)
+    const handleConfirmMove = () => {
+        if (finalTargetFolderId !== undefined) {
+            onMove(finalTargetFolderId)
         }
     }
 
@@ -172,6 +196,7 @@ export function FolderMoveModal({
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.keyboardAvoidingView}
             >
+                {/* Backdrop */}
                 <TouchableWithoutFeedback onPress={onClose}>
                     <View
                         style={[
@@ -181,6 +206,7 @@ export function FolderMoveModal({
                     />
                 </TouchableWithoutFeedback>
 
+                {/* Bottom Sheet */}
                 <Animated.View
                     style={[
                         styles.sheetContainer,
@@ -210,97 +236,37 @@ export function FolderMoveModal({
                     </Text>
                     <Spacer size={5} />
 
-                    {/* --- Breadcrumbs --- */}
-                    <View style={styles.navigationRow}>
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            style={styles.breadcrumbsScrollView}
-                            contentContainerStyle={styles.breadcrumbsContent}
-                        >
-                            {/* Root Breadcrumb */}
-                            <TouchableOpacity
-                                style={styles.breadcrumbItem}
-                                onPress={() => navigateToFolder(null)}
-                            >
-                                <Text
-                                    variant="sm"
-                                    style={[
-                                        styles.breadcrumbText,
-                                        currentViewFolderId === null
-                                            ? [
-                                                  styles.breadcrumbActive,
-                                                  { color: colors.text },
-                                              ]
-                                            : { color: colors.primary },
-                                    ]}
-                                >
-                                    Choose Destination
-                                </Text>
-                            </TouchableOpacity>
-                            {/* Folder Path Breadcrumbs */}
-                            {folderPath.map((folder) => (
-                                <Row key={folder.id} align="center">
-                                    <RightChevronIcon
-                                        width={12}
-                                        height={12}
-                                        stroke={colors.secondaryText}
-                                        style={styles.breadcrumbSeparator}
-                                    />
-                                    <TouchableOpacity
-                                        style={styles.breadcrumbItem}
-                                        onPress={() =>
-                                            navigateToFolder(folder.id)
-                                        }
-                                    >
-                                        <Text
-                                            variant="sm"
-                                            style={[
-                                                styles.breadcrumbText,
-                                                currentViewFolderId ===
-                                                folder.id
-                                                    ? [
-                                                          styles.breadcrumbActive,
-                                                          {
-                                                              color: colors.text,
-                                                          },
-                                                      ]
-                                                    : { color: colors.primary },
-                                            ]}
-                                            numberOfLines={1}
-                                        >
-                                            {folder.title}
-                                        </Text>
-                                    </TouchableOpacity>
-                                </Row>
-                            ))}
-                        </ScrollView>
-                    </View>
+                    {/* Breadcrumbs */}
+                    <BreadcrumbNavigation
+                        path={folderPath}
+                        onNavigate={handleNavigate}
+                    />
+
                     <Spacer size={10} />
 
                     {/* Selection Buttons */}
                     <Row style={styles.selectionButtonRow}>
                         <Button
-                            title="Move to Root"
+                            title="Select Root"
                             variant="text"
-                            onPress={() => handleSelectTarget(null)}
+                            onPress={() => setFinalTargetFolderId(null)}
                             style={styles.selectButton}
                             textStyle={
-                                targetFolderId === null
+                                finalTargetFolderId === null
                                     ? styles.activeSelectButtonText
                                     : { color: colors.primary }
                             }
                         />
                         {currentViewFolderId !== null && (
                             <Button
-                                title="Move Here"
+                                title="Select Current Folder"
                                 variant="text"
                                 onPress={() =>
-                                    handleSelectTarget(currentViewFolderId)
+                                    setFinalTargetFolderId(currentViewFolderId)
                                 }
                                 style={styles.selectButton}
                                 textStyle={
-                                    targetFolderId === currentViewFolderId
+                                    finalTargetFolderId === currentViewFolderId
                                         ? styles.activeSelectButtonText
                                         : { color: colors.primary }
                                 }
@@ -316,7 +282,7 @@ export function FolderMoveModal({
                             { color: colors.secondaryText },
                         ]}
                     >
-                        Or select a subfolder below:
+                        Or click a subfolder below to navigate:
                     </Text>
 
                     {/* ItemsList for Destination Folders */}
@@ -334,12 +300,11 @@ export function FolderMoveModal({
                         ) : (
                             <ItemsList
                                 items={folderItemsForList}
-                                isSelectionList={true}
-                                selectedItemId={targetFolderId}
-                                onSelectItem={handleSelectTarget}
+                                isSelectionList={false}
+                                onFolderPress={handleNavigate}
                                 selectionMode={false}
                                 selectedItems={[]}
-                                emptyListMessage="No subfolders available as destination"
+                                emptyListMessage="No subfolders available"
                                 testID="move-folder-dest-list"
                             />
                         )}
@@ -356,9 +321,9 @@ export function FolderMoveModal({
                         </View>
                         <View style={styles.buttonContainer}>
                             <Button
-                                title="Move"
-                                onPress={handleMove}
-                                disabled={targetFolderId === undefined}
+                                title="Move Here"
+                                onPress={handleConfirmMove}
+                                disabled={finalTargetFolderId === undefined}
                             />
                         </View>
                     </Row>
@@ -368,7 +333,7 @@ export function FolderMoveModal({
     )
 }
 
-// --- Styles ---
+// Styles
 const styles = StyleSheet.create({
     keyboardAvoidingView: { flex: 1, justifyContent: "flex-end" },
     backdrop: {
@@ -394,21 +359,11 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     title: { marginBottom: 5, textAlign: "center" },
-    navigationRow: { marginBottom: 8, minHeight: 35, flexShrink: 1 },
-    breadcrumbsScrollView: { flex: 1 },
-    breadcrumbsContent: { alignItems: "center" },
-    breadcrumbItem: {
-        paddingHorizontal: 4,
-        paddingVertical: 4,
-        marginRight: 2,
-    },
-    breadcrumbText: { fontSize: 14 },
-    breadcrumbActive: { fontWeight: "bold" },
-    breadcrumbSeparator: { marginHorizontal: 4, alignSelf: "center" },
     selectionButtonRow: {
         justifyContent: "flex-start",
         gap: 10,
         flexWrap: "wrap",
+        marginBottom: 10,
     },
     selectButton: {
         width: "auto",
@@ -417,13 +372,14 @@ const styles = StyleSheet.create({
         minHeight: 0,
         borderWidth: 0,
     },
-    activeSelectButtonText: { fontWeight: "bold" },
+    activeSelectButtonText: {
+        fontWeight: "bold",
+    },
     folderListContainer: {
         flex: 1,
         minHeight: 100,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        paddingTop: 8,
         marginBottom: 10,
     },
     subheading: { marginBottom: 8, paddingLeft: 4 },
@@ -432,6 +388,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-    actionButtonRow: { marginTop: 10 },
+    actionButtonRow: { marginTop: 10, paddingBottom: 10 },
     buttonContainer: { flex: 1, marginHorizontal: 5 },
 })
