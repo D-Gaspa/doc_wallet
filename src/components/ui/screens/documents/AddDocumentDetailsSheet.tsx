@@ -252,6 +252,78 @@ export const AddDocumentDetailsSheet = ({
         return stylesArray
     }
 
+    const renderDatePicker = () => {
+        if (Platform.OS === "ios") {
+            return (
+                <Modal
+                    visible={showDatePicker}
+                    transparent
+                    animationType="slide"
+                    onRequestClose={() => setShowDatePicker(false)}
+                >
+                    <View style={styles.iosPickerOverlay}>
+                        <View style={styles.iosPickerContainer}>
+                            <DateTimePicker
+                                value={
+                                    expirationDate
+                                        ? new Date(expirationDate)
+                                        : new Date()
+                                }
+                                mode="date"
+                                display="spinner"
+                                onChange={(_event, selectedDate) => {
+                                    if (selectedDate) {
+                                        const year = selectedDate.getFullYear()
+                                        const month = String(
+                                            selectedDate.getMonth() + 1,
+                                        ).padStart(2, "0")
+                                        const day = String(
+                                            selectedDate.getDate(),
+                                        ).padStart(2, "0")
+                                        setExpirationDate(
+                                            `${year}-${month}-${day}`,
+                                        )
+                                    }
+                                }}
+                            />
+                            <Button
+                                title="Done"
+                                onPress={() => setShowDatePicker(false)}
+                            />
+                        </View>
+                    </View>
+                </Modal>
+            )
+        }
+
+        // For Android, just return the inline picker
+        return (
+            showDatePicker && (
+                <DateTimePicker
+                    value={
+                        expirationDate ? new Date(expirationDate) : new Date()
+                    }
+                    mode="date"
+                    display="default"
+                    onChange={(_event, selectedDate) => {
+                        setShowDatePicker(false)
+                        if (selectedDate) {
+                            const year = selectedDate.getFullYear()
+                            const month = String(
+                                selectedDate.getMonth() + 1,
+                            ).padStart(2, "0")
+                            const day = String(selectedDate.getDate()).padStart(
+                                2,
+                                "0",
+                            )
+                            setExpirationDate(`${year}-${month}-${day}`)
+                        }
+                    }}
+                />
+            )
+        )
+    }
+
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
             <SafeAreaView
@@ -471,6 +543,9 @@ export const AddDocumentDetailsSheet = ({
                                         }}
                                     />
                                 )}
+
+                                {renderDatePicker()}
+
                                 <Text
                                     style={[
                                         styles.subtitleSmall,
@@ -663,5 +738,16 @@ const styles = StyleSheet.create({
     },
     saveBtn: {
         marginBottom: 12,
+    },
+    // eslint-disable-next-line react-native/no-color-literals
+    iosPickerOverlay: {
+        flex: 1,
+        justifyContent: "flex-end",
+        backgroundColor: "rgba(0,0,0,0.4)",
+    },
+    iosPickerContainer: {
+        padding: 20,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
     },
 })
