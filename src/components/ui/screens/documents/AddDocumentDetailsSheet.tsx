@@ -447,7 +447,7 @@ export const AddDocumentDetailsSheet = ({
                                         mode="date"
                                         display={
                                             Platform.OS === "ios"
-                                                ? "inline"
+                                                ? "spinner"
                                                 : "default"
                                         }
                                         onChange={(
