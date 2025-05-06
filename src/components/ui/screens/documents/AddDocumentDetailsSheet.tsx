@@ -11,7 +11,6 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    ViewStyle,
 } from "react-native"
 import { Button } from "../../button"
 import { IDocument } from "../../../../types/document.ts"
@@ -22,7 +21,7 @@ import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { ListItem } from "../folders/types.ts"
 import { ItemsList } from "../folders/ItemsList"
 import { useTheme } from "../../../../hooks/useTheme.ts"
-import { Row, Spacer } from "../../layout"
+import { Spacer } from "../../layout"
 import {
     BreadcrumbItem,
     BreadcrumbNavigation,
@@ -45,9 +44,7 @@ export const AddDocumentDetailsSheet = ({
     const tagContext = useTagContext()
     const allFolders = useFolderStore((s) => s.folders)
     const tags = tagContext?.tags
-    const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
-        null,
-    )
+
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
     const [currentViewFolderId, setCurrentViewFolderId] = useState<
         string | null
@@ -74,10 +71,8 @@ export const AddDocumentDetailsSheet = ({
         )
     }
 
-    // Reset state on visibility change or document change
     useEffect(() => {
         if (visible) {
-            setSelectedFolderId(null)
             setCurrentViewFolderId(null)
             setFolderPath([])
             setSelectedTagIds([])
@@ -89,7 +84,6 @@ export const AddDocumentDetailsSheet = ({
         }
     }, [visible, document])
 
-    // Path and Navigation Logic
     const buildFolderPath = (
         targetFolderId: string | null,
     ): BreadcrumbItem[] => {
@@ -107,7 +101,7 @@ export const AddDocumentDetailsSheet = ({
 
     const handleNavigate = (folderId: string | null) => {
         if (folderId === currentViewFolderId || isNavigating) return
-        setSelectedFolderId(null)
+
         setIsNavigating(true)
         setCurrentViewFolderId(folderId)
         setFolderPath(buildFolderPath(folderId))
@@ -115,7 +109,6 @@ export const AddDocumentDetailsSheet = ({
         setTimeout(() => setIsNavigating(false), 50)
     }
 
-    // Tag Selection Logic
     const handleTagToggle = (tagId: string) => {
         setSelectedTagIds((prev) =>
             prev.includes(tagId)
@@ -124,50 +117,40 @@ export const AddDocumentDetailsSheet = ({
         )
     }
 
-    // Save Logic
     const handleSave = async () => {
         if (!document) {
             Alert.alert("Error", "Document data is missing.")
             return
         }
-        if (selectedFolderId === null && currentViewFolderId !== null) {
-            Alert.alert("Confirm Root", "Save document to the Root folder?", [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Save to Root",
-                    onPress: () =>
-                        proceedWithSave(document, null, selectedTagIds),
-                },
-            ])
-        } else if (selectedFolderId !== null) {
-            const folderName =
-                allFolders.find((f) => f.id === selectedFolderId)?.title ||
-                "this folder"
-            Alert.alert("Confirm Folder", `Save document to "${folderName}"?`, [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: `Save to ${folderName}`,
-                    onPress: () =>
-                        proceedWithSave(
-                            document,
-                            selectedFolderId,
-                            selectedTagIds,
-                        ),
-                },
-            ])
-        } else if (currentViewFolderId === null) {
-            await proceedWithSave(document, null, selectedTagIds)
-        } else {
+
+        if (currentViewFolderId === null) {
             Alert.alert(
-                "Selection Error",
-                "Please select a destination folder (Root or Current).",
+                "Cannot Save to Root",
+                "Please select a specific folder to save the document. Documents cannot be added to the root directory.",
             )
+            return
         }
+
+        const folderName =
+            allFolders.find((f) => f.id === currentViewFolderId)?.title ||
+            "the selected folder"
+        Alert.alert("Confirm Save", `Save document to "${folderName}"?`, [
+            { text: "Cancel", style: "cancel" },
+            {
+                text: `Save to ${folderName}`,
+                onPress: () =>
+                    proceedWithSave(
+                        document,
+                        currentViewFolderId,
+                        selectedTagIds,
+                    ),
+            },
+        ])
     }
 
     const proceedWithSave = async (
         docToSave: IDocument,
-        targetFolderId: string | null,
+        targetFolderId: string,
         tagIds: string[],
     ) => {
         if (hasExpiration && !/^\d{4}-\d{2}-\d{2}$/.test(expirationDate)) {
@@ -213,11 +196,8 @@ export const AddDocumentDetailsSheet = ({
                         : []),
                 ],
             }
-            onSave(
-                updatedDoc,
-                targetFolderId === null ? "root" : targetFolderId,
-                tagIds,
-            )
+
+            onSave(updatedDoc, targetFolderId, tagIds)
         } catch (error) {
             console.error("Error in proceedWithSave:", error)
             Alert.alert("Save Error", "Could not save document details.")
@@ -226,7 +206,6 @@ export const AddDocumentDetailsSheet = ({
         }
     }
 
-    // Data Filtering for ItemsList
     const folderItemsForList = useMemo((): ListItem[] => {
         const childFolders = allFolders.filter(
             (folder) => folder.parentId === currentViewFolderId,
@@ -237,21 +216,6 @@ export const AddDocumentDetailsSheet = ({
             (folder): ListItem => ({ type: "folder", data: folder }),
         )
     }, [allFolders, currentViewFolderId])
-
-    const getSelectButtonStyle = (isRootButton: boolean): ViewStyle[] => {
-        const isActive = isRootButton
-            ? selectedFolderId === null
-            : selectedFolderId === currentViewFolderId
-
-        const stylesArray: ViewStyle[] = [styles.selectButton]
-        if (isActive) {
-            stylesArray.push({
-                backgroundColor: colors.primary + "35",
-                borderColor: colors.primary,
-            })
-        }
-        return stylesArray
-    }
 
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -280,43 +244,8 @@ export const AddDocumentDetailsSheet = ({
                         onNavigate={handleNavigate}
                     />
 
-                    {/* Select Current Folder Button */}
-                    <Row style={styles.selectionButtonRow}>
-                        <Button
-                            title="Select Root Folder"
-                            variant="text"
-                            onPress={() => setSelectedFolderId(null)}
-                            style={getSelectButtonStyle(true)}
-                            textStyle={
-                                selectedFolderId === null
-                                    ? // eslint-disable-next-line react-native/no-inline-styles
-                                      {
-                                          color: colors.primary,
-                                          fontWeight: "bold",
-                                      }
-                                    : { color: colors.primary }
-                            }
-                        />
-                        {currentViewFolderId !== null && (
-                            <Button
-                                title="Select Current Folder"
-                                variant="text"
-                                onPress={() =>
-                                    setSelectedFolderId(currentViewFolderId)
-                                }
-                                style={getSelectButtonStyle(false)}
-                                textStyle={
-                                    selectedFolderId === currentViewFolderId
-                                        ? // eslint-disable-next-line react-native/no-inline-styles
-                                          {
-                                              color: colors.primary,
-                                              fontWeight: "bold",
-                                          }
-                                        : { color: colors.primary }
-                                }
-                            />
-                        )}
-                    </Row>
+                    {/* REMOVED: "Select Root Folder" and "Select Current Folder" buttons */}
+                    {/* <Row style={styles.selectionButtonRow}> ... </Row> */}
                     <Spacer size={8} />
 
                     {/* Folder List */}
@@ -560,7 +489,7 @@ export const AddDocumentDetailsSheet = ({
                         <Button
                             title="Save Document"
                             onPress={handleSave}
-                            disabled={isLoading}
+                            disabled={isLoading || currentViewFolderId === null}
                             style={styles.saveBtn}
                             loading={isLoading}
                         />
@@ -605,23 +534,7 @@ const styles = StyleSheet.create({
         fontWeight: "500",
         marginBottom: 4,
     },
-    selectionButtonRow: {
-        justifyContent: "flex-start",
-        gap: 10,
-        flexWrap: "wrap",
-        marginBottom: 0,
-    },
-    // eslint-disable-next-line react-native/no-color-literals
-    selectButton: {
-        width: "auto",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        minHeight: 0,
-        borderWidth: 1.5,
-        borderRadius: 16,
-        backgroundColor: "transparent",
-        borderColor: "transparent",
-    },
+
     listContainer: {
         flexGrow: 1,
         flexShrink: 1,

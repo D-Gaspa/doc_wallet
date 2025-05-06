@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
     ActivityIndicator,
+    Alert,
     Animated,
     Dimensions,
     KeyboardAvoidingView,
@@ -10,7 +11,6 @@ import {
     StyleSheet,
     TouchableWithoutFeedback,
     View,
-    ViewStyle,
 } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme"
 import { Text } from "../../typography"
@@ -21,6 +21,7 @@ import { ItemsList } from "./ItemsList"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { SelectedItem } from "./useSelectionMode"
 import { BreadcrumbItem, BreadcrumbNavigation } from "./BreadcrumbNavigation"
+import { useDocStore } from "../../../../store"
 
 const screenHeight = Dimensions.get("window").height
 const sheetHeight = screenHeight * 0.75
@@ -31,7 +32,7 @@ interface ItemMoveModalProps {
     onClose: () => void
     folders: Folder[]
     selectedItemsToMove: SelectedItem[]
-    onMove: (targetFolderId: string | null) => void
+    onMove: (targetFolderId: string) => void
 }
 
 export function ItemMoveModal({
@@ -44,16 +45,13 @@ export function ItemMoveModal({
     const { colors } = useTheme()
     const insets = useSafeAreaInsets()
     const translateY = useRef(new Animated.Value(screenHeight)).current
-    const [finalTargetFolderId, setFinalTargetFolderId] = useState<
-        string | null
-    >(null)
+
     const [currentViewFolderId, setCurrentViewFolderId] = useState<
         string | null
     >(null)
     const [folderPath, setFolderPath] = useState<BreadcrumbItem[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
-    // Animation Logic
     const animateSheet = (toValue: number, duration: number = 300) => {
         Animated.timing(translateY, {
             toValue,
@@ -61,24 +59,50 @@ export function ItemMoveModal({
             useNativeDriver: true,
         }).start()
     }
+
     useEffect(() => {
         if (isVisible) {
             animateSheet(0)
-            const firstItemParent = folders.find(
-                (f) => f.id === selectedItemsToMove[0]?.id,
-            )?.parentId
-            const initialTarget =
-                firstItemParent !== undefined ? firstItemParent : null
-            setFinalTargetFolderId(initialTarget)
-            setCurrentViewFolderId(initialTarget)
-            setFolderPath(buildFolderPath(initialTarget))
+
+            const firstItem = selectedItemsToMove[0]
+            let initialViewTarget: string | null = null
+            if (firstItem) {
+                const itemData =
+                    folders.find(
+                        (f) =>
+                            f.id === firstItem.id &&
+                            firstItem.type === "folder",
+                    ) ||
+                    useDocStore
+                        .getState()
+                        .documents.find(
+                            (d) =>
+                                d.id === firstItem.id &&
+                                firstItem.type === "document",
+                        )
+
+                if (itemData && firstItem.type === "folder") {
+                    initialViewTarget = (itemData as Folder).parentId
+                } else if (itemData && firstItem.type === "document") {
+                    const parentFolder = folders.find((f) =>
+                        f.documentIds?.includes(firstItem.id),
+                    )
+                    initialViewTarget = parentFolder ? parentFolder.id : null
+                }
+
+                if (initialViewTarget === undefined) initialViewTarget = null
+            } else {
+                initialViewTarget = null
+            }
+
+            setCurrentViewFolderId(initialViewTarget)
+            setFolderPath(buildFolderPath(initialViewTarget))
             setIsLoading(false)
         } else {
             animateSheet(screenHeight, 250)
         }
-    }, [isVisible])
+    }, [isVisible, folders, selectedItemsToMove])
 
-    // Gesture Handling
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
@@ -99,7 +123,6 @@ export function ItemMoveModal({
         }),
     ).current
 
-    // Path and Navigation Logic
     const buildFolderPath = (
         targetFolderId: string | null,
     ): BreadcrumbItem[] => {
@@ -124,16 +147,12 @@ export function ItemMoveModal({
         setTimeout(() => setIsLoading(false), 50)
     }
 
-    // Data Filtering for ItemsList
     const folderItemsForList = useMemo((): ListItem[] => {
         const availableFolders = folders.filter((folder) => {
-            // a) Belongs to current view
             const isInCurrentView = folder.parentId === currentViewFolderId
-            // b) Is NOT one of the folders being moved
             const isBeingMoved = selectedItemsToMove.some(
                 (item) => item.id === folder.id && item.type === "folder",
             )
-            // c) Is NOT a descendant of one of the folders being moved
             let isDescendantOfMoved = false
             const foldersBeingMovedIds = selectedItemsToMove
                 .filter((item) => item.type === "folder")
@@ -141,7 +160,6 @@ export function ItemMoveModal({
 
             if (foldersBeingMovedIds.length > 0) {
                 if (foldersBeingMovedIds.includes(folder.id)) {
-                    // Check if it *is* one being moved (redundant with b, but safe)
                     isDescendantOfMoved = true
                 } else {
                     let parentIdToCheck = folder.parentId
@@ -158,7 +176,6 @@ export function ItemMoveModal({
                     }
                 }
             }
-
             return isInCurrentView && !isBeingMoved && !isDescendantOfMoved
         })
 
@@ -170,27 +187,20 @@ export function ItemMoveModal({
     }, [folders, currentViewFolderId, selectedItemsToMove])
 
     const handleConfirmMove = () => {
-        if (finalTargetFolderId !== undefined) {
-            onMove(finalTargetFolderId)
+        if (currentViewFolderId !== null) {
+            onMove(currentViewFolderId)
+        } else {
+            console.warn(
+                "Attempted to move items to root, but this should be disabled.",
+            )
+            Alert.alert(
+                "Cannot Move to Root",
+                "Items cannot be moved to the root directory. Please select a folder.",
+            )
         }
     }
 
     const animatedStyle = { transform: [{ translateY: translateY }] }
-
-    const getSelectButtonStyle = (isRootButton: boolean): ViewStyle[] => {
-        const isActive = isRootButton
-            ? finalTargetFolderId === null
-            : finalTargetFolderId === currentViewFolderId
-
-        const stylesArray: ViewStyle[] = [styles.selectButton]
-        if (isActive) {
-            stylesArray.push({
-                backgroundColor: colors.primary + "35",
-                borderColor: colors.primary,
-            })
-        }
-        return stylesArray
-    }
 
     return (
         <Modal
@@ -250,44 +260,8 @@ export function ItemMoveModal({
                     />
                     <Spacer size={10} />
 
-                    {/* Selection Buttons */}
-                    <Row style={styles.selectionButtonRow}>
-                        <Button
-                            title="Select Root"
-                            variant="text"
-                            onPress={() => setFinalTargetFolderId(null)}
-                            style={getSelectButtonStyle(true)}
-                            textStyle={
-                                finalTargetFolderId === null
-                                    ? // eslint-disable-next-line react-native/no-inline-styles
-                                      {
-                                          color: colors.primary,
-                                          fontWeight: "bold",
-                                      }
-                                    : { color: colors.primary }
-                            }
-                        />
-                        {currentViewFolderId !== null && (
-                            <Button
-                                title="Select Current Folder"
-                                variant="text"
-                                onPress={() =>
-                                    setFinalTargetFolderId(currentViewFolderId)
-                                }
-                                style={getSelectButtonStyle(false)}
-                                // Make text bold when active for extra feedback
-                                textStyle={
-                                    finalTargetFolderId === currentViewFolderId
-                                        ? // eslint-disable-next-line react-native/no-inline-styles
-                                          {
-                                              color: colors.primary,
-                                              fontWeight: "bold",
-                                          }
-                                        : { color: colors.primary }
-                                }
-                            />
-                        )}
-                    </Row>
+                    {/* REMOVED: Selection Buttons (Select Root, Select Current Folder) */}
+                    {/* <Row style={styles.selectionButtonRow}> ... </Row> */}
                     <Spacer size={16} />
 
                     <Text
@@ -298,7 +272,8 @@ export function ItemMoveModal({
                             { color: colors.secondaryText },
                         ]}
                     >
-                        Or click a subfolder below to navigate:
+                        {/* Modified instruction text */}
+                        Navigate to the desired destination folder:
                     </Text>
 
                     <View
@@ -319,7 +294,7 @@ export function ItemMoveModal({
                                 onFolderPress={handleNavigate}
                                 selectionMode={false}
                                 selectedItems={[]}
-                                emptyListMessage="No subfolders available"
+                                emptyListMessage="No subfolders available here to move to"
                                 testID="move-folder-dest-list"
                             />
                         )}
@@ -338,7 +313,9 @@ export function ItemMoveModal({
                             <Button
                                 title="Move Here"
                                 onPress={handleConfirmMove}
-                                disabled={finalTargetFolderId === undefined}
+                                disabled={
+                                    currentViewFolderId === null || isLoading
+                                }
                             />
                         </View>
                     </Row>
@@ -348,7 +325,6 @@ export function ItemMoveModal({
     )
 }
 
-// Styles
 const styles = StyleSheet.create({
     keyboardAvoidingView: { flex: 1, justifyContent: "flex-end" },
     backdrop: { ...StyleSheet.absoluteFillObject },
@@ -377,23 +353,6 @@ const styles = StyleSheet.create({
         alignSelf: "center",
     },
     title: { marginBottom: 5, textAlign: "center" },
-    selectionButtonRow: {
-        justifyContent: "flex-start",
-        gap: 10,
-        flexWrap: "wrap",
-        marginBottom: 10,
-    },
-    // eslint-disable-next-line react-native/no-color-literals
-    selectButton: {
-        width: "auto",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        minHeight: 0,
-        borderWidth: 1.5,
-        borderRadius: 16,
-        backgroundColor: "transparent",
-        borderColor: "transparent",
-    },
     folderListContainer: {
         flex: 1,
         minHeight: 150,
