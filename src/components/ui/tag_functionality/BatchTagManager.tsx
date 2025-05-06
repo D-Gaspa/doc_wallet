@@ -1,46 +1,45 @@
 import React, { useState } from "react"
-import { View, StyleSheet, Modal, Text } from "react-native"
+import { ScrollView, StyleSheet, Text, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 import { useTagContext } from "./TagContext"
-import { Stack } from "../layout"
 import { Row } from "../layout"
 import { Button } from "../button"
-import { Alert } from "../feedback"
+import { Toast } from "../feedback"
 import { Checkbox } from "../form"
+import { SelectedItem } from "../screens/folders/useSelectionMode"
+import { BaseBottomSheetModal } from "../../common/modal/BaseBottomSheetModal"
+import { AlertType } from "../feedback/Alert"
 
 interface BatchTagManagerProps {
     isVisible: boolean
     onClose: () => void
-    itemIds: string[]
-    itemType: "folder" | "document"
+    items: SelectedItem[]
     onTagsApplied?: () => void
 }
 
 export function BatchTagManager({
     isVisible,
     onClose,
-    itemIds,
-    itemType,
+    items,
     onTagsApplied,
 }: BatchTagManagerProps) {
     const { colors } = useTheme()
     const { tags, batchAssociateTags, batchDisassociateTags } = useTagContext()
 
-    // State for selected tags
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+    const [toastVisible, setToastVisible] = useState(false)
+    const [toastMessage, setToastMessage] = useState("")
+    const [toastType, setToastType] = useState<AlertType>("info")
 
-    // Alert state
-    const [alert, setAlert] = useState<{
-        visible: boolean
-        message: string
-        type: "success" | "error" | "info" | "warning"
-    }>({
-        visible: false,
-        message: "",
-        type: "info",
-    })
-
-    // Toggle tag selection
+    const handleClose = () => {
+        setSelectedTagIds([])
+        onClose()
+    }
+    const showToast = (message: string, type: AlertType = "info") => {
+        setToastMessage(message)
+        setToastType(type)
+        setToastVisible(true)
+    }
     const handleTagToggle = (tagId: string) => {
         setSelectedTagIds((prevSelected) => {
             if (prevSelected.includes(tagId)) {
@@ -51,260 +50,242 @@ export function BatchTagManager({
         })
     }
 
-    // Apply selected tags to all items
     const handleApplyTags = () => {
         if (selectedTagIds.length === 0) {
-            setAlert({
-                visible: true,
-                message: "Please select at least one tag to apply",
-                type: "info",
-            })
+            showToast("Please select at least one tag", "warning")
             return
         }
-
-        const success = batchAssociateTags(selectedTagIds, itemIds, itemType)
-
+        if (items.length === 0) {
+            showToast("No items selected", "warning")
+            return
+        }
+        const success = batchAssociateTags(selectedTagIds, items)
         if (success) {
-            setAlert({
-                visible: true,
-                message: `Tags applied to ${itemIds.length} ${itemType}(s)`,
-                type: "success",
-            })
-
-            // Clear selection after successful application
+            showToast(`Tags applied to ${items.length} item(s)`, "success")
             setSelectedTagIds([])
-
-            // Notify parent component
             if (onTagsApplied) {
                 onTagsApplied()
             }
+            onClose()
         } else {
-            setAlert({
-                visible: true,
-                message: "Failed to apply tags",
-                type: "error",
-            })
+            showToast("Failed to apply tags", "error")
         }
     }
 
-    // Remove selected tags from all items
     const handleRemoveTags = () => {
         if (selectedTagIds.length === 0) {
-            setAlert({
-                visible: true,
-                message: "Please select at least one tag to remove",
-                type: "info",
-            })
+            showToast("Please select at least one tag to remove", "warning")
+            return
+        }
+        if (items.length === 0) {
+            showToast("No items selected", "warning")
             return
         }
 
-        const success = batchDisassociateTags(selectedTagIds, itemIds, itemType)
+        const success = batchDisassociateTags(selectedTagIds, items)
 
         if (success) {
-            setAlert({
-                visible: true,
-                message: `Tags removed from ${itemIds.length} ${itemType}(s)`,
-                type: "success",
-            })
-
-            // Clear selection after successful removal
+            showToast(`Tags removed from ${items.length} item(s)`, "success")
             setSelectedTagIds([])
-
-            // Notify parent component
             if (onTagsApplied) {
                 onTagsApplied()
             }
+            onClose()
         } else {
-            setAlert({
-                visible: true,
-                message: "Failed to remove tags",
-                type: "error",
-            })
+            showToast("Failed to remove tags", "error")
         }
-    }
-
-    // Reset and close
-    const handleClose = () => {
-        setSelectedTagIds([])
-        onClose()
     }
 
     return (
-        <Modal
-            visible={isVisible}
-            transparent
-            animationType="slide"
-            onRequestClose={handleClose}
+        <BaseBottomSheetModal
+            isVisible={isVisible}
+            onClose={handleClose}
+            dismissOnBackdropPress={true}
         >
-            <View style={styles.modalBackground}>
-                <View
-                    style={[
-                        styles.modalContainer,
-                        { backgroundColor: colors.background },
-                    ]}
+            {/* eslint-disable-next-line react-native/no-inline-styles */}
+            <View style={[styles.modalContentContainer, { paddingBottom: 20 }]}>
+                {/* Header */}
+                <Text style={[styles.title, { color: colors.text }]}>
+                    {`Manage Tags (${items.length} item${
+                        items.length !== 1 ? "s" : ""
+                    } selected)`}
+                </Text>
+
+                {/* Scrollable Tag List */}
+                <ScrollView
+                    style={styles.tagsScrollView}
+                    contentContainerStyle={styles.tagsContentContainer}
+                    showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled={true}
                 >
-                    <Stack spacing={16}>
-                        <Text style={[styles.title, { color: colors.text }]}>
-                            {`Manage Tags (${itemIds.length} ${itemType}s selected)`}
-                        </Text>
-
-                        {tags.length > 0 ? (
-                            <View style={styles.tagsContainer}>
-                                {tags.map((tag) => (
-                                    <Row
-                                        key={tag.id}
-                                        align="center"
-                                        spacing={8}
-                                        style={styles.tagRow}
-                                    >
-                                        <Checkbox
-                                            checked={selectedTagIds.includes(
-                                                tag.id,
-                                            )}
-                                            onToggle={() =>
-                                                handleTagToggle(tag.id)
-                                            }
-                                            testID={`checkbox-${tag.id}`}
-                                        />
-                                        <View
-                                            style={[
-                                                styles.tagPreview,
-                                                {
-                                                    backgroundColor:
-                                                        tag.color + "20",
-                                                    borderColor: tag.color,
-                                                },
-                                            ]}
-                                        >
-                                            <View
-                                                style={[
-                                                    styles.dot,
-                                                    {
-                                                        backgroundColor:
-                                                            tag.color,
-                                                    },
-                                                ]}
-                                            />
-                                            <Text
-                                                style={{ color: colors.text }}
-                                            >
-                                                {tag.name}
-                                            </Text>
-                                        </View>
-                                    </Row>
-                                ))}
-                            </View>
-                        ) : (
-                            <Text
-                                style={[
-                                    styles.emptyText,
-                                    { color: colors.secondaryText },
-                                ]}
+                    {tags.length > 0 ? (
+                        tags.map((tag) => (
+                            <Row
+                                key={tag.id}
+                                align="center"
+                                spacing={10}
+                                style={styles.tagRow}
                             >
-                                No tags available. Create tags first.
-                            </Text>
-                        )}
-
-                        <Stack spacing={12}>
-                            <Row justify="space-between" align="center">
-                                <View style={styles.buttonContainer}>
-                                    <Button
-                                        title="Apply Tags"
-                                        onPress={handleApplyTags}
-                                        style={
-                                            selectedTagIds.length === 0
-                                                ? styles.disabledButton
-                                                : {}
-                                        }
-                                        testID="apply-tags-button"
+                                <Checkbox
+                                    checked={selectedTagIds.includes(tag.id)}
+                                    onToggle={() => handleTagToggle(tag.id)}
+                                    testID={`checkbox-${tag.id}`}
+                                />
+                                <View
+                                    style={[
+                                        styles.tagPreview,
+                                        {
+                                            backgroundColor: tag.color + "20",
+                                            borderColor: tag.color,
+                                        },
+                                    ]}
+                                >
+                                    <View
+                                        style={[
+                                            styles.dot,
+                                            { backgroundColor: tag.color },
+                                        ]}
                                     />
-                                </View>
-                                <View style={styles.buttonContainer}>
-                                    <Button
-                                        title="Remove Tags"
-                                        onPress={handleRemoveTags}
-                                        testID="remove-tags-button"
-                                    />
+                                    <Text
+                                        style={{ color: colors.text }}
+                                        numberOfLines={1}
+                                    >
+                                        {tag.name}
+                                    </Text>
                                 </View>
                             </Row>
-                            <Button
-                                title="Close"
-                                onPress={handleClose}
-                                style={styles.closeButton}
-                                testID="close-button"
-                            />
-                        </Stack>
-                    </Stack>
-
-                    {/* Alert notification */}
-                    {alert.visible && (
-                        <Alert
-                            type={alert.type}
-                            message={alert.message}
-                            visible={alert.visible}
-                            onClose={() =>
-                                setAlert({ ...alert, visible: false })
-                            }
-                        />
+                        ))
+                    ) : (
+                        <Text
+                            style={[
+                                styles.emptyText,
+                                { color: colors.secondaryText },
+                            ]}
+                        >
+                            No tags available. Create tags first.
+                        </Text>
                     )}
+                </ScrollView>
+
+                <View
+                    style={[
+                        styles.separator,
+                        { borderTopColor: colors.border },
+                    ]}
+                />
+
+                {/* Action Buttons (Apply/Remove) */}
+                <View style={styles.actionButtonsContainer}>
+                    <Row justify="space-between" align="center">
+                        <View style={styles.buttonContainer}>
+                            <Button
+                                title="Apply Tags"
+                                onPress={handleApplyTags}
+                                disabled={selectedTagIds.length === 0}
+                                testID="apply-tags-button"
+                            />
+                        </View>
+                        <View style={styles.buttonContainer}>
+                            <Button
+                                title="Remove Tags"
+                                variant="outline"
+                                onPress={handleRemoveTags}
+                                disabled={selectedTagIds.length === 0}
+                                testID="remove-tags-button"
+                            />
+                        </View>
+                    </Row>
                 </View>
+
+                {/* Close Button (Separate) */}
+                <View style={styles.closeButtonContainer}>
+                    <Button
+                        title="Close"
+                        variant="text"
+                        onPress={handleClose}
+                        testID="close-button"
+                    />
+                </View>
+
+                <Toast
+                    message={toastMessage}
+                    visible={toastVisible}
+                    onDismiss={() => setToastVisible(false)}
+                    duration={
+                        toastType === "error" || toastType === "warning"
+                            ? 4000
+                            : 3000
+                    }
+                />
             </View>
-        </Modal>
+        </BaseBottomSheetModal>
     )
 }
 
 const styles = StyleSheet.create({
-    modalBackground: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    modalContainer: {
-        width: "85%",
-        borderRadius: 10,
-        padding: 20,
-        maxHeight: "80%",
+    modalContentContainer: {
+        width: "100%",
+        flexDirection: "column",
+        flexGrow: 1,
+        paddingHorizontal: 20,
     },
     title: {
         fontSize: 18,
         fontWeight: "bold",
         textAlign: "center",
         marginBottom: 16,
+        flexShrink: 0,
     },
-    tagsContainer: {
-        maxHeight: 300,
+    tagsScrollView: {
+        flexGrow: 1,
+        flexShrink: 1,
+        marginVertical: 8,
+    },
+    tagsContentContainer: {
+        paddingBottom: 10,
     },
     tagRow: {
-        marginBottom: 8,
+        marginBottom: 12,
     },
     tagPreview: {
         flexDirection: "row",
         alignItems: "center",
         borderRadius: 16,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
         borderWidth: 1,
         flex: 1,
+        overflow: "hidden",
     },
     dot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        marginRight: 6,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginRight: 8,
     },
     emptyText: {
         fontStyle: "italic",
         opacity: 0.7,
         textAlign: "center",
-        marginTop: 8,
+        marginVertical: 20,
+        paddingHorizontal: 10,
+    },
+    separator: {
+        borderTopWidth: StyleSheet.hairlineWidth,
+        marginVertical: 16,
+        flexShrink: 0,
+    },
+    actionButtonsContainer: {
+        marginBottom: 12,
+        flexShrink: 0,
     },
     buttonContainer: {
-        flex: 0.48,
+        flex: 1,
+        marginHorizontal: 5,
     },
-    disabledButton: {
-        opacity: 0.5,
-    },
-    closeButton: {
-        borderWidth: 1,
+    closeButtonContainer: {
+        marginTop: 4,
+        marginBottom: 5,
+        flexShrink: 0,
     },
 })

@@ -29,9 +29,9 @@ const TAB_PADDING_BOTTOM = 4
 
 // Updated tabs array
 const tabs = [
-    { key: "Home", label: "Home", icon: HouseIcon },
-    { key: "Files", label: "Files", icon: AddFileIcon },
-    { key: "Profile", label: "Profile", icon: ProfileIcon },
+    { key: "Home", label: "Inicio", icon: HouseIcon },
+    { key: "Files", label: "Documentos", icon: AddFileIcon },
+    { key: "Profile", label: "Perfil", icon: ProfileIcon },
 ]
 const tabKeys = tabs.map((t) => t.key)
 

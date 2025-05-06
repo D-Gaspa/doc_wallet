@@ -94,7 +94,7 @@ export function CustomIconSelector({
     return (
         <View style={styles.container}>
             <Text weight="medium" style={styles.title}>
-                Select an Icon
+                Selecciona un icono
             </Text>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>

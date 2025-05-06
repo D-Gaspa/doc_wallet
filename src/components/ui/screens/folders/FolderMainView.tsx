@@ -6,7 +6,7 @@ import React, {
     useRef,
     useState,
 } from "react"
-import { StyleSheet, View } from "react-native"
+import { Alert as RNAlert, StyleSheet, View } from "react-native"
 import { Container, Stack } from "../../layout"
 import { Alert as AlertComponent, AlertType } from "../../feedback/Alert"
 import { LoggingService } from "../../../../services/monitoring/loggingService"
@@ -15,9 +15,9 @@ import { TagProvider, useTagContext } from "../../tag_functionality/TagContext"
 import { BatchTagManager } from "../../tag_functionality/BatchTagManager"
 import { FolderHeader, FolderSortOption } from "./FolderHeader"
 import { ItemsList } from "./ItemsList"
-import { FolderSelectionControls } from "./FolderSelectionControls.tsx"
+import { ItemSelectionControls } from "./ItemSelectionControls"
 import { TagManagerSection } from "../../tag_functionality/TagManagerSection"
-import { useFolderOperations } from "./useFolderOperations"
+import { useItemOperations } from "./useItemOperations.ts"
 import { useSelectionMode } from "./useSelectionMode"
 import { RouteProp, useIsFocused, useRoute } from "@react-navigation/native"
 import { Folder, ListItem } from "./types"
@@ -28,14 +28,15 @@ import { documentPreview } from "../../../../services/document/preview.ts"
 import { documentStorage } from "../../../../services/document/storage.ts"
 import * as FileSystem from "expo-file-system"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
-import { showDocumentOptions } from "../documents/useDocumentOperations.ts"
-import { FolderMoveModal } from "./FolderMoveModal"
+import { ItemMoveModal } from "./ItemMoveModal.tsx"
 import { TabParamList } from "../../../../App"
 import { FolderActionModal } from "./FolderActionModal.tsx"
 import { AddDocumentDetailsSheet } from "../documents/AddDocumentDetailsSheet.tsx"
 import { ExpandingFab } from "../../../ExpandingFab.tsx"
 import { documentImport } from "../../../../services/document/import.ts"
 import { types } from "@react-native-documents/picker"
+import { useDocumentOperations } from "../documents/useDocumentOperations"
+import { useFavoriteDocumentsStore } from "../../../../store/useFavoriteDocumentsStore"
 
 export interface FolderMainViewRef {
     resetToRootFolder(): void
@@ -55,7 +56,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
               error: console.error,
           }
 
-    // --- State and Hooks ---
+    // State and Hooks
     const tagContext = useTagContext()
     const folders = useFolderStore((state) => state.folders)
     const setFolders = useFolderStore((state) => state.setFolders)
@@ -100,9 +101,9 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         getCurrentFolderName,
         handleShareFolder,
         handleDeleteFolder,
-        handleToggleFavorite,
-        handleMoveFolders,
-    } = useFolderOperations({
+        handleToggleFolderFavorite,
+        handleMoveItems,
+    } = useItemOperations({
         folders,
         setFolders,
         currentFolderId,
@@ -115,13 +116,21 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
 
     const {
         selectionMode,
-        selectedFolderIds,
+        selectedItems,
         toggleSelectionMode,
         handleSelectAll,
-        handleFolderSelect,
+        handleItemSelect,
     } = useSelectionMode()
 
-    // --- Handlers ---
+    const {
+        handleToggleFavorite: handleToggleDocumentFavorite,
+        handleDeleteDocument,
+        handleShareDocument,
+    } = useDocumentOperations()
+
+    const favoriteDocIds = useFavoriteDocumentsStore((s) => s.favoriteIds)
+
+    // Handlers
     const handleAddDocumentPress = async () => {
         setLoading(true)
         try {
@@ -134,7 +143,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 const doc = importedDocs[0]
                 const tempDoc: IDocument = {
                     id: `temp_${Date.now()}`,
-                    title: doc.name ?? `Documento_${Date.now()}`,
+                    title: doc.name ?? `Documento_${Date.now()}`, // Spanish prefix
                     sourceUri: doc.localUri ?? doc.uri,
                     metadata: {
                         createdAt: new Date().toISOString(),
@@ -186,21 +195,32 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 metadata: doc.metadata,
                 parameters: doc.parameters ?? [],
             })
-            const updatedFolders = folders.map((folder) =>
-                folder.id === selectedFolderId
-                    ? {
-                          ...folder,
-                          documentIds: [
-                              ...new Set([
-                                  ...(folder.documentIds || []),
-                                  storedDocument.id,
-                              ]),
-                          ],
-                          updatedAt: new Date(),
-                      }
-                    : folder,
-            )
-            setFolders(updatedFolders)
+
+            const targetFolderId =
+                selectedFolderId === "root" ? null : selectedFolderId
+            if (targetFolderId) {
+                const updatedFolders = folders.map((folder) =>
+                    folder.id === targetFolderId
+                        ? {
+                              ...folder,
+                              documentIds: [
+                                  ...new Set([
+                                      ...(folder.documentIds || []),
+                                      storedDocument.id,
+                                  ]),
+                              ],
+                              updatedAt: new Date(),
+                          }
+                        : folder,
+                )
+                setFolders(updatedFolders)
+                logger.info(`Folder ${targetFolderId} updated with document.`)
+            } else {
+                logger.info(
+                    `Document ${storedDocument.id} added, but not linked to a specific folder (potentially root?).`,
+                )
+            }
+
             tagContext.syncTagsForItem(
                 storedDocument.id,
                 "document",
@@ -267,91 +287,105 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         })
     }
 
-    const handleMoveSelectedFolders = (targetFolderId: string | null) => {
-        if (selectedFolderIds.length === 0) return
-        try {
-            handleMoveFolders(selectedFolderIds, targetFolderId)
-            setAlert({
-                visible: true,
-                message: "Carpeta(s) movida(s) exitosamente.",
-                type: "success",
-            })
+    const handleConfirmMoveInModal = (targetFolderId: string | null) => {
+        if (selectedItems.length > 0) {
+            handleMoveItems(selectedItems, targetFolderId)
+        } else {
+            logger.warn("Attempted to move with no items selected.")
             setMoveFolderModalVisible(false)
-            toggleSelectionMode()
-        } catch (error) {
-            logger.error("Error durante la operación de mover carpetas:", error)
-            setAlert({
-                visible: true,
-                message: "Ocurrió un error al mover las carpetas.",
-                type: "error",
-            })
         }
+        toggleSelectionMode()
+        setMoveFolderModalVisible(false)
     }
 
     const handleDocumentPress = async (doc: IDocument) => {
-        setLoading(true)
-        try {
-            const docStoreState = useDocStore.getState()
-            // Optional short delay can sometimes help UI responsiveness before native view opens
-            await new Promise((resolve) => setTimeout(resolve, 100))
-            const previewResult = await docStoreState.getDocumentPreview(doc.id)
+        if (selectionMode) {
+            handleItemSelect(doc.id, "document")
+        } else {
+            setLoading(true)
+            try {
+                const docStoreState = useDocStore.getState()
+                await new Promise((resolve) => setTimeout(resolve, 100))
+                const previewResult = await docStoreState.getDocumentPreview(
+                    doc.id,
+                )
 
-            if (!previewResult || !previewResult.sourceUri) {
+                if (!previewResult || !previewResult.sourceUri) {
+                    setAlert({
+                        visible: true,
+                        message:
+                            "No se encontró vista previa para este documento.",
+                        type: "error",
+                    })
+                    setLoading(false)
+                    return
+                }
+                const mimeType = documentPreview.getMimeTypeForDocumentType(
+                    previewResult.metadata?.type ?? DocumentType.PDF,
+                )
+                const fileInfo = await FileSystem.getInfoAsync(
+                    previewResult.sourceUri,
+                )
+
+                if (!fileInfo.exists || fileInfo.size === 0) {
+                    setAlert({
+                        visible: true,
+                        message:
+                            "El archivo de vista previa falta o está vacío.",
+                        type: "error",
+                    })
+                    setLoading(false)
+                    return
+                }
+
+                await documentPreview.viewDocumentByUri(
+                    previewResult.sourceUri,
+                    mimeType,
+                    async () => {
+                        await documentStorage.deletePreviewFile(
+                            previewResult.sourceUri,
+                        )
+                        logger.debug(
+                            "Archivo de vista previa limpiado después de la visualización.",
+                        )
+                    },
+                )
+            } catch (err) {
+                logger.error(
+                    "Error al abrir la vista previa del documento",
+                    err,
+                )
                 setAlert({
                     visible: true,
-                    message: "No se encontró vista previa para este documento.",
+                    message: documentPreview.getErrorMessage(err),
                     type: "error",
                 })
+            } finally {
                 setLoading(false)
-                return
             }
-            const mimeType = documentPreview.getMimeTypeForDocumentType(
-                previewResult.metadata?.type ?? DocumentType.PDF,
-            )
-            const fileInfo = await FileSystem.getInfoAsync(
-                previewResult.sourceUri,
-            )
-
-            if (!fileInfo.exists || fileInfo.size === 0) {
-                setAlert({
-                    visible: true,
-                    message: "El archivo de vista previa falta o está vacío.",
-                    type: "error",
-                })
-                setLoading(false)
-                return
-            }
-
-            await documentPreview.viewDocumentByUri(
-                previewResult.sourceUri,
-                mimeType,
-                async () => {
-                    await documentStorage.deletePreviewFile(
-                        previewResult.sourceUri,
-                    )
-                    logger.debug(
-                        "Archivo de vista previa limpiado después de la visualización.",
-                    )
-                },
-            )
-        } catch (err) {
-            logger.error("Error al abrir la vista previa del documento", err)
-            setAlert({
-                visible: true,
-                message: documentPreview.getErrorMessage(err),
-                type: "error",
-            })
-        } finally {
-            setLoading(false)
         }
     }
 
     const handleFolderPress = (folderId: string) => {
         if (selectionMode) {
-            handleFolderSelect(folderId)
+            handleItemSelect(folderId, "folder")
         } else {
             internalNavigateToFolder(folderId)
         }
+    }
+
+    const handleFolderLongPress = (folderId: string) => {
+        if (!selectionMode) {
+            toggleSelectionMode()
+        }
+        handleItemSelect(folderId, "folder")
+    }
+
+    const handleDocumentLongPress = (documentId: string) => {
+        if (!selectionMode) {
+            toggleSelectionMode()
+        }
+        handleItemSelect(documentId, "document")
     }
 
     const handleBackPress = () => {
@@ -403,11 +437,94 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
 
     const handleDeleteAction = (folder: Folder) => {
         if (folder) {
+            // TODO: We might want to use the Alert confirmation here as well,
+            // similar to batch delete, or let handleDeleteFolder handle it.
             handleDeleteFolder(folder.id)
         }
     }
 
-    // --- Navigation Effects ---
+    const handleBatchDelete = () => {
+        if (selectedItems.length === 0) return
+
+        RNAlert.alert(
+            "Confirmar Eliminación",
+            `¿Estás seguro de que quieres eliminar ${selectedItems.length} elemento(s) seleccionado(s)? Esta acción no se puede deshacer. Las carpetas deben estar vacías para ser eliminadas.`, // Spanish Message
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Eliminar",
+                    style: "destructive",
+                    onPress: async () => {
+                        setLoading(true)
+                        let successCount = 0
+                        let errorCount = 0
+                        let skippedNonEmptyFolders = 0
+                        const itemsToDelete = [...selectedItems]
+
+                        toggleSelectionMode()
+
+                        for (const item of itemsToDelete) {
+                            try {
+                                if (item.type === "folder") {
+                                    const folderToDelete = folders.find(
+                                        (f) => f.id === item.id,
+                                    )
+                                    const hasChildFolders = folders.some(
+                                        (f) => f.parentId === item.id,
+                                    )
+                                    const isEmpty =
+                                        (!folderToDelete?.documentIds ||
+                                            folderToDelete.documentIds
+                                                .length === 0) &&
+                                        !hasChildFolders
+
+                                    if (isEmpty) {
+                                        handleDeleteFolder(item.id)
+                                        successCount++
+                                    } else {
+                                        logger.warn(
+                                            `Skipping non-empty folder delete in batch: ${item.id}`,
+                                        )
+                                        skippedNonEmptyFolders++
+                                        errorCount++
+                                    }
+                                } else if (item.type === "document") {
+                                    await docStore.deleteDocument(item.id)
+                                    successCount++
+                                }
+                            } catch (e) {
+                                logger.error(
+                                    `Failed to delete item ${item.type} ${item.id}`,
+                                    e,
+                                )
+                                errorCount++
+                            }
+                        }
+                        setLoading(false)
+
+                        let message = `${successCount} elemento(s) eliminado(s).`
+                        if (errorCount > 0) {
+                            message += ` ${errorCount} fallaron`
+                            if (skippedNonEmptyFolders > 0) {
+                                message += ` (${skippedNonEmptyFolders} carpeta(s) no vacía(s) omitida(s))`
+                            }
+                            message += `.`
+                        } else if (skippedNonEmptyFolders > 0) {
+                            message += ` ${skippedNonEmptyFolders} carpeta(s) no vacía(s) omitida(s).`
+                        }
+
+                        setAlert({
+                            visible: true,
+                            message: message,
+                            type: errorCount > 0 ? "warning" : "success",
+                        })
+                    },
+                },
+            ],
+        )
+    }
+
+    // Navigation Effects
     useEffect(() => {
         const targetFolderId = route.params?.folderId
         if (isFocused && targetFolderId && !navigatedFromParams.current) {
@@ -432,7 +549,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         navigateToFolder: internalNavigateToFolder,
     }))
 
-    // --- Memoized Calculations ---
+    // Memoized Calculations
     const displayItems = useMemo(() => {
         logger.debug("Recalculando elementos a mostrar", {
             currentFolderId,
@@ -478,20 +595,12 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         })
 
         const folderItems = filteredItems.filter(
-            (
-                item,
-            ): item is ListItem & {
-                type: "folder"
-                data: Folder
-            } => item.type === "folder",
+            (item): item is ListItem & { type: "folder"; data: Folder } =>
+                item.type === "folder",
         )
         const documentItems = filteredItems.filter(
-            (
-                item,
-            ): item is ListItem & {
-                type: "document"
-                data: IDocument
-            } => item.type === "document",
+            (item): item is ListItem & { type: "document"; data: IDocument } =>
+                item.type === "document",
         )
 
         folderItems.sort((a, b) => {
@@ -508,6 +617,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                 )
             return 0
         })
+
         documentItems.sort((a, b) =>
             (a.data.title || "").localeCompare(b.data.title || ""),
         )
@@ -528,12 +638,6 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         tagContext.tags,
     ])
 
-    const foldersForSelection = useMemo(() => {
-        return displayItems
-            .filter((item) => item.type === "folder")
-            .map((item) => item.data as Folder)
-    }, [displayItems])
-
     const emptyListMessage = useMemo(() => {
         const isFiltering = searchQuery !== "" || selectedTagFilters.length > 0
         if (isFiltering) {
@@ -545,7 +649,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         }
     }, [searchQuery, selectedTagFilters.length, currentFolderId])
 
-    // --- JSX Rendering ---
+    // JSX Rendering
     return (
         <Container testID="folder-main-view">
             <View style={styles.contentContainer}>
@@ -562,29 +666,52 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         sortOption={sortOption}
                         setSortOption={setSortOption}
                     />
-                    <FolderSelectionControls
-                        selectionMode={selectionMode}
-                        selectedFolderIds={selectedFolderIds}
-                        filteredFolders={foldersForSelection}
-                        toggleSelectionMode={toggleSelectionMode}
-                        handleSelectAll={() =>
-                            handleSelectAll(foldersForSelection)
-                        }
-                        setBatchTagModalVisible={setBatchTagModalVisible}
-                        onMovePress={() => setMoveFolderModalVisible(true)}
-                    />
-                    {/* Render the unified list */}
+
+                    {selectionMode && (
+                        <ItemSelectionControls
+                            selectedItems={selectedItems}
+                            displayItems={displayItems}
+                            toggleSelectionMode={toggleSelectionMode}
+                            handleSelectAll={() =>
+                                handleSelectAll(displayItems)
+                            }
+                            setBatchTagModalVisible={setBatchTagModalVisible}
+                            onMovePress={() => {
+                                if (selectedItems.length > 0) {
+                                    setMoveFolderModalVisible(true)
+                                } else {
+                                    setAlert({
+                                        visible: true,
+                                        message:
+                                            "Selecciona elementos para mover.",
+                                        type: "info",
+                                    })
+                                }
+                            }}
+                            onDeletePress={handleBatchDelete}
+                        />
+                    )}
+
                     <ItemsList
                         items={displayItems}
                         selectionMode={selectionMode}
-                        selectedFolderIds={selectedFolderIds}
+                        selectedItems={selectedItems}
+                        onItemSelect={handleItemSelect}
                         isSelectionList={false}
                         onFolderPress={handleFolderPress}
                         onDocumentPress={handleDocumentPress}
+                        onFolderLongPress={handleFolderLongPress}
+                        onDocumentLongPress={handleDocumentLongPress}
+                        onDocumentToggleFavorite={(docId) =>
+                            handleToggleDocumentFavorite(docId)
+                        }
+                        onDocumentDelete={handleDeleteDocument}
+                        onDocumentShare={handleShareDocument}
+                        getIsDocumentFavorite={(docId) =>
+                            favoriteDocIds.includes(docId)
+                        }
                         onFolderOptionsPress={handleShowActionModal}
-                        onDocumentOptionsPress={showDocumentOptions}
-                        onFolderToggleFavorite={handleToggleFavorite}
-                        onFolderSelect={handleFolderSelect}
+                        onFolderToggleFavorite={handleToggleFolderFavorite}
                         emptyListMessage={emptyListMessage}
                         testID="folder-items-list"
                     />
@@ -640,24 +767,21 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         )
                     }}
                     onSave={handleSaveDocument}
-                    folders={folders}
-                    setFolders={setFolders} // Check if needed or if AddDocumentDetailsSheet should use store directly
                 />
                 <BatchTagManager
                     isVisible={batchTagModalVisible}
                     onClose={() => setBatchTagModalVisible(false)}
-                    itemIds={selectedFolderIds}
-                    itemType="folder"
+                    items={selectedItems}
                     onTagsApplied={() => {
                         toggleSelectionMode()
                     }}
                 />
-                <FolderMoveModal
+                <ItemMoveModal
                     isVisible={moveFolderModalVisible}
                     onClose={() => setMoveFolderModalVisible(false)}
                     folders={folders}
-                    selectedFolderIds={selectedFolderIds}
-                    onMove={handleMoveSelectedFolders}
+                    selectedItemsToMove={selectedItems}
+                    onMove={handleConfirmMoveInModal}
                 />
                 <FolderActionModal
                     isVisible={actionModalVisible}
@@ -677,7 +801,11 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         visible={alert.visible}
                         onClose={() => setAlert({ ...alert, visible: false })}
                         autoDismiss={true}
-                        duration={3000}
+                        duration={
+                            alert.type === "error" || alert.type === "warning"
+                                ? 5000
+                                : 3000
+                        }
                     />
                 </View>
             )}
@@ -704,6 +832,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         flexGrow: 1,
+        paddingBottom: 80,
     },
     alertContainer: {
         position: "absolute",
