@@ -416,62 +416,70 @@ export const AddDocumentDetailsSheet = ({
                                 >
                                     Expiration Date (YYYY-MM-DD):
                                 </Text>
-                                <TouchableOpacity
-                                    onPress={() => setShowDatePicker(true)}
-                                    style={[
-                                        styles.expirationDateInput,
-                                        // eslint-disable-next-line react-native/no-inline-styles
-                                        {
-                                            borderColor: colors.border,
-                                            backgroundColor: colors.card,
-                                            justifyContent: "center",
-                                        },
-                                    ]}
-                                >
-                                    <Text
-                                        style={{
-                                            color: expirationDate
-                                                ? colors.text
-                                                : colors.text + "99",
-                                        }}
-                                    >
-                                        {expirationDate || "Select date"}
-                                    </Text>
-                                </TouchableOpacity>
-                                {Platform.OS === "android" &&
-                                    showDatePicker && (
-                                        <DateTimePicker
-                                            value={
-                                                expirationDate
-                                                    ? new Date(expirationDate)
-                                                    : new Date()
+                                {Platform.OS === "android" ? (
+                                    <>
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                setShowDatePicker(true)
                                             }
-                                            mode="date"
-                                            display="default"
-                                            onChange={(
-                                                _event: unknown,
-                                                selectedDate: Date | undefined,
-                                            ) => {
-                                                setShowDatePicker(false)
-                                                if (selectedDate) {
-                                                    const year =
-                                                        selectedDate.getFullYear()
-                                                    const month = String(
-                                                        selectedDate.getMonth() +
-                                                            1,
-                                                    ).padStart(2, "0")
-                                                    const day = String(
-                                                        selectedDate.getDate(),
-                                                    ).padStart(2, "0")
-                                                    setExpirationDate(
-                                                        `${year}-${month}-${day}`,
-                                                    )
-                                                }
-                                            }}
-                                        />
-                                    )}
+                                            style={[
+                                                styles.expirationDateInput,
+                                                // eslint-disable-next-line react-native/no-inline-styles
+                                                {
+                                                    borderColor: colors.border,
+                                                    backgroundColor:
+                                                        colors.card,
+                                                    justifyContent: "center",
+                                                },
+                                            ]}
+                                        >
+                                            <Text
+                                                style={{
+                                                    color: expirationDate
+                                                        ? colors.text
+                                                        : colors.text + "99",
+                                                }}
+                                            >
+                                                {expirationDate ||
+                                                    "Select date"}
+                                            </Text>
+                                        </TouchableOpacity>
 
-                                {Platform.OS === "ios" && (
+                                        {showDatePicker && (
+                                            <DateTimePicker
+                                                value={
+                                                    expirationDate
+                                                        ? new Date(
+                                                              expirationDate,
+                                                          )
+                                                        : new Date()
+                                                }
+                                                mode="date"
+                                                display="default"
+                                                onChange={(
+                                                    _event,
+                                                    selectedDate,
+                                                ) => {
+                                                    setShowDatePicker(false)
+                                                    if (selectedDate) {
+                                                        const year =
+                                                            selectedDate.getFullYear()
+                                                        const month = String(
+                                                            selectedDate.getMonth() +
+                                                                1,
+                                                        ).padStart(2, "0")
+                                                        const day = String(
+                                                            selectedDate.getDate(),
+                                                        ).padStart(2, "0")
+                                                        setExpirationDate(
+                                                            `${year}-${month}-${day}`,
+                                                        )
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                    </>
+                                ) : (
                                     <TextInput
                                         value={expirationDate}
                                         onChangeText={setExpirationDate}
@@ -490,6 +498,7 @@ export const AddDocumentDetailsSheet = ({
                                         ]}
                                     />
                                 )}
+
                                 <Text
                                     style={[
                                         styles.subtitleSmall,
