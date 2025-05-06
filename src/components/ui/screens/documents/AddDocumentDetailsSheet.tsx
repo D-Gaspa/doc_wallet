@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react"
 import {
     Alert,
+    KeyboardAvoidingView,
     Modal,
-    ScrollView,
+    Platform,
     StyleSheet,
     Text,
     TextInput,
@@ -156,134 +157,141 @@ export const AddDocumentDetailsSheet = ({
             <SafeAreaView
                 style={[styles.sheet, { backgroundColor: colors.background }]}
             >
-                <ScrollView
-                    /* eslint-disable-next-line react-native/no-inline-styles */
-                    style={{ flex: 1 }}
-                    keyboardShouldPersistTaps="handled"
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.kavContainer}
                 >
-                    <View style={styles.contentContainer}>
-                        <Text style={[styles.title, { color: colors.text }]}>
-                            Add Document Details
-                        </Text>
-                        {/* Folder Selection Section */}
-                        <Text style={[styles.subtitle, { color: colors.text }]}>
-                            Choose a Folder:
-                        </Text>
-                        <View style={styles.listContainer}>
-                            <ItemsList
-                                items={folderItems}
-                                isSelectionList={true}
-                                selectedItemId={selectedFolderId}
-                                onSelectItem={(id) => setSelectedFolderId(id)}
-                                selectionMode={false}
-                                selectedFolderIds={[]}
-                                emptyListMessage="No folders available to select."
-                                testID="add-doc-folder-select-list"
-                            />
-                        </View>
-                        {/* Tag Selection Section */}
-                        <Text style={[styles.subtitle, { color: colors.text }]}>
-                            Select Tags:
-                        </Text>
-                        <TagList
-                            tags={tags}
-                            selectedTags={selectedTagIds}
-                            onTagPress={handleTagToggle}
-                            showAddTagButton={false}
-                            horizontal={false}
-                            testID="add-doc-tag-select-list"
+                    {/* Title */}
+                    <Text style={[styles.title, { color: colors.text }]}>
+                        Add Document Details
+                    </Text>
+
+                    {/* Folder Selection */}
+                    <Text style={[styles.subtitle, { color: colors.text }]}>
+                        Choose a Folder:
+                    </Text>
+                    <View
+                        style={[
+                            styles.listContainer,
+                            { borderColor: colors.border },
+                        ]}
+                    >
+                        <ItemsList
+                            items={folderItems}
+                            isSelectionList={true}
+                            selectedItemId={selectedFolderId}
+                            onSelectItem={(id) => setSelectedFolderId(id)}
+                            selectionMode={false}
+                            selectedFolderIds={[]}
+                            emptyListMessage="No folders available."
+                            testID="add-doc-folder-select-list"
                         />
-                        {/* Expiration Section */}
-                        <View style={styles.expirationContainer}>
-                            <TouchableOpacity
-                                onPress={() => setHasExpiration(!hasExpiration)}
-                                style={styles.expirationToggle}
-                            >
-                                <Text style={styles.expirationToggleIcon}>
-                                    {hasExpiration ? "☑️" : "⬜️"}
-                                </Text>
-                                <Text style={{ color: colors.text }}>
-                                    This document has an expiration date
-                                </Text>
-                            </TouchableOpacity>
+                    </View>
 
-                            {hasExpiration && (
-                                // eslint-disable-next-line react-native/no-inline-styles
-                                <View style={{ marginTop: 16 }}>
-                                    <Text
-                                        style={[
-                                            styles.subtitle,
-                                            { color: colors.text },
-                                        ]}
-                                    >
-                                        Expiration Date (YYYY-MM-DD):
-                                    </Text>
-                                    <TextInput
-                                        style={[
-                                            styles.expirationDateInput,
-                                            {
-                                                borderColor: colors.border,
-                                                color: colors.text,
-                                                backgroundColor: colors.card,
-                                            },
-                                        ]}
-                                        placeholder="YYYY-MM-DD"
-                                        placeholderTextColor={
-                                            colors.text + "99"
-                                        }
-                                        value={expirationDate}
-                                        onChangeText={setExpirationDate}
-                                        keyboardType="numeric"
-                                    />
+                    {/* Tag Selection */}
+                    <Text style={[styles.subtitle, { color: colors.text }]}>
+                        Select Tags:
+                    </Text>
+                    <TagList
+                        tags={tags}
+                        selectedTags={selectedTagIds}
+                        onTagPress={handleTagToggle}
+                        showAddTagButton={false}
+                        horizontal={false}
+                        testID="add-doc-tag-select-list"
+                    />
 
-                                    <Text
-                                        style={[
-                                            styles.subtitle,
-                                            // eslint-disable-next-line react-native/no-inline-styles
-                                            {
-                                                color: colors.text,
-                                                marginTop: 12,
-                                            },
-                                        ]}
-                                    >
-                                        When do you want to be notified?
-                                    </Text>
-                                    <View style={styles.notifyContainer}>
-                                        {notificationChoices.map((opt) => (
-                                            <TouchableOpacity
-                                                key={opt.value}
-                                                onPress={() =>
-                                                    toggleNotification(
-                                                        opt.value,
-                                                    )
-                                                }
-                                                style={styles.notifyItem}
+                    {/* Expiration Section */}
+                    <View
+                        style={[
+                            styles.expirationContainer,
+                            { borderColor: colors.border },
+                        ]}
+                    >
+                        <TouchableOpacity
+                            onPress={() => setHasExpiration(!hasExpiration)}
+                            style={styles.expirationToggle}
+                        >
+                            <Text style={styles.expirationToggleIcon}>
+                                {hasExpiration ? "☑️" : "⬜️"}
+                            </Text>
+                            <Text style={{ color: colors.text }}>
+                                This document has an expiration date
+                            </Text>
+                        </TouchableOpacity>
+                        {hasExpiration && (
+                            // eslint-disable-next-line react-native/no-inline-styles
+                            <View style={{ marginTop: 16 }}>
+                                <Text
+                                    style={[
+                                        styles.subtitle,
+                                        { color: colors.text },
+                                    ]}
+                                >
+                                    Expiration Date (YYYY-MM-DD):
+                                </Text>
+                                <TextInput
+                                    style={[
+                                        styles.expirationDateInput,
+                                        {
+                                            borderColor: colors.border,
+                                            color: colors.text,
+                                            backgroundColor: colors.card,
+                                        },
+                                    ]}
+                                    placeholder="YYYY-MM-DD"
+                                    placeholderTextColor={colors.text + "99"}
+                                    value={expirationDate}
+                                    onChangeText={setExpirationDate}
+                                    keyboardType="numeric"
+                                />
+
+                                <Text
+                                    style={[
+                                        styles.subtitle,
+                                        // eslint-disable-next-line react-native/no-inline-styles
+                                        {
+                                            color: colors.text,
+                                            marginTop: 12,
+                                        },
+                                    ]}
+                                >
+                                    When do you want to be notified?
+                                </Text>
+                                <View style={styles.notifyContainer}>
+                                    {notificationChoices.map((opt) => (
+                                        <TouchableOpacity
+                                            key={opt.value}
+                                            onPress={() =>
+                                                toggleNotification(opt.value)
+                                            }
+                                            style={styles.notifyItem}
+                                        >
+                                            <Text style={styles.notifyCheckbox}>
+                                                {notificationTimes.includes(
+                                                    opt.value,
+                                                )
+                                                    ? "☑️"
+                                                    : "⬜️"}
+                                            </Text>
+                                            <Text
+                                                style={{
+                                                    color: colors.text,
+                                                }}
                                             >
-                                                <Text
-                                                    style={
-                                                        styles.notifyCheckbox
-                                                    }
-                                                >
-                                                    {notificationTimes.includes(
-                                                        opt.value,
-                                                    )
-                                                        ? "☑️"
-                                                        : "⬜️"}
-                                                </Text>
-                                                <Text
-                                                    style={{
-                                                        color: colors.text,
-                                                    }}
-                                                >
-                                                    {opt.label}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
+                                                {opt.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
                                 </View>
-                            )}
-                        </View>
-                        <Spacer size={24} />
+                            </View>
+                        )}
+                    </View>
+
+                    <Spacer size={16} />
+
+                    {/* Action Buttons at the bottom */}
+                    <View style={styles.buttonContainer}>
                         <Button
                             title="Save Document"
                             onPress={handleSave}
@@ -296,9 +304,10 @@ export const AddDocumentDetailsSheet = ({
                             variant="outline"
                             onPress={onClose}
                         />
-                        <Spacer size={20} />
                     </View>
-                </ScrollView>
+                    {/* Spacer at the very bottom for padding */}
+                    <Spacer size={10} />
+                </KeyboardAvoidingView>
                 <LoadingOverlay visible={isLoading && !visible} />
             </SafeAreaView>
         </Modal>
@@ -309,35 +318,32 @@ const styles = StyleSheet.create({
     sheet: {
         flex: 1,
     },
-    contentContainer: {
+    kavContainer: {
+        flex: 1,
         paddingHorizontal: 20,
-        paddingBottom: 20,
     },
     title: {
         fontSize: 20,
         fontWeight: "bold",
-        marginTop: 10,
-        marginBottom: 20,
+        marginTop: 15,
+        marginBottom: 15,
         textAlign: "center",
     },
     subtitle: {
         fontSize: 16,
         fontWeight: "600",
-        marginTop: 16,
+        marginTop: 10,
         marginBottom: 8,
     },
     listContainer: {
-        height: 200,
+        flex: 1,
+        minHeight: 150,
         borderWidth: 1,
         borderRadius: 8,
-        marginBottom: 16,
-    },
-    saveBtn: {
-        marginTop: 24,
-        marginBottom: 12,
+        marginBottom: 10,
     },
     expirationContainer: {
-        marginVertical: 16,
+        marginVertical: 10,
         padding: 10,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderBottomWidth: StyleSheet.hairlineWidth,
@@ -371,5 +377,12 @@ const styles = StyleSheet.create({
     notifyCheckbox: {
         fontSize: 18,
         marginRight: 5,
+    },
+    buttonContainer: {
+        marginTop: "auto",
+        paddingTop: 10,
+    },
+    saveBtn: {
+        marginBottom: 12,
     },
 })
