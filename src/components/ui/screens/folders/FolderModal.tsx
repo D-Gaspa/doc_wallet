@@ -96,83 +96,140 @@ export function UnifiedFolderModal({
             { type: "medical" as const, label: "Médico" },
             { type: "car" as const, label: "Vehículo" },
             { type: "education" as const, label: "Educación" },
-            { type: "custom" as const, label: "Personalizado" },
+            { type: "custom" as const, label: "Propio" },
         ],
         [],
     )
 
+    const prevIsVisible = useRef(isVisible)
+    const prevInitialDataId = useRef(initialData.id)
+
     useEffect(() => {
-        if (isVisible) {
+        logger.debug(
+            `useEffect triggered. isVisible: ${isVisible}, prevIsVisible: ${prevIsVisible.current}, Mode: ${mode},
+            initialData ID: ${initialData.id}, prevInitialDataId: ${prevInitialDataId.current}`,
+        )
+
+        if (
+            isVisible &&
+            (!prevIsVisible.current ||
+                initialData.id !== prevInitialDataId.current)
+        ) {
+            logger.debug(
+                `>>> Initializing/Resetting state. Reason: ${
+                    !prevIsVisible.current ? "Modal opened" : "Item ID changed"
+                }. Mode: ${mode}, ID: ${initialData.id ?? "new"}`,
+            )
+
             setFolderName(initialData.name ?? "")
             const initialType = initialData.type ?? "custom"
             setSelectedType(initialType)
-            setCustomIconId(initialData.customIconId ?? "file")
+            const initialCustomIcon = initialData.customIconId ?? "file"
+            setCustomIconId(initialCustomIcon)
 
             const isCustom = initialType === "custom"
             setShowCustomSelector(isCustom)
             fadeAnim.setValue(isCustom ? 1 : 0)
 
-            const t = setTimeout(() => {
-                isMounted.current = true
-                resetPosition?.()
-            }, 50)
+            resetPosition?.()
 
-            return () => {
-                clearTimeout(t)
-                isMounted.current = false
+            prevIsVisible.current = isVisible
+            prevInitialDataId.current = initialData.id
+
+            const mountTimer = setTimeout(() => {
+                isMounted.current = true
+                logger.debug("isMounted set to true after init/reset.")
+            }, 10)
+
+            return () => clearTimeout(mountTimer)
+        } else if (!isVisible && prevIsVisible.current) {
+            logger.debug("<<< Modal hidden. Cleaning up.")
+            isMounted.current = false
+
+            if (mode === "create") {
+                setFolderName("")
+                setSelectedType("custom")
+                setCustomIconId("file")
+                setShowCustomSelector(true)
+                fadeAnim.setValue(1)
+            }
+            prevIsVisible.current = isVisible
+            prevInitialDataId.current = undefined
+        } else {
+            if (isVisible && initialData.id !== prevInitialDataId.current) {
+                prevInitialDataId.current = initialData.id
+            }
+            if (isVisible !== prevIsVisible.current) {
+                prevIsVisible.current = isVisible
             }
         }
-    }, [isVisible, initialData, resetPosition, fadeAnim])
+    }, [
+        isVisible,
+        initialData.id,
+        initialData.name,
+        initialData.type,
+        initialData.customIconId,
+        mode,
+        resetPosition,
+        fadeAnim,
+    ])
 
-    /** Handles selection of a folder type, animating the custom icon selector if needed. */
     const handleTypeSelect = async (type: FolderType) => {
-        if (!isMounted.current) return
-        const isCustom = type === "custom"
-        setSelectedType(type)
-
-        if (isCustom && !showCustomSelector) {
-            setShowCustomSelector(true)
-            await animateIconSelector(true)
-        } else if (!isCustom && showCustomSelector) {
-            await animateIconSelector(false)
-            setShowCustomSelector(false)
+        logger.debug(
+            `handleTypeSelect: User selected type - ${type}. Current selectedType: ${selectedType}`,
+        )
+        if (type === selectedType) {
+            logger.debug(
+                `handleTypeSelect: Type ${type} is already selected. No change.`,
+            )
+            return
         }
 
-        if (isCustom && !customIconId) setCustomIconId("file")
+        const isCustom = type === "custom"
+
+        setSelectedType(type)
+        logger.debug(`handleTypeSelect: setSelectedType to - ${type}`)
+
+        if (isCustom) {
+            if (!showCustomSelector) {
+                logger.debug("handleTypeSelect: Showing custom selector")
+                setShowCustomSelector(true)
+                await animateIconSelector(true)
+            }
+            if (!customIconId) {
+                logger.debug(
+                    "handleTypeSelect: Setting default custom icon 'file'",
+                )
+                setCustomIconId("file")
+            }
+        } else {
+            if (showCustomSelector) {
+                logger.debug("handleTypeSelect: Hiding custom selector")
+                await animateIconSelector(false)
+                setShowCustomSelector(false)
+            }
+        }
     }
 
-    /** Handles saving the folder (create or update). */
     const handleSave = () => {
-        if (!isMounted.current || folderName.trim() === "") return
-        onSave(
-            folderName.trim(),
-            selectedType,
-            selectedType === "custom" ? customIconId : undefined,
-            initialData.id,
-        )
+        if (folderName.trim() === "") {
+            logger.warn("Save attempt with empty folder name.")
+            return
+        }
+        const finalIconId = selectedType === "custom" ? customIconId : undefined
         logger.debug(`${mode === "create" ? "Creating" : "Updating"} folder`, {
+            id: initialData.id,
             name: folderName.trim(),
             type: selectedType,
-            customIconId: selectedType === "custom" ? customIconId : undefined,
+            customIconId: finalIconId,
             parentId: parentFolderId,
-            id: initialData.id,
         })
-
-        if (mode === "create") {
-            setFolderName("")
-            setSelectedType("custom")
-            setCustomIconId("file")
-        }
+        onSave(folderName.trim(), selectedType, finalIconId, initialData.id)
         onClose()
     }
 
-    /** Handles cancelling the modal, resetting state if creating. */
     const handleCancel = () => {
-        if (mode === "create") {
-            setFolderName("")
-            setSelectedType("custom")
-            setCustomIconId("file")
-        }
+        logger.debug("Modal cancelled by user.")
         onClose()
     }
 
