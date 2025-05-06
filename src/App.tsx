@@ -99,14 +99,7 @@ function MainTabsContent() {
                         <FolderMainView {...props} ref={folderMainViewRef} />
                     )}
                 </Tab.Screen>
-                <Tab.Screen name="Files">
-                    {(props) => (
-                        <DocumentsScreen
-                            {...props}
-                            setActiveTab={setActiveTab}
-                        />
-                    )}
-                </Tab.Screen>
+                <Tab.Screen name="Files" component={DocumentsScreen} />
                 <Tab.Screen name="Profile">
                     {() => (
                         <ProfileScreen
