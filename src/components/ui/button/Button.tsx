@@ -2,6 +2,7 @@ import React, { ReactNode } from "react"
 import {
     ActivityIndicator,
     Pressable,
+    StyleProp,
     StyleSheet,
     Text,
     TextStyle,
@@ -17,7 +18,7 @@ export interface ButtonProps {
     onPress: () => void
     loading?: boolean
     disabled?: boolean
-    style?: ViewStyle
+    style?: StyleProp<ViewStyle>
     textStyle?: TextStyle
     testID?: string
     children?: ReactNode

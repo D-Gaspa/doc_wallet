@@ -10,6 +10,7 @@ import {
     StyleSheet,
     TouchableWithoutFeedback,
     View,
+    ViewStyle,
 } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme"
 import { Text } from "../../typography"
@@ -44,15 +45,15 @@ export function ItemMoveModal({
     const insets = useSafeAreaInsets()
     const translateY = useRef(new Animated.Value(screenHeight)).current
     const [finalTargetFolderId, setFinalTargetFolderId] = useState<
-        string | null | undefined
-    >(undefined)
+        string | null
+    >(null)
     const [currentViewFolderId, setCurrentViewFolderId] = useState<
         string | null
     >(null)
     const [folderPath, setFolderPath] = useState<BreadcrumbItem[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
-    // --- Animation Logic ---
+    // Animation Logic
     const animateSheet = (toValue: number, duration: number = 300) => {
         Animated.timing(translateY, {
             toValue,
@@ -63,16 +64,21 @@ export function ItemMoveModal({
     useEffect(() => {
         if (isVisible) {
             animateSheet(0)
-            setFinalTargetFolderId(undefined)
-            setCurrentViewFolderId(null)
-            setFolderPath([])
+            const firstItemParent = folders.find(
+                (f) => f.id === selectedItemsToMove[0]?.id,
+            )?.parentId
+            const initialTarget =
+                firstItemParent !== undefined ? firstItemParent : null
+            setFinalTargetFolderId(initialTarget)
+            setCurrentViewFolderId(initialTarget)
+            setFolderPath(buildFolderPath(initialTarget))
             setIsLoading(false)
         } else {
             animateSheet(screenHeight, 250)
         }
     }, [isVisible])
 
-    // --- Gesture Handling ---
+    // Gesture Handling
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
@@ -85,9 +91,7 @@ export function ItemMoveModal({
                         toValue: screenHeight,
                         duration: 200,
                         useNativeDriver: true,
-                    }).start(() => {
-                        onClose()
-                    })
+                    }).start(onClose)
                 } else {
                     animateSheet(0, 200)
                 }
@@ -95,15 +99,13 @@ export function ItemMoveModal({
         }),
     ).current
 
-    // --- Path and Navigation Logic ---
+    // Path and Navigation Logic
     const buildFolderPath = (
         targetFolderId: string | null,
     ): BreadcrumbItem[] => {
         if (targetFolderId === null) return []
-
         const path: BreadcrumbItem[] = []
         let currentFolder = folders.find((f) => f.id === targetFolderId)
-
         while (currentFolder) {
             path.unshift({ id: currentFolder.id, title: currentFolder.title })
             currentFolder = folders.find(
@@ -116,18 +118,14 @@ export function ItemMoveModal({
     const handleNavigate = (folderId: string | null) => {
         if (folderId === currentViewFolderId || isLoading) return
         setIsLoading(true)
-        setFinalTargetFolderId(undefined)
-
         setCurrentViewFolderId(folderId)
         setFolderPath(buildFolderPath(folderId))
 
         setTimeout(() => setIsLoading(false), 50)
     }
 
-    // --- Data Filtering for ItemsList ---
+    // Data Filtering for ItemsList
     const folderItemsForList = useMemo((): ListItem[] => {
-        setIsLoading(true)
-        // 1. Filter folders:
         const availableFolders = folders.filter((folder) => {
             // a) Belongs to current view
             const isInCurrentView = folder.parentId === currentViewFolderId
@@ -135,43 +133,37 @@ export function ItemMoveModal({
             const isBeingMoved = selectedItemsToMove.some(
                 (item) => item.id === folder.id && item.type === "folder",
             )
-            // c) Is NOT a descendant of one of the folders being moved (prevent moving into self/child)
+            // c) Is NOT a descendant of one of the folders being moved
             let isDescendantOfMoved = false
             const foldersBeingMovedIds = selectedItemsToMove
                 .filter((item) => item.type === "folder")
                 .map((item) => item.id)
 
             if (foldersBeingMovedIds.length > 0) {
-                let parentIdToCheck = folder.parentId
-                while (parentIdToCheck !== null) {
-                    if (foldersBeingMovedIds.includes(parentIdToCheck)) {
-                        isDescendantOfMoved = true
-                        break
-                    }
-                    if (foldersBeingMovedIds.includes(folder.id)) {
-                        isDescendantOfMoved = true
-                        break
-                    }
-                    const parentFolder = folders.find(
-                        (f) => f.id === parentIdToCheck,
-                    )
-                    parentIdToCheck = parentFolder
-                        ? parentFolder.parentId
-                        : null
-                }
                 if (foldersBeingMovedIds.includes(folder.id)) {
+                    // Check if it *is* one being moved (redundant with b, but safe)
                     isDescendantOfMoved = true
+                } else {
+                    let parentIdToCheck = folder.parentId
+                    while (parentIdToCheck !== null && !isDescendantOfMoved) {
+                        if (foldersBeingMovedIds.includes(parentIdToCheck)) {
+                            isDescendantOfMoved = true
+                        }
+                        const parentFolder = folders.find(
+                            (f) => f.id === parentIdToCheck,
+                        )
+                        parentIdToCheck = parentFolder
+                            ? parentFolder.parentId
+                            : null
+                    }
                 }
             }
 
             return isInCurrentView && !isBeingMoved && !isDescendantOfMoved
         })
 
-        // 2. Sort alphabetically
         availableFolders.sort((a, b) => a.title.localeCompare(b.title))
 
-        setIsLoading(false)
-        // 3. Map to ListItem structure
         return availableFolders.map(
             (folder): ListItem => ({ type: "folder", data: folder }),
         )
@@ -185,6 +177,21 @@ export function ItemMoveModal({
 
     const animatedStyle = { transform: [{ translateY: translateY }] }
 
+    const getSelectButtonStyle = (isRootButton: boolean): ViewStyle[] => {
+        const isActive = isRootButton
+            ? finalTargetFolderId === null
+            : finalTargetFolderId === currentViewFolderId
+
+        const stylesArray: ViewStyle[] = [styles.selectButton]
+        if (isActive) {
+            stylesArray.push({
+                backgroundColor: colors.primary + "35",
+                borderColor: colors.primary,
+            })
+        }
+        return stylesArray
+    }
+
     return (
         <Modal
             animationType="none"
@@ -196,7 +203,6 @@ export function ItemMoveModal({
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.keyboardAvoidingView}
             >
-                {/* Backdrop */}
                 <TouchableWithoutFeedback onPress={onClose}>
                     <View
                         style={[
@@ -206,7 +212,6 @@ export function ItemMoveModal({
                     />
                 </TouchableWithoutFeedback>
 
-                {/* Bottom Sheet */}
                 <Animated.View
                     style={[
                         styles.sheetContainer,
@@ -218,15 +223,18 @@ export function ItemMoveModal({
                     ]}
                     {...panResponder.panHandlers}
                 >
-                    {/* Handle Indicator */}
                     <View
-                        style={[
-                            styles.handleIndicator,
-                            { backgroundColor: colors.border + "80" },
-                        ]}
-                    />
+                        style={styles.handleArea}
+                        {...panResponder.panHandlers}
+                    >
+                        <View
+                            style={[
+                                styles.handleIndicator,
+                                { backgroundColor: colors.border + "80" },
+                            ]}
+                        />
+                    </View>
 
-                    {/* Title */}
                     <Text
                         variant="md"
                         weight="bold"
@@ -236,35 +244,25 @@ export function ItemMoveModal({
                     </Text>
                     <Spacer size={5} />
 
-                    {/* Breadcrumbs */}
                     <BreadcrumbNavigation
                         path={folderPath}
                         onNavigate={handleNavigate}
                     />
-
                     <Spacer size={10} />
 
-                    {/* --- Selection Buttons --- */}
+                    {/* Selection Buttons */}
                     <Row style={styles.selectionButtonRow}>
                         <Button
                             title="Select Root"
                             variant="text"
                             onPress={() => setFinalTargetFolderId(null)}
-                            style={
-                                finalTargetFolderId === null
-                                    ? {
-                                          ...styles.selectButton,
-                                          backgroundColor:
-                                              colors.primary + "20",
-                                      }
-                                    : styles.selectButton
-                            }
+                            style={getSelectButtonStyle(true)}
                             textStyle={
                                 finalTargetFolderId === null
                                     ? // eslint-disable-next-line react-native/no-inline-styles
                                       {
-                                          fontWeight: "bold",
                                           color: colors.primary,
+                                          fontWeight: "bold",
                                       }
                                     : { color: colors.primary }
                             }
@@ -276,21 +274,14 @@ export function ItemMoveModal({
                                 onPress={() =>
                                     setFinalTargetFolderId(currentViewFolderId)
                                 }
-                                style={
-                                    finalTargetFolderId === currentViewFolderId
-                                        ? {
-                                              ...styles.selectButton,
-                                              backgroundColor:
-                                                  colors.primary + "20",
-                                          }
-                                        : styles.selectButton
-                                }
+                                style={getSelectButtonStyle(false)}
+                                // Make text bold when active for extra feedback
                                 textStyle={
                                     finalTargetFolderId === currentViewFolderId
                                         ? // eslint-disable-next-line react-native/no-inline-styles
                                           {
-                                              fontWeight: "bold",
                                               color: colors.primary,
+                                              fontWeight: "bold",
                                           }
                                         : { color: colors.primary }
                                 }
@@ -298,6 +289,7 @@ export function ItemMoveModal({
                         )}
                     </Row>
                     <Spacer size={16} />
+
                     <Text
                         variant="sm"
                         weight="medium"
@@ -309,7 +301,6 @@ export function ItemMoveModal({
                         Or click a subfolder below to navigate:
                     </Text>
 
-                    {/* ItemsList for Destination Folders */}
                     <View
                         style={[
                             styles.folderListContainer,
@@ -360,27 +351,30 @@ export function ItemMoveModal({
 // Styles
 const styles = StyleSheet.create({
     keyboardAvoidingView: { flex: 1, justifyContent: "flex-end" },
-    backdrop: {
-        ...StyleSheet.absoluteFillObject,
-    },
+    backdrop: { ...StyleSheet.absoluteFillObject },
     sheetContainer: {
         height: sheetHeight,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         paddingHorizontal: 15,
-        paddingTop: 10,
+        paddingTop: 0,
         shadowOffset: { width: 0, height: -3 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 10,
         overflow: "hidden",
     },
+    handleArea: {
+        paddingTop: 10,
+        paddingBottom: 10,
+        alignItems: "center",
+        width: "100%",
+    },
     handleIndicator: {
         width: 50,
         height: 6,
         borderRadius: 3,
         alignSelf: "center",
-        marginBottom: 8,
     },
     title: { marginBottom: 5, textAlign: "center" },
     selectionButtonRow: {
@@ -395,16 +389,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
         minHeight: 0,
-        borderWidth: 0,
-        borderRadius: 6,
+        borderWidth: 1.5,
+        borderRadius: 16,
         backgroundColor: "transparent",
+        borderColor: "transparent",
     },
     folderListContainer: {
         flex: 1,
-        minHeight: 100,
+        minHeight: 150,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderBottomWidth: StyleSheet.hairlineWidth,
         marginBottom: 10,
+        marginHorizontal: -15,
     },
     subheading: { marginBottom: 8, paddingLeft: 4 },
     loadingIndicator: {
@@ -412,6 +408,10 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-    actionButtonRow: { marginTop: 10, paddingBottom: 10 },
+    actionButtonRow: {
+        marginTop: "auto",
+        paddingTop: 10,
+        paddingBottom: 10,
+    },
     buttonContainer: { flex: 1, marginHorizontal: 5 },
 })

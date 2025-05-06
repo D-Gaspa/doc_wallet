@@ -55,8 +55,8 @@ export function BreadcrumbNavigation({
                                 style={[
                                     styles.breadcrumbText,
                                     index === displayPath.length - 1
-                                        // eslint-disable-next-line react-native/no-inline-styles
-                                        ? {
+                                        ? // eslint-disable-next-line react-native/no-inline-styles
+                                          {
                                               color: colors.text,
                                               fontWeight: "bold",
                                           }
