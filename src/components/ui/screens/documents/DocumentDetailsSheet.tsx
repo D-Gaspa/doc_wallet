@@ -9,6 +9,7 @@ import { useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
 import { Folder } from "../folders/types.ts"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
+import { TouchableOpacity } from "react-native"
 
 interface Props {
     visible: boolean
@@ -32,6 +33,7 @@ export const DocumentDetailsSheet = ({
     )
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
     const [isLoading] = useState(false)
+    const [showAllTags, setShowAllTags] = useState(false)
 
     useEffect(() => {
         if (!visible) {
@@ -94,7 +96,20 @@ export const DocumentDetailsSheet = ({
                     tags={tags}
                     selectedTags={selectedTagIds}
                     onTagPress={handleTagToggle}
+                    showAddTagButton={false}
+                    horizontal={false}
                 />
+                {tags.length > 3 && (
+                    <TouchableOpacity
+                        onPress={() => setShowAllTags((prev) => !prev)}
+                    >
+                        <Text style={{ color: colors.primary }}>
+                            {showAllTags
+                                ? "Show less ▲"
+                                : `Show all (${tags.length}) ▼`}
+                        </Text>
+                    </TouchableOpacity>
+                )}
 
                 <Button
                     title="Guardar y seleccionar archivo"

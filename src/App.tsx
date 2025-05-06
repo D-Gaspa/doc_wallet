@@ -15,7 +15,7 @@ import { LoginScreen } from "./components/ui/screens/auth/LoginScreen"
 import { RegisterScreen } from "./components/ui/screens/auth/RegisterScreen"
 import { SettingsScreen } from "./components/ui/screens/settings/SettingsScreen"
 import { FolderMainView } from "./components/ui/screens/folders/FolderMainView"
-import { DocumentsScreen } from "./components/ui/screens/documents/DocumentsScreen"
+import { DocumentScannerScreen } from "./components/ui/screens/documents/DocumentScannerScreen.tsx"
 import { ProfileScreen } from "./components/ui/screens/ProfileScreen"
 import { TabBar } from "./components/ui/layout/tab_bar/TabBar"
 import type { FolderMainViewRef } from "./navigation"
@@ -101,8 +101,8 @@ function MainTabsContent() {
                 </Tab.Screen>
                 <Tab.Screen name="Files">
                     {(props) => (
-                        //@ts-expect-error ignore
-                        <DocumentsScreen
+                        /* @ts-expect-error TODO: Fix this*/
+                        <DocumentScannerScreen
                             {...props}
                             setActiveTab={setActiveTab}
                         />

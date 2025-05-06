@@ -1,8 +1,6 @@
 import React, { useState, useRef } from "react"
 import { View, TouchableOpacity, StyleSheet, Animated } from "react-native"
-import { useTheme } from "../hooks/useTheme.ts" // Adjust path
-
-// Import necessary icons - adjust paths as needed
+import { useTheme } from "../hooks/useTheme.ts"
 import PlusIcon from "../../src/components/ui/assets/svg/plus.svg"
 import AddFolderIcon from "../../src/components/ui/assets/svg/add_folder.svg" // Reuse existing icon
 import AddFileIcon from "../../src/components/ui/assets/svg/add-file-icon.svg" // Or another suitable document icon

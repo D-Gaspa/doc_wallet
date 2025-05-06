@@ -1,10 +1,10 @@
-// src/components/ui/tag_functionality/TagList.tsx
 import React, { useState } from "react"
 import {
     View,
     StyleSheet,
     Text,
     TouchableOpacity,
+    ScrollView,
     GestureResponderEvent,
 } from "react-native"
 import { Tag, TagProps } from "./Tag"
@@ -46,59 +46,51 @@ export function TagList({
     const { colors } = useTheme()
     const [isExpanded, setIsExpanded] = useState(initiallyExpanded)
 
-    const MAX_EXPANDED_TAGS_TO_SHOW = 3
-
-    const tagsToShowExpanded = tags.slice(0, MAX_EXPANDED_TAGS_TO_SHOW)
-    const remainingTagsCount = tags.length - MAX_EXPANDED_TAGS_TO_SHOW
+    const PREVIEW_COUNT = 3
+    const previewTags = tags.slice(0, PREVIEW_COUNT)
+    const remainingTagsCount = tags.length - PREVIEW_COUNT
     const showMoreIndicator = remainingTagsCount > 0
     const canShowAddButton = showAddTagButton && onAddTagPress
 
-    if (tags.length === 0 && !canShowAddButton) {
-        return null
-    }
+    if (tags.length === 0 && !canShowAddButton) return null
 
-    const handleTagPress = (tagId: string) => {
-        if (onTagPress) onTagPress(tagId)
-    }
+    /* Handlers */
+    const handleTagPress = (tagId: string) => onTagPress?.(tagId)
+    const handleTagLongPress = (tagId: string) => onTagLongPress?.(tagId)
 
-    const handleTagLongPress = (tagId: string) => {
-        if (onTagLongPress) onTagLongPress(tagId)
-    }
-
-    const handleToggleExpand = () => {
-        if (tags.length > 0 || canShowAddButton) {
-            if (
-                tagsToShowExpanded.length > 0 ||
-                showMoreIndicator ||
-                canShowAddButton
-            ) {
-                setIsExpanded(true)
-            }
+    const expandTags = () => {
+        if (previewTags.length > 0 || showMoreIndicator || canShowAddButton) {
+            setIsExpanded(true)
         }
     }
 
-    const collapseTags = (event?: GestureResponderEvent) => {
-        event?.stopPropagation()
+    const collapseTags = (e?: GestureResponderEvent) => {
+        e?.stopPropagation()
         setIsExpanded(false)
     }
 
+    /* Render */
     return (
         <View style={styles.outerContainer}>
             {isExpanded ? (
-                // --- Expanded State ---
-                // Using View, but ScrollView might be better if many tags + buttons can overflow horizontally
-                <View // Changed back to View assuming wrapping or limited items fit
+                <ScrollView
+                    horizontal={horizontal}
+                    showsHorizontalScrollIndicator={false}
+                    showsVerticalScrollIndicator={false}
                     style={[
+                        styles.scrollContainer,
+                        !horizontal && styles.verticalScroll,
+                    ]}
+                    contentContainerStyle={[
                         styles.container,
-                        styles.expandedContainer, // Generic expanded style
-                        horizontal && styles.horizontalContainer, // Specific horizontal layout
-                        !horizontal && styles.verticalContainer,
+                        horizontal
+                            ? styles.horizontalContainer
+                            : styles.verticalContainer,
                     ]}
                     testID={testID ?? "tag-list-expanded"}
                 >
-                    {/* Collapse Button --> Moved to the beginning <-- */}
                     <TouchableOpacity
-                        style={styles.collapseButton} // Style updated below
+                        style={styles.collapseButton}
                         onPress={collapseTags}
                         testID="collapse-tags-button"
                         hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
@@ -110,8 +102,7 @@ export function TagList({
                         />
                     </TouchableOpacity>
 
-                    {/* Display first 3 tags */}
-                    {tagsToShowExpanded.map((tag) => (
+                    {tags.map((tag) => (
                         <Tag
                             key={tag.id}
                             id={tag.id}
@@ -124,21 +115,6 @@ export function TagList({
                         />
                     ))}
 
-                    {/* "+X more" Indicator */}
-                    {showMoreIndicator && (
-                        <View style={styles.moreTagsIndicator}>
-                            <Text
-                                style={[
-                                    styles.moreTagsText,
-                                    { color: colors.secondaryText },
-                                ]}
-                            >
-                                +{remainingTagsCount}
-                            </Text>
-                        </View>
-                    )}
-
-                    {/* Add Tag Button (Inline) */}
                     {canShowAddButton && (
                         <TouchableOpacity
                             style={[
@@ -159,19 +135,18 @@ export function TagList({
                             />
                         </TouchableOpacity>
                     )}
-                </View> // End Expanded View
+                </ScrollView>
             ) : (
-                // --- Collapsed State (Preview) ---
                 <TouchableOpacity
                     style={[
                         styles.container,
                         styles.collapsedContainer,
                         !horizontal && styles.verticalContainer,
                     ]}
-                    onPress={handleToggleExpand}
+                    onPress={expandTags}
                     disabled={
                         !(
-                            tagsToShowExpanded.length > 0 ||
+                            previewTags.length > 0 ||
                             showMoreIndicator ||
                             canShowAddButton
                         )
@@ -179,7 +154,7 @@ export function TagList({
                     testID={testID ?? "tag-list-collapsed"}
                     activeOpacity={0.7}
                 >
-                    {tags.map((tag) => (
+                    {previewTags.map((tag) => (
                         <View
                             key={tag.id}
                             style={[
@@ -190,6 +165,38 @@ export function TagList({
                             ]}
                         />
                     ))}
+                    {showMoreIndicator && (
+                        <View style={styles.moreTagsIndicator}>
+                            <Text
+                                style={[
+                                    styles.moreTagsText,
+                                    { color: colors.secondaryText },
+                                ]}
+                            >
+                                +{remainingTagsCount}
+                            </Text>
+                        </View>
+                    )}
+                    {canShowAddButton && (
+                        <TouchableOpacity
+                            style={[
+                                styles.addTagButtonSmall,
+                                {
+                                    backgroundColor: colors.primary + "20",
+                                    borderColor: colors.primary,
+                                },
+                            ]}
+                            onPress={onAddTagPress}
+                            testID="add-tag-button-collapsed"
+                            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                        >
+                            <PlusIcon
+                                width={10}
+                                height={10}
+                                fill={colors.primary}
+                            />
+                        </TouchableOpacity>
+                    )}
                 </TouchableOpacity>
             )}
         </View>
@@ -205,26 +212,25 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         paddingVertical: 2,
-        position: "relative", // Keep relative for potential absolute children if needed later
     },
     horizontalContainer: {
-        // Used when horizontal=true
-        flexWrap: "nowrap", // Prevent wrapping in horizontal view
+        flexWrap: "nowrap",
     },
-    expandedContainer: {
-        // Common style for expanded view (wrapping if vertical)
+    verticalContainer: {
+        flexDirection: "column",
+        alignItems: "flex-start",
         flexWrap: "wrap",
+    },
+    scrollContainer: {
+        maxHeight: 120,
+    },
+    verticalScroll: {
+        maxHeight: undefined,
     },
     collapsedContainer: {
         flexWrap: "nowrap",
         overflow: "hidden",
         paddingLeft: 2,
-    },
-    verticalContainer: {
-        // Style if horizontal={false}
-        flexDirection: "column",
-        alignItems: "flex-start",
-        flexWrap: "wrap",
     },
     collapsedDot: {
         width: 10,
@@ -266,8 +272,8 @@ const styles = StyleSheet.create({
     collapseButton: {
         justifyContent: "center",
         alignItems: "center",
-        paddingHorizontal: 4, // Touch area padding
-        marginRight: 4, // Add margin to space it from the first tag
-        height: 22, // Match small tag height for vertical alignment
+        paddingHorizontal: 4,
+        marginRight: 4,
+        height: 22,
     },
 })

@@ -1,22 +1,25 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
+    Animated,
+    Dimensions,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    SafeAreaView,
     StyleSheet,
     View,
-    ScrollView,
     ViewStyle,
-    Animated,
-    TouchableOpacity,
 } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme"
 import { BaseModal } from "../../../common/modal"
 import { Stack } from "../../layout"
-import { Row } from "../../layout"
 import { Text } from "../../typography"
 import { TextField } from "../../form"
 import { FolderCard } from "../../cards"
 import { Button } from "../../button"
-import { LoggingService } from "../../../../services/monitoring/loggingService"
 import { useDismissGesture } from "../../gestures/useDismissGesture.ts"
+import { LoggingService } from "../../../../services/monitoring/loggingService"
 import { CustomIconSelector } from "./CustomIconSelector"
 
 export type FolderType = "travel" | "medical" | "car" | "education" | "custom"
@@ -30,7 +33,7 @@ interface UnifiedFolderModalProps {
         customIconId?: string,
         folderId?: string,
     ) => void
-    mode: "create" | "edit"
+    mode?: "create" | "edit"
     initialData?: {
         id?: string
         name?: string
@@ -50,77 +53,95 @@ export function UnifiedFolderModal({
     parentFolderId = null,
 }: UnifiedFolderModalProps) {
     const { colors } = useTheme()
-    const logger = LoggingService.getLogger
-        ? LoggingService.getLogger("UnifiedFolderModal")
-        : { debug: console.debug }
+    const logger = LoggingService.getLogger?.("UnifiedFolderModal") ?? {
+        debug: console.debug,
+    }
     const isMounted = useRef(false)
+    const { height: windowHeight, width: windowWidth } =
+        Dimensions.get("window")
 
-    const [folderName, setFolderName] = useState(initialData.name || "")
+    const [folderName, setFolderName] = useState(initialData.name ?? "")
     const [selectedType, setSelectedType] = useState<FolderType>(
-        initialData.type || "custom",
+        initialData.type ?? "custom",
     )
     const [customIconId, setCustomIconId] = useState(
-        initialData.customIconId || "file", // Default icon if custom
+        initialData.customIconId ?? "file",
     )
     const [showCustomSelector, setShowCustomSelector] = useState(
-        initialData.type === "custom",
+        (initialData.type ?? "custom") === "custom",
     )
+    const [iconSelectorHeight, setIconSelectorHeight] = useState(190)
 
-    const handleCancelRef = useRef(() => {
-        if (mode === "create") {
-            setFolderName("")
-            setSelectedType("custom")
-            setCustomIconId("file")
-        }
-        onClose()
-    })
+    const fadeAnim = useRef(
+        new Animated.Value(showCustomSelector ? 1 : 0),
+    ).current
+    const animateIconSelector = (visible: boolean) => {
+        return new Promise<void>((resolve) => {
+            Animated.timing(fadeAnim, {
+                toValue: visible ? 1 : 0,
+                duration: 180,
+                useNativeDriver: true,
+            }).start(() => resolve())
+        })
+    }
 
     const { translateX, panHandlers, resetPosition } = useDismissGesture({
-        onDismiss: handleCancelRef.current,
+        onDismiss: () => handleCancel(),
         direction: "horizontal",
     })
 
+    const folderTypes = useMemo(
+        () => [
+            { type: "travel" as const, label: "Viaje" },
+            { type: "medical" as const, label: "Médico" },
+            { type: "car" as const, label: "Vehículo" },
+            { type: "education" as const, label: "Educación" },
+            { type: "custom" as const, label: "Personalizado" },
+        ],
+        [],
+    )
+
     useEffect(() => {
         if (isVisible) {
-            setFolderName(initialData.name || "")
-            setSelectedType(initialData.type || "custom")
-            setCustomIconId(initialData.customIconId || "file")
-            setShowCustomSelector(initialData.type === "custom")
+            setFolderName(initialData.name ?? "")
+            const initialType = initialData.type ?? "custom"
+            setSelectedType(initialType)
+            setCustomIconId(initialData.customIconId ?? "file")
 
-            const timer = setTimeout(() => {
+            const isCustom = initialType === "custom"
+            setShowCustomSelector(isCustom)
+            fadeAnim.setValue(isCustom ? 1 : 0)
+
+            const t = setTimeout(() => {
                 isMounted.current = true
-                if (resetPosition) resetPosition()
-            }, 100)
+                resetPosition?.()
+            }, 50)
 
             return () => {
-                clearTimeout(timer)
+                clearTimeout(t)
                 isMounted.current = false
             }
         }
-    }, [isVisible, initialData])
+    }, [isVisible, initialData, resetPosition, fadeAnim])
 
-    const folderTypes = [
-        { type: "travel" as const, label: "Viaje" },
-        { type: "medical" as const, label: "Médico" },
-        { type: "car" as const, label: "Vehículo" },
-        { type: "education" as const, label: "Educación" },
-        { type: "custom" as const, label: "Personalizado" },
-    ]
-
-    const handleTypeSelect = (type: FolderType) => {
+    /** Handles selection of a folder type, animating the custom icon selector if needed. */
+    const handleTypeSelect = async (type: FolderType) => {
         if (!isMounted.current) return
+        const isCustom = type === "custom"
         setSelectedType(type)
-        setShowCustomSelector(type === "custom")
-        if (type === "custom" && !customIconId) {
-            setCustomIconId("file") // Ensure a default icon if switching to custom
+
+        if (isCustom && !showCustomSelector) {
+            setShowCustomSelector(true)
+            await animateIconSelector(true)
+        } else if (!isCustom && showCustomSelector) {
+            await animateIconSelector(false)
+            setShowCustomSelector(false)
         }
+
+        if (isCustom && !customIconId) setCustomIconId("file")
     }
 
-    const handleIconSelect = (iconId: string) => {
-        if (!isMounted.current) return
-        setCustomIconId(iconId)
-    }
-
+    /** Handles saving the folder (create or update). */
     const handleSave = () => {
         if (!isMounted.current || folderName.trim() === "") return
         onSave(
@@ -136,6 +157,7 @@ export function UnifiedFolderModal({
             parentId: parentFolderId,
             id: initialData.id,
         })
+
         if (mode === "create") {
             setFolderName("")
             setSelectedType("custom")
@@ -144,240 +166,314 @@ export function UnifiedFolderModal({
         onClose()
     }
 
-    function handleCancel() {
-        handleCancelRef.current()
+    /** Handles cancelling the modal, resetting state if creating. */
+    const handleCancel = () => {
+        if (mode === "create") {
+            setFolderName("")
+            setSelectedType("custom")
+            setCustomIconId("file")
+        }
+        onClose()
     }
 
     const buttonStyle: ViewStyle =
-        folderName.trim() === "" ? { ...styles.disabledButton } : {}
+        folderName.trim() === "" ? styles.disabledButton : {}
+
     const modalTitle =
-        mode === "create" ? "Crear Nueva Carpeta" : "Editar Carpeta"
+        mode === "create" ? "Crear nueva carpeta" : "Editar carpeta"
+
     const actionButtonText =
-        mode === "create" ? "Crear Carpeta" : "Actualizar Carpeta"
+        mode === "create" ? "Crear carpeta" : "Actualizar carpeta"
+
+    /** Renders the header section of the FlatList (Name input and Type label). */
+    const listHeader = (
+        <Stack spacing={20} style={styles.headerContent}>
+            <Stack spacing={6}>
+                <Text weight="medium" style={{ color: colors.text }}>
+                    Nombre de la carpeta
+                </Text>
+                <TextField
+                    placeholder="Ingresa el nombre de la carpeta"
+                    value={folderName}
+                    onChangeText={setFolderName}
+                    testID="folder-name-input"
+                    returnKeyType="done"
+                />
+            </Stack>
+            <Text weight="medium" style={{ color: colors.text }}>
+                Tipo de Carpeta
+            </Text>
+        </Stack>
+    )
+
+    /** Component to measure the layout height of the CustomIconSelector. */
+    const MeasureCustomIconSelector = () => {
+        return (
+            <View
+                onLayout={(event) => {
+                    const { height } = event.nativeEvent.layout
+
+                    if (height > 0 && height !== iconSelectorHeight) {
+                        setIconSelectorHeight(height)
+                    }
+                }}
+            >
+                <CustomIconSelector
+                    selectedIconId={customIconId}
+                    onSelectIcon={setCustomIconId}
+                />
+            </View>
+        )
+    }
+
+    /** Renders the footer section of the FlatList (animated icon selector). */
+    const listFooter = (
+        <>
+            <View
+                /* eslint-disable-next-line react-native/no-inline-styles */
+                style={{
+                    position: "relative",
+                    height: iconSelectorHeight,
+                    width: "100%",
+                }}
+            >
+                {/* Conditionally render the animated icon selector */}
+                {showCustomSelector ? (
+                    <Animated.View
+                        style={[
+                            styles.iconSelectorContainer,
+
+                            // eslint-disable-next-line react-native/no-inline-styles
+                            {
+                                opacity: fadeAnim,
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                            },
+                        ]}
+                    >
+                        <MeasureCustomIconSelector />
+                    </Animated.View>
+                ) : null}
+            </View>
+            <View style={styles.emptyFooter} />
+        </>
+    )
+
+    const wideModal: ViewStyle = {
+        width: "100%",
+        padding: 0,
+        maxWidth: undefined,
+        height: "100%",
+        borderRadius: 0,
+    }
 
     return (
         <BaseModal
             isVisible={isVisible}
             onClose={handleCancel}
             dismissOnBackdropPress={false}
+            containerStyle={wideModal}
         >
-            <Animated.View
-                style={[
-                    styles.modalContent,
-                    {
-                        backgroundColor: colors.background,
-                        transform: [{ translateX }],
-                    },
-                ]}
-                {...panHandlers}
-            >
-                <View style={styles.headerBar}>
+            <SafeAreaView style={styles.safeArea}>
+                <Animated.View
+                    style={[
+                        styles.modalContent,
+                        {
+                            backgroundColor: colors.background,
+                            transform: [{ translateX }],
+                            maxHeight: windowHeight,
+                            maxWidth: windowWidth,
+                        },
+                    ]}
+                    {...panHandlers}
+                >
+                    {/* Drag handle & title */}
                     <View
                         style={[
-                            styles.closeIndicator,
-                            { backgroundColor: colors.border }, // Use border color for subtle look
+                            styles.headerBar,
+                            { borderBottomColor: colors.border },
                         ]}
-                    />
-                    <Text
-                        variant="md"
-                        weight="bold"
-                        style={[styles.title, { color: colors.text }]}
                     >
-                        {modalTitle}
-                    </Text>
-                </View>
-
-                <ScrollView
-                    style={styles.scrollContainer}
-                    contentContainerStyle={styles.scrollContentContainer}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    <View
-                        style={styles.container}
-                        testID={`folder-${mode}-modal`}
-                    >
-                        <Stack spacing={20}>
-                            <Stack spacing={6}>
-                                <Text
-                                    weight="medium"
-                                    style={{ color: colors.text }}
-                                >
-                                    Nombre de la Carpeta
-                                </Text>
-                                <TextField
-                                    placeholder="Ingresa el nombre de la carpeta"
-                                    value={folderName}
-                                    onChangeText={setFolderName}
-                                    testID="folder-name-input"
-                                    style={styles.textField} // Use specific style if needed
-                                />
-                            </Stack>
-
-                            <Stack spacing={6}>
-                                <Text
-                                    weight="medium"
-                                    style={{ color: colors.text }}
-                                >
-                                    Tipo de Carpeta
-                                </Text>
-                                <View style={styles.typesOuterContainer}>
-                                    {folderTypes.map((item) => (
-                                        <TouchableOpacity
-                                            key={item.type}
-                                            onPress={() =>
-                                                handleTypeSelect(item.type)
-                                            }
-                                            activeOpacity={0.7}
-                                            style={[
-                                                styles.folderCardWrapper,
-                                                {
-                                                    borderColor:
-                                                        selectedType ===
-                                                        item.type
-                                                            ? colors.primary
-                                                            : colors.border,
-                                                },
-                                            ]}
-                                        >
-                                            <FolderCard
-                                                title={item.label}
-                                                type={item.type}
-                                                onPress={() =>
-                                                    handleTypeSelect(item.type)
-                                                }
-                                                testID={`folder-type-${item.type}`}
-                                                onToggleFavorite={() => {}}
-                                                selected={
-                                                    selectedType === item.type
-                                                }
-                                            />
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </Stack>
-
-                            <View style={styles.iconSelectorContainer}>
-                                {showCustomSelector &&
-                                    selectedType === "custom" && (
-                                        <CustomIconSelector
-                                            selectedIconId={customIconId}
-                                            onSelectIcon={handleIconSelect}
-                                        />
-                                    )}
-                            </View>
-                        </Stack>
+                        {/* Visual indicator for swiping */}
+                        <View
+                            style={[
+                                styles.closeIndicator,
+                                { backgroundColor: colors.border },
+                            ]}
+                        />
+                        <Text
+                            variant="md"
+                            weight="bold"
+                            style={[styles.title, { color: colors.text }]}
+                        >
+                            {modalTitle}
+                        </Text>
                     </View>
-                </ScrollView>
 
-                <View
-                    style={[styles.footer, { borderTopColor: colors.border }]}
-                >
-                    <Row
-                        justify="space-between"
-                        align="center"
-                        style={styles.buttonRow}
-                        spacing={15} // Add gap between buttons
+                    {/* Body */}
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === "ios" ? "padding" : undefined}
+                        style={styles.flex}
+                        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
                     >
-                        <View style={styles.buttonContainer}>
-                            <Button
-                                title="Cancelar"
-                                onPress={handleCancel}
-                                testID="cancel-button"
-                                variant="outline" // Use outline variant for cancel
-                            />
-                        </View>
-                        <View style={styles.buttonContainer}>
-                            <Button
-                                title={actionButtonText}
-                                onPress={handleSave}
-                                style={buttonStyle}
-                                disabled={folderName.trim() === ""}
-                                testID={
-                                    mode === "create"
-                                        ? "create-button"
-                                        : "update-button"
-                                }
-                            />
-                        </View>
-                    </Row>
-                </View>
-            </Animated.View>
+                        <FlatList
+                            data={folderTypes}
+                            keyExtractor={(item) => item.type}
+                            numColumns={2}
+                            ListHeaderComponent={listHeader}
+                            ListFooterComponent={listFooter}
+                            columnWrapperStyle={styles.columnWrapper}
+                            contentContainerStyle={styles.listContentContainer}
+                            showsVerticalScrollIndicator={false}
+                            scrollEnabled={true}
+                            initialNumToRender={10}
+                            style={styles.flatList}
+                            renderItem={({ item }) => (
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel={item.label}
+                                    onPress={() => handleTypeSelect(item.type)}
+                                    style={[
+                                        styles.folderCardWrapper,
+
+                                        {
+                                            borderColor:
+                                                selectedType === item.type
+                                                    ? colors.primary
+                                                    : colors.border + "50",
+                                        },
+                                    ]}
+                                >
+                                    <FolderCard
+                                        folderId={item.type}
+                                        title={item.label}
+                                        type={item.type}
+                                        selected={selectedType === item.type}
+                                        onPress={() =>
+                                            handleTypeSelect(item.type)
+                                        }
+                                        onToggleFavorite={() => {}}
+                                        testID={`folder-type-${item.type}`}
+                                    />
+                                </Pressable>
+                            )}
+                        />
+                    </KeyboardAvoidingView>
+
+                    {/* Footer buttons */}
+                    <View
+                        style={[
+                            styles.footer,
+                            { borderTopColor: colors.border },
+                        ]}
+                    >
+                        {/* Cancel Button */}
+                        <Button
+                            title="Cancelar"
+                            onPress={handleCancel}
+                            variant="outline"
+                            style={styles.fullWidthBtn}
+                            testID="cancel-button"
+                        />
+                        {/* Save/Update Button */}
+                        <Button
+                            title={actionButtonText}
+                            onPress={handleSave}
+                            style={[styles.fullWidthBtn, buttonStyle]}
+                            disabled={folderName.trim() === ""}
+                            testID={
+                                mode === "create"
+                                    ? "create-button"
+                                    : "update-button"
+                            }
+                        />
+                    </View>
+                </Animated.View>
+            </SafeAreaView>
         </BaseModal>
     )
 }
 
 const styles = StyleSheet.create({
-    modalContent: {
-        height: "85%", // Take up most of the screen height
+    safeArea: {
+        flex: 1,
         width: "100%",
-        borderTopLeftRadius: 20, // Rounded corners at the top
-        borderTopRightRadius: 20,
-        overflow: "hidden", // Clip content to rounded corners
+        height: "100%",
     },
-    scrollContainer: {
+    flex: {
         flex: 1,
     },
-    scrollContentContainer: {
-        paddingBottom: 30, // Padding at the bottom of scroll content
-    },
-    container: {
-        paddingHorizontal: 20,
-        paddingTop: 10, // Reduced top padding inside scroll view
-        paddingBottom: 20, // Add padding at the bottom inside scroll view
+    flatList: {
         flex: 1,
+    },
+    modalContent: {
+        flex: 1,
+        width: "100%",
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        overflow: "hidden",
+
+        display: "flex",
+        flexDirection: "column",
     },
     headerBar: {
-        paddingTop: 12, // Adjust top padding for handle
-        paddingBottom: 12, // Bottom padding
+        paddingTop: 12,
+        paddingBottom: 16,
         paddingHorizontal: 20,
         alignItems: "center",
         borderBottomWidth: StyleSheet.hairlineWidth,
-        width: "100%",
-    },
-    title: {
-        marginVertical: 4, // Reduced vertical margin
-        textAlign: "center",
-        fontSize: 18, // Slightly larger title
     },
     closeIndicator: {
         width: 40,
         height: 5,
         borderRadius: 2.5,
-        marginBottom: 8, // Space below handle
-        alignSelf: "center",
+        marginBottom: 12,
     },
-    textField: {
-        width: "100%",
+    title: {
+        marginVertical: 4,
+        textAlign: "center",
+        fontSize: 18,
     },
-    typesOuterContainer: {
-        width: "100%",
-        marginTop: 4, // Add margin top for spacing
+    listContentContainer: {
+        paddingBottom: 80,
+        flexGrow: 1,
+    },
+    headerContent: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 10,
+    },
+    columnWrapper: {
+        justifyContent: "space-between",
+        marginBottom: 12,
+        paddingHorizontal: 20,
     },
     folderCardWrapper: {
-        borderWidth: 1.5, // Slightly thicker border
-        borderRadius: 12, // Consistent border radius
-        marginBottom: 10, // Increased space between type options
+        borderWidth: 2,
+        borderRadius: 12,
+        flex: 0.48,
         overflow: "hidden",
-    },
-    iconSelectorContainer: {
-        width: "100%",
-        minHeight: 80, // Adjust min height if needed
-        marginTop: 10,
-        marginBottom: 10,
     },
     footer: {
         padding: 20,
-        borderTopWidth: StyleSheet.hairlineWidth, // Separator line
-        width: "100%",
+        borderTopWidth: StyleSheet.hairlineWidth,
+        paddingBottom: Platform.OS === "ios" ? 30 : 20,
     },
-    buttonRow: {
-        width: "100%",
-    },
-    buttonContainer: {
-        flex: 1, // Make buttons take equal space
+    fullWidthBtn: {
+        alignSelf: "stretch",
+        marginBottom: 12,
     },
     disabledButton: {
         opacity: 0.5,
+    },
+    emptyFooter: {
+        height: 50,
+    },
+    iconSelectorContainer: {
+        paddingHorizontal: 20,
+        marginTop: 10,
+        width: "100%",
     },
 })

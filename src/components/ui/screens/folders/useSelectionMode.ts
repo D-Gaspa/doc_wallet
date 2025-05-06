@@ -1,50 +1,74 @@
-import { useState } from "react"
-import { Folder } from "./types"
+import { useCallback, useState } from "react"
+import { ListItem } from "./types"
+
+export interface SelectedItem {
+    id: string
+    type: "folder" | "document"
+}
 
 export function useSelectionMode() {
-    // Selection mode states
     const [selectionMode, setSelectionMode] = useState(false)
-    const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([])
+    const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([])
 
-    // Toggle selection mode
-    const toggleSelectionMode = () => {
-        if (selectionMode) {
-            // Exit selection mode
-            setSelectionMode(false)
-            setSelectedFolderIds([])
-        } else {
-            // Enter selection mode
-            setSelectionMode(true)
-        }
-    }
-
-    // Select all folders in the current view
-    const handleSelectAll = (folders: Folder[]) => {
-        if (selectedFolderIds.length === folders.length && folders.length > 0) {
-            // If all are selected, deselect all
-            setSelectedFolderIds([])
-        } else {
-            // Otherwise select all
-            setSelectedFolderIds(folders.map((folder) => folder.id))
-        }
-    }
-
-    // Handle folder selection/deselection
-    const handleFolderSelect = (folderId: string) => {
-        setSelectedFolderIds((prev) => {
-            if (prev.includes(folderId)) {
-                return prev.filter((id) => id !== folderId)
+    const toggleSelectionMode = useCallback(() => {
+        setSelectionMode((prevMode) => {
+            if (prevMode) {
+                setSelectedItems([])
+                return false
             } else {
-                return [...prev, folderId]
+                return true
             }
         })
-    }
+    }, [])
+
+    const handleItemSelect = useCallback(
+        (itemId: string, itemType: "folder" | "document") => {
+            setSelectedItems((prev) => {
+                const existingIndex = prev.findIndex(
+                    (item) => item.id === itemId && item.type === itemType,
+                )
+                if (existingIndex > -1) {
+                    return prev.filter((_, index) => index !== existingIndex)
+                } else {
+                    return [...prev, { id: itemId, type: itemType }]
+                }
+            })
+        },
+        [],
+    )
+
+    const handleSelectAll = useCallback(
+        (displayItems: ListItem[]) => {
+            const allCurrentlySelected =
+                displayItems.length > 0 &&
+                displayItems.every((displayItem) =>
+                    selectedItems.some(
+                        (selItem) =>
+                            selItem.id === displayItem.data.id &&
+                            selItem.type === displayItem.type,
+                    ),
+                )
+
+            if (allCurrentlySelected) {
+                setSelectedItems([])
+            } else {
+                setSelectedItems(
+                    displayItems.map((item) => ({
+                        id: item.data.id,
+                        type: item.type,
+                    })),
+                )
+            }
+        },
+        [selectedItems],
+    )
 
     return {
         selectionMode,
-        selectedFolderIds,
+        selectedItems,
         toggleSelectionMode,
         handleSelectAll,
-        handleFolderSelect,
+        handleItemSelect,
+        setSelectedItems,
     }
 }

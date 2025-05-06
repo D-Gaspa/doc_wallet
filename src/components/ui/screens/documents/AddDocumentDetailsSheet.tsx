@@ -1,24 +1,37 @@
-import React, { JSX, useEffect, useState } from "react"
-import { Modal, ScrollView, StyleSheet, Text, View } from "react-native"
+import React, { useEffect, useMemo, useState } from "react"
+import DateTimePicker from "@react-native-community/datetimepicker"
+import {
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    ViewStyle,
+} from "react-native"
 import { Button } from "../../button"
 import { IDocument } from "../../../../types/document.ts"
-import { Tag, useTagContext } from "../../tag_functionality/TagContext.tsx"
+import { useTagContext } from "../../tag_functionality/TagContext.tsx"
 import { TagList } from "../../tag_functionality/TagList.tsx"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useFolderStore } from "../../../../store/useFolderStore.ts"
-import { Folder } from "../folders/types.ts"
-import { FolderCard } from "../../cards"
-import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
-import { TouchableOpacity, TextInput, Alert } from "react-native"
+import { ListItem } from "../folders/types.ts"
+import { ItemsList } from "../folders/ItemsList"
 import { useTheme } from "../../../../hooks/useTheme.ts"
+import { Row, Spacer } from "../../layout"
+import {
+    BreadcrumbItem,
+    BreadcrumbNavigation,
+} from "../folders/BreadcrumbNavigation"
 
 interface Props {
     visible: boolean
     document: IDocument | null
     onClose: () => void
     onSave: (doc: IDocument, folderId: string, tagIds: string[]) => void
-    folders: Folder[]
-    setFolders: (folders: Folder[]) => void
 }
 
 export const AddDocumentDetailsSheet = ({
@@ -27,21 +40,24 @@ export const AddDocumentDetailsSheet = ({
     onClose,
     onSave,
 }: Props) => {
+    const { colors } = useTheme()
     const tagContext = useTagContext()
+    const allFolders = useFolderStore((s) => s.folders)
     const tags = tagContext?.tags
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
         null,
     )
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-    const { colors } = useTheme()
-    const folders = useFolderStore((s) => s.folders)
+    const [currentViewFolderId, setCurrentViewFolderId] = useState<
+        string | null
+    >(null)
+    const [folderPath, setFolderPath] = useState<BreadcrumbItem[]>([])
     const [isLoading, setLoading] = useState(false)
-
-    const [, setHydratedTags] = useState<Tag[]>([])
-
+    const [isNavigating, setIsNavigating] = useState(false)
     const [hasExpiration, setHasExpiration] = useState(false)
     const [expirationDate, setExpirationDate] = useState<string>("")
-    const [notificationTimes, setNotificationTimes] = useState<number[]>([]) // days before
+    const [notificationTimes, setNotificationTimes] = useState<number[]>([])
+    const [showDatePicker, setShowDatePicker] = useState(false)
 
     const notificationChoices = [
         { label: "1 day before", value: 1 },
@@ -51,54 +67,54 @@ export const AddDocumentDetailsSheet = ({
         { label: "1 month before", value: 30 },
         { label: "2 months before", value: 60 },
     ]
-
-    // Notification toggle
     const toggleNotification = (val: number) => {
         setNotificationTimes((prev) =>
             prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
         )
     }
 
+    // Reset state on visibility change or document change
     useEffect(() => {
-        if (!visible) {
+        if (visible) {
             setSelectedFolderId(null)
+            setCurrentViewFolderId(null)
+            setFolderPath([])
             setSelectedTagIds([])
             setHasExpiration(false)
             setExpirationDate("")
             setNotificationTimes([])
+            setLoading(false)
+            setIsNavigating(false)
         }
-    }, [visible])
+    }, [visible, document])
 
-    useEffect(() => {
-        if (document?.id) {
-            const tags = tagContext.getTagsForItem(document.id, "document")
-            console.log("📦 useEffect hydration:", tags)
-            setHydratedTags(tags)
+    // Path and Navigation Logic
+    const buildFolderPath = (
+        targetFolderId: string | null,
+    ): BreadcrumbItem[] => {
+        if (targetFolderId === null) return []
+        const path: BreadcrumbItem[] = []
+        let currentFolder = allFolders.find((f) => f.id === targetFolderId)
+        while (currentFolder) {
+            path.unshift({ id: currentFolder.id, title: currentFolder.title })
+            currentFolder = allFolders.find(
+                (f) => f.id === currentFolder?.parentId,
+            )
         }
-    }, [tagContext.associations.length, document?.id])
-
-    const renderFolderTree = (
-        folders: Folder[],
-        parentId: string | null = null,
-        level: number = 0,
-    ): JSX.Element[] => {
-        return folders
-            .filter((f) => f.parentId === parentId)
-            .map((folder) => (
-                <View key={folder.id} style={{ marginLeft: level * 16 }}>
-                    <FolderCard
-                        title={folder.title}
-                        type={folder.type}
-                        folderId={folder.id}
-                        selected={selectedFolderId === folder.id}
-                        onPress={() => setSelectedFolderId(folder.id)}
-                        onToggleFavorite={() => setSelectedFolderId(folder.id)}
-                    />
-                    {renderFolderTree(folders, folder.id, level + 1)}
-                </View>
-            ))
+        return path
     }
 
+    const handleNavigate = (folderId: string | null) => {
+        if (folderId === currentViewFolderId || isNavigating) return
+        setSelectedFolderId(null)
+        setIsNavigating(true)
+        setCurrentViewFolderId(folderId)
+        setFolderPath(buildFolderPath(folderId))
+
+        setTimeout(() => setIsNavigating(false), 50)
+    }
+
+    // Tag Selection Logic
     const handleTagToggle = (tagId: string) => {
         setSelectedTagIds((prev) =>
             prev.includes(tagId)
@@ -107,12 +123,55 @@ export const AddDocumentDetailsSheet = ({
         )
     }
 
+    // Save Logic
     const handleSave = async () => {
-        if (!document || !selectedFolderId) return
+        if (!document) {
+            Alert.alert("Error", "Document data is missing.")
+            return
+        }
+        if (selectedFolderId === null && currentViewFolderId !== null) {
+            Alert.alert("Confirm Root", "Save document to the Root folder?", [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Save to Root",
+                    onPress: () =>
+                        proceedWithSave(document, null, selectedTagIds),
+                },
+            ])
+        } else if (selectedFolderId !== null) {
+            const folderName =
+                allFolders.find((f) => f.id === selectedFolderId)?.title ||
+                "this folder"
+            Alert.alert("Confirm Folder", `Save document to "${folderName}"?`, [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: `Save to ${folderName}`,
+                    onPress: () =>
+                        proceedWithSave(
+                            document,
+                            selectedFolderId,
+                            selectedTagIds,
+                        ),
+                },
+            ])
+        } else if (currentViewFolderId === null) {
+            await proceedWithSave(document, null, selectedTagIds)
+        } else {
+            Alert.alert(
+                "Selection Error",
+                "Please select a destination folder (Root or Current).",
+            )
+        }
+    }
 
+    const proceedWithSave = async (
+        docToSave: IDocument,
+        targetFolderId: string | null,
+        tagIds: string[],
+    ) => {
         if (hasExpiration && !/^\d{4}-\d{2}-\d{2}$/.test(expirationDate)) {
             Alert.alert(
-                "Invalid date",
+                "Invalid Date",
                 "Please use YYYY-MM-DD format for the expiration date.",
             )
             return
@@ -121,19 +180,21 @@ export const AddDocumentDetailsSheet = ({
         setLoading(true)
 
         try {
-            // Pass the relevant data to the parent component
-            //onSave(document, selectedFolderId, selectedTagIds)
             const updatedDoc = {
-                ...document,
+                ...docToSave,
                 parameters: [
-                    ...(document.parameters || []),
+                    ...(docToSave.parameters || []).filter(
+                        (p) =>
+                            p.key !== "expiration_date" &&
+                            p.key !== "expiration_notifications",
+                    ),
                     ...(hasExpiration
                         ? [
                               {
                                   key: "expiration_date",
                                   value: expirationDate,
-                                  id: "expiration_date",
-                                  documentId: document.id,
+                                  id: `exp_date_${docToSave.id}`,
+                                  documentId: docToSave.id,
                                   type: "date",
                                   isSearchable: true,
                                   isSystem: false,
@@ -141,8 +202,8 @@ export const AddDocumentDetailsSheet = ({
                               {
                                   key: "expiration_notifications",
                                   value: JSON.stringify(notificationTimes),
-                                  id: "expiration_notifications",
-                                  documentId: document.id,
+                                  id: `exp_notify_${docToSave.id}`,
+                                  documentId: docToSave.id,
                                   type: "json",
                                   isSearchable: false,
                                   isSystem: false,
@@ -151,146 +212,340 @@ export const AddDocumentDetailsSheet = ({
                         : []),
                 ],
             }
-            onSave(updatedDoc, selectedFolderId, selectedTagIds)
+            onSave(
+                updatedDoc,
+                targetFolderId === null ? "root" : targetFolderId,
+                tagIds,
+            )
         } catch (error) {
-            console.error("Error in handleSave:", error)
+            console.error("Error in proceedWithSave:", error)
+            Alert.alert("Save Error", "Could not save document details.")
         } finally {
             setLoading(false)
         }
     }
 
+    // Data Filtering for ItemsList
+    const folderItemsForList = useMemo((): ListItem[] => {
+        const childFolders = allFolders.filter(
+            (folder) => folder.parentId === currentViewFolderId,
+        )
+        childFolders.sort((a, b) => a.title.localeCompare(b.title))
+
+        return childFolders.map(
+            (folder): ListItem => ({ type: "folder", data: folder }),
+        )
+    }, [allFolders, currentViewFolderId])
+
+    const getSelectButtonStyle = (isRootButton: boolean): ViewStyle[] => {
+        const isActive = isRootButton
+            ? selectedFolderId === null
+            : selectedFolderId === currentViewFolderId
+
+        const stylesArray: ViewStyle[] = [styles.selectButton]
+        if (isActive) {
+            stylesArray.push({
+                backgroundColor: colors.primary + "35",
+                borderColor: colors.primary,
+            })
+        }
+        return stylesArray
+    }
+
     return (
-        <Modal visible={visible} animationType="slide">
+        <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
             <SafeAreaView
                 style={[styles.sheet, { backgroundColor: colors.background }]}
+                edges={["bottom", "left", "right"]}
             >
-                {/* eslint-disable-next-line react-native/no-inline-styles */}
-                <ScrollView style={{ flex: 1 }}>
-                    <View>
-                        <Text style={[styles.title, { color: colors.text }]}>
-                            Add Document Details
-                        </Text>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.kavContainer}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+                >
+                    {/* Header */}
+                    <Text style={[styles.title, { color: colors.text }]}>
+                        Add Document Details
+                    </Text>
 
-                        <Text style={[styles.subtitle, { color: colors.text }]}>
-                            Choose a Folder:
-                        </Text>
-                        <View style={styles.folderTreeContainer}>
-                            {renderFolderTree(folders)}
-                        </View>
-                        {/* Tag List */}
-                        <Text style={[styles.subtitle, { color: colors.text }]}>
-                            Select Tags:
-                        </Text>
+                    {/* Folder Selection */}
+                    <Text style={[styles.subtitle, { color: colors.text }]}>
+                        Choose Destination Folder:
+                    </Text>
 
-                        <TagList
-                            tags={tags}
-                            selectedTags={selectedTagIds}
-                            onTagPress={handleTagToggle}
-                            showAddTagButton={false}
+                    {/* Breadcrumbs */}
+                    <BreadcrumbNavigation
+                        path={folderPath}
+                        onNavigate={handleNavigate}
+                    />
+
+                    {/* Select Current Folder Button */}
+                    <Row style={styles.selectionButtonRow}>
+                        <Button
+                            title="Select Root Folder"
+                            variant="text"
+                            onPress={() => setSelectedFolderId(null)}
+                            style={getSelectButtonStyle(true)}
+                            textStyle={
+                                selectedFolderId === null
+                                    ? // eslint-disable-next-line react-native/no-inline-styles
+                                      {
+                                          color: colors.primary,
+                                          fontWeight: "bold",
+                                      }
+                                    : { color: colors.primary }
+                            }
                         />
+                        {currentViewFolderId !== null && (
+                            <Button
+                                title="Select Current Folder"
+                                variant="text"
+                                onPress={() =>
+                                    setSelectedFolderId(currentViewFolderId)
+                                }
+                                style={getSelectButtonStyle(false)}
+                                textStyle={
+                                    selectedFolderId === currentViewFolderId
+                                        ? // eslint-disable-next-line react-native/no-inline-styles
+                                          {
+                                              color: colors.primary,
+                                              fontWeight: "bold",
+                                          }
+                                        : { color: colors.primary }
+                                }
+                            />
+                        )}
+                    </Row>
+                    <Spacer size={8} />
 
-                        <View style={styles.expirationContainer}>
-                            <TouchableOpacity
-                                onPress={() => setHasExpiration(!hasExpiration)}
-                                style={styles.expirationToggle}
+                    {/* Folder List */}
+                    <View
+                        style={[
+                            styles.listContainer,
+                            {
+                                borderTopColor: colors.border,
+                                borderBottomColor: colors.border,
+                            },
+                        ]}
+                    >
+                        {isNavigating ? (
+                            <ActivityIndicator
+                                style={styles.loadingIndicator}
+                                color={colors.primary}
+                            />
+                        ) : (
+                            <ItemsList
+                                items={folderItemsForList}
+                                onFolderPress={handleNavigate}
+                                selectionMode={false}
+                                selectedItems={[]}
+                                emptyListMessage="No subfolders here"
+                                testID="add-doc-folder-select-list"
+                            />
+                        )}
+                    </View>
+
+                    {/* Tag Selection */}
+                    <Text
+                        style={[
+                            styles.subtitle,
+                            // eslint-disable-next-line react-native/no-inline-styles
+                            { color: colors.text, marginTop: 15 },
+                        ]}
+                    >
+                        Select Tags (Optional):
+                    </Text>
+                    <TagList
+                        tags={tags || []}
+                        selectedTags={selectedTagIds}
+                        onTagPress={handleTagToggle}
+                        showAddTagButton={false}
+                        horizontal={true}
+                        testID="add-doc-tag-select-list"
+                        size="small"
+                    />
+
+                    {/* Expiration Section */}
+                    <View
+                        style={[
+                            styles.expirationContainer,
+                            {
+                                borderTopColor: colors.border,
+                                borderBottomColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <TouchableOpacity
+                            onPress={() => setHasExpiration(!hasExpiration)}
+                            style={styles.expirationToggle}
+                        >
+                            <View
+                                style={[
+                                    styles.checkboxPlaceholder,
+                                    { borderColor: colors.border },
+                                ]}
                             >
-                                <Text style={styles.expirationToggleIcon}>
-                                    {hasExpiration ? "☑️" : "⬜️"}
-                                </Text>
-                                <Text style={{ color: colors.text }}>
-                                    This document has an expiration date
-                                </Text>
-                            </TouchableOpacity>
-
-                            {hasExpiration && (
-                                // eslint-disable-next-line react-native/no-inline-styles
-                                <View style={{ marginTop: 16 }}>
+                                {hasExpiration && (
                                     <Text
-                                        style={[
-                                            styles.subtitle,
-                                            { color: colors.text },
-                                        ]}
-                                    >
-                                        Expiration Date (YYYY-MM-DD):
-                                    </Text>
-                                    <TextInput
-                                        style={[
-                                            styles.expirationDateInput,
+                                        style={
+                                            /* eslint-disable-next-line react-native/no-inline-styles */
                                             {
-                                                borderColor: colors.border,
-                                                color: colors.text,
-                                                backgroundColor: colors.card,
-                                            },
-                                        ]}
-                                        placeholder="YYYY-MM-DD"
-                                        placeholderTextColor={
-                                            colors.text + "99"
+                                                fontSize: 14,
+                                                fontWeight: "bold",
+                                                color: colors.primary,
+                                            }
                                         }
-                                        value={expirationDate}
-                                        onChangeText={setExpirationDate}
-                                        keyboardType="numeric"
-                                    />
-
-                                    {}
-                                    <Text
-                                        style={[
-                                            styles.subtitle,
-                                            // eslint-disable-next-line react-native/no-inline-styles
-                                            {
-                                                color: colors.text,
-                                                marginTop: 12,
-                                            },
-                                        ]}
                                     >
-                                        When do you want to be notified?
+                                        ✓
                                     </Text>
-                                    <View style={styles.notifyContainer}>
-                                        {notificationChoices.map((opt) => (
-                                            <TouchableOpacity
-                                                key={opt.value}
-                                                onPress={() =>
-                                                    toggleNotification(
-                                                        opt.value,
-                                                    )
-                                                }
-                                                style={styles.notifyItem}
-                                            >
-                                                <Text
-                                                    style={
-                                                        styles.notifyCheckbox
-                                                    }
-                                                >
-                                                    {notificationTimes.includes(
-                                                        opt.value,
-                                                    )
-                                                        ? "☑️"
-                                                        : "⬜️"}
-                                                </Text>
-                                                <Text
-                                                    style={{
-                                                        color: colors.text,
-                                                    }}
-                                                >
-                                                    {opt.label}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                </View>
-                            )}
-                        </View>
+                                )}
+                            </View>
+                            <Text style={{ color: colors.text }}>
+                                This document has an expiration date
+                            </Text>
+                        </TouchableOpacity>
 
-                        {/* Save Button */}
+                        {hasExpiration && (
+                            <View style={styles.expirationDetails}>
+                                <Text
+                                    style={[
+                                        styles.subtitleSmall,
+                                        { color: colors.text },
+                                    ]}
+                                >
+                                    Expiration Date (YYYY-MM-DD):
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={() => setShowDatePicker(true)}
+                                    style={[
+                                        styles.expirationDateInput,
+                                        // eslint-disable-next-line react-native/no-inline-styles
+                                        {
+                                            borderColor: colors.border,
+                                            backgroundColor: colors.card,
+                                            justifyContent: "center",
+                                        },
+                                    ]}
+                                >
+                                    <Text
+                                        style={{
+                                            color: expirationDate
+                                                ? colors.text
+                                                : colors.text + "99",
+                                        }}
+                                    >
+                                        {expirationDate || "Select date"}
+                                    </Text>
+                                </TouchableOpacity>
+                                {showDatePicker && (
+                                    <DateTimePicker
+                                        value={
+                                            expirationDate
+                                                ? new Date(expirationDate)
+                                                : new Date()
+                                        }
+                                        mode="date"
+                                        display={
+                                            Platform.OS === "ios"
+                                                ? "inline"
+                                                : "default"
+                                        }
+                                        onChange={(
+                                            _event: unknown,
+                                            selectedDate: Date | undefined,
+                                        ) => {
+                                            setShowDatePicker(false)
+                                            if (selectedDate) {
+                                                const year =
+                                                    selectedDate.getFullYear()
+                                                const month = String(
+                                                    selectedDate.getMonth() + 1,
+                                                ).padStart(2, "0")
+                                                const day = String(
+                                                    selectedDate.getDate(),
+                                                ).padStart(2, "0")
+                                                setExpirationDate(
+                                                    `${year}-${month}-${day}`,
+                                                )
+                                            }
+                                        }}
+                                    />
+                                )}
+                                <Text
+                                    style={[
+                                        styles.subtitleSmall,
+                                        // eslint-disable-next-line react-native/no-inline-styles
+                                        { color: colors.text, marginTop: 12 },
+                                    ]}
+                                >
+                                    When do you want to be notified?
+                                </Text>
+                                <View style={styles.notifyContainer}>
+                                    {notificationChoices.map((opt) => (
+                                        <TouchableOpacity
+                                            key={opt.value}
+                                            onPress={() =>
+                                                toggleNotification(opt.value)
+                                            }
+                                            style={styles.notifyItem}
+                                        >
+                                            <View
+                                                style={[
+                                                    styles.checkboxPlaceholder,
+                                                    {
+                                                        borderColor:
+                                                            colors.border,
+                                                    },
+                                                ]}
+                                            >
+                                                {notificationTimes.includes(
+                                                    opt.value,
+                                                ) && (
+                                                    <Text
+                                                        /* eslint-disable-next-line react-native/no-inline-styles */
+                                                        style={{
+                                                            fontSize: 14,
+                                                            fontWeight: "bold",
+                                                            color: colors.primary,
+                                                        }}
+                                                    >
+                                                        ✓
+                                                    </Text>
+                                                )}
+                                            </View>
+                                            <Text
+                                                style={{ color: colors.text }}
+                                            >
+                                                {opt.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+                    </View>
+
+                    <Spacer size={16} />
+
+                    {/* Action Buttons at the bottom */}
+                    <View style={styles.buttonContainer}>
                         <Button
                             title="Save Document"
                             onPress={handleSave}
+                            disabled={isLoading}
                             style={styles.saveBtn}
+                            loading={isLoading}
                         />
-                        <Button title="Cancel" onPress={onClose} />
+                        <Button
+                            title="Cancel"
+                            variant="outline"
+                            onPress={onClose}
+                            disabled={isLoading}
+                        />
                     </View>
-                </ScrollView>
-
-                <LoadingOverlay visible={isLoading} />
+                    {/* Spacer at the very bottom for padding */}
+                    <Spacer size={10} />
+                </KeyboardAvoidingView>
             </SafeAreaView>
         </Modal>
     )
@@ -299,54 +554,114 @@ export const AddDocumentDetailsSheet = ({
 const styles = StyleSheet.create({
     sheet: {
         flex: 1,
-        padding: 20,
+    },
+    kavContainer: {
+        flex: 1,
+        paddingHorizontal: 20,
+        paddingTop: 15,
     },
     title: {
         fontSize: 20,
         fontWeight: "bold",
-        marginBottom: 20,
+        marginBottom: 15,
+        textAlign: "center",
     },
     subtitle: {
         fontSize: 16,
         fontWeight: "600",
-        marginTop: 16,
+        marginTop: 10,
+        marginBottom: 8,
     },
-    saveBtn: {
-        marginTop: 24,
-        marginBottom: 12,
+    subtitleSmall: {
+        fontSize: 14,
+        fontWeight: "500",
+        marginBottom: 4,
     },
-    folderTreeContainer: {
-        marginTop: 8,
+    selectionButtonRow: {
+        justifyContent: "flex-start",
+        gap: 10,
+        flexWrap: "wrap",
+        marginBottom: 0,
+    },
+    // eslint-disable-next-line react-native/no-color-literals
+    selectButton: {
+        width: "auto",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        minHeight: 0,
+        borderWidth: 1.5,
+        borderRadius: 16,
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+    },
+    listContainer: {
+        flexGrow: 1,
+        flexShrink: 1,
+        minHeight: 100,
+        maxHeight: 250,
+
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+
+        marginBottom: 10,
+        overflow: "hidden",
+        marginHorizontal: -20,
+    },
+    loadingIndicator: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
     },
     expirationContainer: {
-        marginVertical: 16,
+        marginVertical: 10,
+        paddingVertical: 10,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     expirationToggle: {
         flexDirection: "row",
         alignItems: "center",
+        paddingHorizontal: 5,
+        paddingVertical: 5,
     },
-    expirationToggleIcon: {
-        fontSize: 22,
+    checkboxPlaceholder: {
+        width: 20,
+        height: 20,
+        borderWidth: 1.5,
+        borderRadius: 4,
         marginRight: 8,
+        alignItems: "center",
+        justifyContent: "center",
     },
+    expirationDetails: {
+        marginTop: 16,
+        paddingHorizontal: 5,
+    },
+
     expirationDateInput: {
         borderWidth: 1,
-        padding: 8,
+        padding: 10,
         borderRadius: 8,
         marginTop: 6,
+        height: 44,
     },
     notifyContainer: {
         flexDirection: "row",
         flexWrap: "wrap",
+        marginTop: 8,
     },
     notifyItem: {
         flexDirection: "row",
         alignItems: "center",
-        marginRight: 12,
-        marginBottom: 8,
+        marginRight: 16,
+        marginBottom: 10,
     },
-    notifyCheckbox: {
-        fontSize: 18,
-        marginRight: 3,
+
+    buttonContainer: {
+        paddingTop: 10,
+    },
+    saveBtn: {
+        marginBottom: 12,
     },
 })

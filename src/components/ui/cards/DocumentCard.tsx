@@ -1,227 +1,280 @@
-import React, { useEffect, useState } from "react"
-import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native"
-import { useTheme } from "../../../hooks/useTheme.ts"
+import React, { useState } from "react"
+import {
+    GestureResponderEvent,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native"
+import { useTheme } from "../../../hooks/useTheme"
 import ArrowIcon from "../assets/svg/Arrow 1.svg"
-import { IDocument } from "../../../types/document.ts"
-import { Tag, useTagContext } from "../tag_functionality/TagContext.tsx"
-import { ItemTagsManager } from "../tag_functionality/ItemTagsManager.tsx"
-import { documentPreview } from "../../../services/document/preview.ts"
-import { documentStorage } from "../../../services/document/storage"
-import { DocumentType } from "../../../types/document"
-import { useDocStore } from "../../../store"
-import { LoadingOverlay } from "../feedback/LoadingOverlay.tsx"
-import * as FileSystem from "expo-file-system"
+import { DocumentType, IDocument } from "../../../types/document"
+import { Tag, useTagContext } from "../tag_functionality/TagContext"
+import { ItemTagsManager } from "../tag_functionality/ItemTagsManager"
+import { ListItemCard } from "./ListItemCard"
+import { Stack } from "../layout"
+import { DocumentActionModal } from "../screens/documents/DocumentActionModal"
+
+import StarIcon from "../assets/svg/starfilled.svg"
+import StarOutlineIcon from "../assets/svg/favorite.svg"
+import SettingsIcon from "../assets/svg/threedots.svg"
+
+// eslint-disable-next-line react-native/no-inline-styles
+const PdfIconPlaceholder = () => <Text style={{ fontSize: 20 }}>📄</Text>
+// eslint-disable-next-line react-native/no-inline-styles
+const ImageIconPlaceholder = () => <Text style={{ fontSize: 20 }}>🖼️</Text>
+// eslint-disable-next-line react-native/no-inline-styles
+const DefaultIconPlaceholder = () => <Text style={{ fontSize: 20 }}>❓</Text>
 
 export interface DocumentCardProps {
     document: IDocument
+    tags: Tag[]
+
     onPress: () => void
     onLongPress?: () => void
-    testID?: string
+
+    isFavorite?: boolean
+    onToggleFavorite?: () => void
+    onShare?: () => void
+    onDelete?: () => void
+    // TODO: Add other actions as needed, e.g., onViewDetails
+
+    selected?: boolean
     showAddTagButton?: boolean
-    maxTags?: number
-    tags?: Tag[]
+    selectedTagIds?: string[]
+    onTagPress?: (tagId: string) => void
+
+    testID?: string
 }
 
 export function DocumentCard({
     document,
     onPress,
     onLongPress,
-    testID,
-    maxTags = 3,
+    isFavorite = false,
+    onToggleFavorite,
+    onShare,
+    onDelete,
+    selected = false,
     showAddTagButton = true,
-    tags: incomingTags,
+    selectedTagIds = [],
+    onTagPress,
+    testID,
 }: DocumentCardProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
-    //const tags = tagContext.getTagsForItem(document.id, "document")
-    const [isLoading, setLoading] = useState(false)
-    const [tags, setTags] = useState<Tag[]>([])
-    const [previewUri, setPreviewUri] = useState<string | null>(null)
+    const [actionModalVisible, setActionModalVisible] = useState(false)
+
     const isExpired = (() => {
         const expirationParam = document.parameters?.find(
             (p) => p.key === "expiration_date",
         )
         if (!expirationParam?.value) return false
-
-        const expirationDate = new Date(expirationParam.value)
-        const now = new Date()
-        expirationDate.setHours(0, 0, 0, 0)
-        now.setHours(0, 0, 0, 0)
-
-        return expirationDate < now
+        try {
+            const expirationDate = new Date(expirationParam.value)
+            if (isNaN(expirationDate.getTime())) return false
+            const now = new Date()
+            expirationDate.setHours(0, 0, 0, 0)
+            now.setHours(0, 0, 0, 0)
+            return expirationDate < now
+        } catch (e) {
+            console.warn("Error parsing expiration date:", e)
+            return false
+        }
     })()
 
-    console.log("💡 DocumentCard rendering with tags:", tags)
+    const iconNode = React.useMemo(() => {
+        const docType = document.metadata?.type
+        if (docType === DocumentType.PDF) {
+            return <PdfIconPlaceholder />
+        } else if (
+            docType === DocumentType.IMAGE ||
+            docType === DocumentType.IMAGE_PNG
+        ) {
+            return <ImageIconPlaceholder />
+        }
+        return <DefaultIconPlaceholder />
+    }, [document.metadata?.type])
 
-    useEffect(() => {
-        let isMounted = true
-
-        const fetchPreview = async () => {
-            try {
-                const docStore = useDocStore.getState()
-                const preview = await docStore.getDocumentPreview(document.id)
-
-                if (preview?.sourceUri && isMounted) {
-                    const fileInfo = await FileSystem.getInfoAsync(
-                        preview.sourceUri,
-                    )
-                    if (fileInfo.exists && fileInfo.size > 0) {
-                        setPreviewUri(preview.sourceUri)
-                    }
-                }
-            } catch (err) {
-                console.warn("Failed to load preview", err)
-            }
+    const handleButtonPress =
+        (handler?: () => void) => (event: GestureResponderEvent) => {
+            event.stopPropagation()
+            handler?.()
         }
 
-        fetchPreview()
-        return () => {
-            isMounted = false
-        }
-    }, [document.id])
+    const actionIconsNode = React.useMemo(
+        () => (
+            <View style={styles.actionButtonsContainer}>
+                {/* Favorite Button (only if handler provided) */}
+                {onToggleFavorite && (
+                    <TouchableOpacity
+                        onPress={handleButtonPress(onToggleFavorite)}
+                        style={styles.actionButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 5 }}
+                        testID={`doc-fav-btn-${document.id}`}
+                    >
+                        {isFavorite ? (
+                            <StarIcon
+                                width={18}
+                                height={18}
+                                fill={colors.warning}
+                            />
+                        ) : (
+                            <StarOutlineIcon
+                                width={18}
+                                height={18}
+                                stroke={colors.secondaryText}
+                            />
+                        )}
+                    </TouchableOpacity>
+                )}
 
-    useEffect(() => {
-        if (incomingTags) {
-            setTags(incomingTags)
-        } else {
-            const fetchedTags = tagContext.getTagsForItem(
-                document.id,
-                "document",
-            )
-            console.log(
-                "[DocumentCard] Fetched tags for",
-                document.id,
-                fetchedTags,
-            )
-            setTags(fetchedTags)
-        }
-    }, [incomingTags, tagContext.associations.length, document.id])
+                {/* Options Button (only if delete or share handlers provided) */}
+                {(onDelete || onShare) && (
+                    <TouchableOpacity
+                        onPress={handleButtonPress(() =>
+                            setActionModalVisible(true),
+                        )}
+                        style={styles.actionButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 5, right: 10 }} // Adjust hitSlop
+                        testID={`doc-options-btn-${document.id}`}
+                    >
+                        <SettingsIcon
+                            width={18}
+                            height={18}
+                            fill={colors.secondaryText}
+                        />
+                    </TouchableOpacity>
+                )}
+            </View>
+        ),
+        [
+            document.id,
+            isFavorite,
+            onToggleFavorite,
+            onShare,
+            onDelete,
+            colors,
+            setActionModalVisible,
+        ],
+    )
 
-    const handleOpenPreview = async () => {
-        if (onPress) {
-            onPress()
-            return
-        }
-
-        setLoading(true)
-        try {
-            const docStore = useDocStore.getState()
-            await new Promise((resolve) => setTimeout(resolve, 200))
-
-            const previewResult = await docStore.getDocumentPreview(document.id)
-            if (!previewResult || !previewResult.sourceUri) {
-                console.error("Preview failed")
-                return
-            }
-
-            const mimeType = documentPreview.getMimeTypeForDocumentType(
-                previewResult.metadata?.type ?? DocumentType.PDF,
-            )
-
-            const fileInfo = await FileSystem.getInfoAsync(
-                previewResult.sourceUri,
-            )
-            if (!fileInfo.exists || fileInfo.size === 0) {
-                console.error("Preview file is missing or empty")
-            }
-
-            await documentPreview.viewDocumentByUri(
-                previewResult.sourceUri,
-                mimeType,
-                async () => {
-                    const storage = await documentStorage
-                    await storage.deletePreviewFile(previewResult.sourceUri)
-                },
-            )
-        } catch (err) {
-            console.warn("Document preview failed", err)
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    return (
-        <TouchableOpacity
-            onLongPress={onLongPress}
-            style={[
-                styles.container,
-                {
-                    borderBottomColor: colors.secondaryText,
-                    shadowColor: colors.shadow,
-                },
-            ]}
-            onPress={handleOpenPreview}
-            testID={testID}
-        >
-            {isExpired && <View style={styles.expiredOverlay} />}
-
-            <Image
-                source={{ uri: previewUri ?? document.sourceUri }}
-                style={styles.image}
-                resizeMode="cover"
-            />
-
-            <View style={styles.content}>
-                <Text style={[styles.title, { color: colors.text }]}>
-                    {document.title ?? "Untitled document"}
-                </Text>
+    // Children Node
+    const documentTags = tagContext.getTagsForItem(document.id, "document")
+    const childrenNode = React.useMemo(
+        () => (
+            <Stack spacing={6} style={styles.childrenStack}>
+                {/* Tags */}
                 <ItemTagsManager
                     itemId={document.id}
                     itemType="document"
-                    tags={tags}
+                    tags={documentTags}
                     allTags={tagContext.tags}
                     showAddTagButton={showAddTagButton}
-                    maxTags={maxTags}
+                    selectedTagIds={selectedTagIds}
+                    onTagPress={onTagPress}
                     horizontal={true}
+                    size="small"
+                    initiallyExpanded={false}
                 />
-
+                {/* Visualizar Link */}
                 <View style={styles.viewContainer}>
                     <Text style={[styles.viewText, { color: colors.primary }]}>
                         Visualizar documento
                     </Text>
                     <ArrowIcon width={16} height={16} stroke={colors.primary} />
                 </View>
+            </Stack>
+        ),
+        [
+            document.id,
+            documentTags,
+            tagContext.tags,
+            showAddTagButton,
+            selectedTagIds,
+            onTagPress,
+            colors.primary,
+        ],
+    )
 
-                <LoadingOverlay visible={isLoading} />
-            </View>
-        </TouchableOpacity>
+    // Render Base Component
+    return (
+        <View style={styles.outerContainer}>
+            {/* Expired Overlay */}
+            {isExpired && <View style={styles.expiredOverlay} />}
+
+            <ListItemCard
+                id={document.id}
+                title={document.title ?? "Untitled Document"}
+                icon={iconNode}
+                onPress={onPress}
+                onLongPress={onLongPress}
+                actionIcons={actionIconsNode}
+                selected={selected}
+                testID={testID}
+            >
+                {childrenNode}
+            </ListItemCard>
+
+            {/* Render Action Modal */}
+            {document && (
+                <DocumentActionModal
+                    isVisible={actionModalVisible}
+                    onClose={() => setActionModalVisible(false)}
+                    document={document}
+                    isFavorite={isFavorite}
+                    onToggleFavorite={() => {
+                        if (onToggleFavorite) onToggleFavorite()
+                        setActionModalVisible(false)
+                    }}
+                    onShare={() => {
+                        if (onShare) onShare()
+                        setActionModalVisible(false)
+                    }}
+                    onDelete={() => {
+                        if (onDelete) onDelete()
+                        setActionModalVisible(false)
+                    }}
+                    onViewDetails={() => {
+                        console.log("view details pressed")
+                    }}
+                />
+            )}
+        </View>
     )
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 10,
-        marginHorizontal: 5,
-        borderBottomWidth: 1,
+    outerContainer: {
+        position: "relative",
     },
-    image: {
-        width: 60,
-        height: 60,
-        borderRadius: 5,
-        marginRight: 15,
-    },
-    content: {
-        flex: 1,
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: "bold",
-    },
+    childrenStack: {},
     viewContainer: {
         flexDirection: "row",
         alignItems: "center",
-        marginTop: 5,
+        marginTop: 4,
     },
     viewText: {
-        fontSize: 16,
+        fontSize: 14,
+        fontWeight: "500",
         marginRight: 5,
     },
     // eslint-disable-next-line react-native/no-color-literals
     expiredOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(0, 0, 0, 0.5)", // semi-transparent black
+        backgroundColor: "rgba(0, 0, 0, 0.3)",
+        borderRadius: 8,
         zIndex: 2,
+        pointerEvents: "none",
+    },
+    actionButtonsContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    actionButton: {
+        padding: 4,
+        marginLeft: 8,
+        justifyContent: "center",
+        alignItems: "center",
     },
 })

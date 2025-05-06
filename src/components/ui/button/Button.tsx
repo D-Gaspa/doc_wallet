@@ -1,30 +1,30 @@
 import React, { ReactNode } from "react"
 import {
-    Pressable,
-    Text,
-    StyleSheet,
     ActivityIndicator,
-    View, // ---> Import View
+    Pressable,
+    StyleProp,
+    StyleSheet,
+    Text,
+    TextStyle,
+    View,
     ViewStyle,
-    TextStyle, // ---> Import TextStyle
 } from "react-native"
-import { useTheme } from "../../../hooks/useTheme.ts" // Adjust path if needed
+import { useTheme } from "../../../hooks/useTheme.ts"
 
-// Define Button variants
 type ButtonVariant = "primary" | "outline" | "text"
 
 export interface ButtonProps {
-    title?: string // Optional title
+    title?: string
     onPress: () => void
     loading?: boolean
     disabled?: boolean
-    style?: ViewStyle // Style for the Pressable container
-    textStyle?: TextStyle // ---> Style specifically for the Text component
+    style?: StyleProp<ViewStyle>
+    textStyle?: TextStyle
     testID?: string
-    children?: ReactNode // Allow children override
-    variant?: ButtonVariant // ---> Added variant prop
-    leftIcon?: ReactNode // ---> Icon on the left
-    rightIcon?: ReactNode // ---> Icon on the right
+    children?: ReactNode
+    variant?: ButtonVariant
+    leftIcon?: ReactNode
+    rightIcon?: ReactNode
 }
 
 export function Button({
@@ -33,12 +33,12 @@ export function Button({
     loading = false,
     disabled = false,
     style,
-    textStyle, // Destructure textStyle
+    textStyle,
     testID,
     children,
-    variant = "primary", // Default to 'primary'
-    leftIcon, // Destructure leftIcon
-    rightIcon, // Destructure rightIcon
+    variant = "primary",
+    leftIcon,
+    rightIcon,
 }: ButtonProps) {
     const { colors } = useTheme()
     const isDisabled = disabled || loading
@@ -53,7 +53,7 @@ export function Button({
                         borderColor: isDisabled
                             ? colors.secondaryText + "80"
                             : colors.primary,
-                        borderWidth: 1.5, // Slightly thicker border for outline
+                        borderWidth: 1.5,
                     },
                     text: {
                         color: isDisabled
@@ -65,14 +65,14 @@ export function Button({
                 return {
                     container: {
                         backgroundColor: "transparent",
-                        elevation: 0, // No shadow for text buttons
+                        elevation: 0,
                         shadowOpacity: 0,
                     },
                     text: {
                         color: isDisabled
                             ? colors.secondaryText + "80"
                             : colors.primary,
-                        fontWeight: "500", // Medium weight for text buttons
+                        fontWeight: "500",
                     },
                 }
             case "primary":
@@ -80,11 +80,11 @@ export function Button({
                 return {
                     container: {
                         backgroundColor: colors.primary,
-                        shadowColor: colors.shadow, // Keep shadow for primary
-                        elevation: 3, // Reduced elevation slightly
+                        shadowColor: colors.shadow,
+                        elevation: 3,
                     },
                     text: {
-                        color: colors.tabbarIcon_active, // White text on primary bg
+                        color: colors.tabbarIcon_active,
                     },
                 }
         }
@@ -99,16 +99,16 @@ export function Button({
             onPress={onPress}
             disabled={isDisabled}
             style={({ pressed }) => [
-                styles.buttonBase, // Base layout styles
-                variantStyles.container, // Apply variant container styles
+                styles.buttonBase,
+                variantStyles.container,
                 isDisabled
                     ? styles.disabledState
                     : pressed
                     ? styles.pressedState
-                    : {}, // Opacity states
-                style, // Apply external container styles last
+                    : {},
+                style,
             ]}
-            android_ripple={{ color: loaderColor + "30" }} // Ripple based on variant color
+            android_ripple={{ color: loaderColor + "30" }}
             testID={testID ?? "button"}
             accessibilityRole="button"
             accessibilityState={{ disabled: isDisabled }}
@@ -125,14 +125,14 @@ export function Button({
                 ) : children ? (
                     children // Render children if provided
                 ) : (
-                    title && ( // Render title only if non-empty and no children
+                    title && (
                         <Text
                             style={[
-                                styles.textBase, // Base text styles
-                                variantStyles.text, // Apply variant text styles
-                                textStyle, // Apply external text styles
+                                styles.textBase,
+                                variantStyles.text,
+                                textStyle,
                             ]}
-                            numberOfLines={1} // Prevent text wrapping issues
+                            numberOfLines={1}
                         >
                             {title}
                         </Text>
@@ -150,38 +150,35 @@ export function Button({
 
 const styles = StyleSheet.create({
     buttonBase: {
-        // Base styles for layout, padding, border radius
         width: "100%",
-        paddingVertical: 10, // Slightly reduced padding
-        paddingHorizontal: 16, // Horizontal padding
-        borderRadius: 24, // Keep border radius
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 24,
         alignItems: "center",
         justifyContent: "center",
-        minHeight: 44, // Ensure minimum touch target height
-        shadowOpacity: 0.1, // Base shadow settings
+        minHeight: 44,
+        shadowOpacity: 0.1,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 3,
-        borderWidth: 0, // Default no border (set by variants)
+        borderWidth: 0,
     },
     contentContainer: {
-        // Container for icon + text/children
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
     },
     textBase: {
-        // Base styles for text
         fontSize: 16,
         fontWeight: "bold",
         textAlign: "center",
     },
     iconWrapper: {
-        marginHorizontal: 8, // Space between icon and text/children
+        marginHorizontal: 8,
     },
     disabledState: {
-        opacity: 0.5, // Use opacity for disabled state across variants
+        opacity: 0.5,
     },
     pressedState: {
-        opacity: 0.8, // Use opacity for pressed state across variants
+        opacity: 0.8,
     },
 })
