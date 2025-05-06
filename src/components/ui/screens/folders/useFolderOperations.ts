@@ -544,7 +544,7 @@ export function useFolderOperations({
         handleDeleteFolder,
         deleteSingleFolderInternal,
         handleShareFolder,
-        handleToggleFavorite,
+        handleToggleFolderFavorite: handleToggleFavorite,
         handleMoveItems,
         showFolderOptions: (
             folder: Folder,

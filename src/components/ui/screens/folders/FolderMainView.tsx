@@ -28,7 +28,6 @@ import { documentPreview } from "../../../../services/document/preview.ts"
 import { documentStorage } from "../../../../services/document/storage.ts"
 import * as FileSystem from "expo-file-system"
 import { LoadingOverlay } from "../../feedback/LoadingOverlay.tsx"
-import { showDocumentOptions } from "../documents/useDocumentOperations.ts"
 import { FolderMoveModal } from "./FolderMoveModal"
 import { TabParamList } from "../../../../App"
 import { FolderActionModal } from "./FolderActionModal.tsx"
@@ -36,6 +35,8 @@ import { AddDocumentDetailsSheet } from "../documents/AddDocumentDetailsSheet.ts
 import { ExpandingFab } from "../../../ExpandingFab.tsx"
 import { documentImport } from "../../../../services/document/import.ts"
 import { types } from "@react-native-documents/picker"
+import { useDocumentOperations } from "../documents/useDocumentOperations"
+import { useFavoriteDocumentsStore } from "../../../../store/useFavoriteDocumentsStore"
 
 export interface FolderMainViewRef {
     resetToRootFolder(): void
@@ -100,7 +101,7 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         getCurrentFolderName,
         handleShareFolder,
         handleDeleteFolder,
-        handleToggleFavorite,
+        handleToggleFolderFavorite,
         handleMoveItems,
     } = useFolderOperations({
         folders,
@@ -120,6 +121,15 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
         handleSelectAll,
         handleItemSelect,
     } = useSelectionMode()
+
+    const {
+        handleToggleFavorite: handleToggleDocumentFavorite,
+        handleDeleteDocument,
+        handleShareDocument,
+        // isFavorite: isDocumentFavorite,
+    } = useDocumentOperations()
+
+    const favoriteDocIds = useFavoriteDocumentsStore((s) => s.favoriteIds)
 
     // Handlers
     const handleAddDocumentPress = async () => {
@@ -682,9 +692,16 @@ const FolderMainViewContent = forwardRef((_props, ref) => {
                         onDocumentPress={handleDocumentPress}
                         onFolderLongPress={handleFolderLongPress}
                         onDocumentLongPress={handleDocumentLongPress}
+                        onDocumentToggleFavorite={(docId) =>
+                            handleToggleDocumentFavorite(docId)
+                        }
+                        onDocumentDelete={handleDeleteDocument}
+                        onDocumentShare={handleShareDocument}
+                        getIsDocumentFavorite={(docId) =>
+                            favoriteDocIds.includes(docId)
+                        }
                         onFolderOptionsPress={handleShowActionModal}
-                        onDocumentOptionsPress={showDocumentOptions}
-                        onFolderToggleFavorite={handleToggleFavorite}
+                        onFolderToggleFavorite={handleToggleFolderFavorite}
                         emptyListMessage={emptyListMessage}
                         testID="folder-items-list"
                     />

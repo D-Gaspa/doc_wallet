@@ -20,6 +20,10 @@ interface ItemsListProps {
     onFolderOptionsPress?: (folder: Folder) => void
     onDocumentOptionsPress?: (document: IDocument) => void
     onFolderToggleFavorite?: (folderId: string) => void
+    onDocumentToggleFavorite?: (documentId: string) => void
+    onDocumentDelete?: (document: IDocument) => void
+    onDocumentShare?: (documentId: IDocument) => void
+    getIsDocumentFavorite?: (documentId: string) => boolean
     onItemSelect?: (id: string, type: "folder" | "document") => void
     onSelectItem?: (id: string, type: "folder" | "document") => void
     onFolderLongPress?: (folderId: string) => void
@@ -40,6 +44,10 @@ export function ItemsList({
     onFolderOptionsPress,
     onDocumentOptionsPress,
     onFolderToggleFavorite,
+    onDocumentToggleFavorite,
+    onDocumentDelete,
+    getIsDocumentFavorite,
+    onDocumentShare,
     onItemSelect,
     onSelectItem,
     onFolderLongPress,
@@ -139,6 +147,9 @@ export function ItemsList({
 
                 if (isSelectionList) return null
 
+                const isDocFavorite = getIsDocumentFavorite
+                    ? getIsDocumentFavorite(document.id)
+                    : false
                 return (
                     <DocumentCard
                         key={`document-${document.id}`}
@@ -149,6 +160,12 @@ export function ItemsList({
                         )}
                         onPress={handlePress}
                         onLongPress={handleLongPress}
+                        isFavorite={isDocFavorite}
+                        onToggleFavorite={() =>
+                            onDocumentToggleFavorite?.(document.id)
+                        }
+                        onShare={() => onDocumentShare?.(document)}
+                        onDelete={() => onDocumentDelete?.(document)}
                         showAddTagButton={true}
                         testID={`document-${document.id}`}
                     />
