@@ -13,8 +13,10 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-community/datetimepicker": "8.3.0",
     "@react-native-documents/picker": "^10.1.1",
     "@react-native-documents/viewer": "^1.0.1",
+    "@react-native-vector-icons/fontawesome6": "^12.0.0",
     "@react-navigation/bottom-tabs": "^7.2.1",
     "@react-navigation/elements": "^2.2.6",
     "@react-navigation/native": "^7.0.15",
@@ -43,11 +45,11 @@
     "react-native-quick-crypto": "^0.7.12",
     "react-native-reanimated": "^3.17.5",
     "react-native-safe-area-context": "^5.2.0",
-    "typescript-eslint": "^8.32.0",
     "react-native-screens": "^4.9.1",
     "react-native-svg": "^15.11.2",
-    "zustand": "^5.0.3",
-    "@react-native-community/datetimepicker": "8.3.0"
+    "react-native-vector-icons": "^10.2.0",
+    "typescript-eslint": "^8.32.0",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@babel/core": "^7.26.9",
