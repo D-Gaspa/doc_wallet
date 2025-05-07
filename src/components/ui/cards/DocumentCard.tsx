@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useMemo, useState } from "react"
 import {
     GestureResponderEvent,
     StyleSheet,
@@ -6,8 +6,8 @@ import {
     TouchableOpacity,
     View,
 } from "react-native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import { useTheme } from "../../../hooks/useTheme"
-import ArrowIcon from "../assets/svg/Arrow 1.svg"
 import { DocumentType, IDocument } from "../../../types/document"
 import { Tag, useTagContext } from "../tag_functionality/TagContext"
 import { ItemTagsManager } from "../tag_functionality/ItemTagsManager"
@@ -15,35 +15,19 @@ import { ListItemCard } from "./ListItemCard"
 import { Stack } from "../layout"
 import { DocumentActionModal } from "../screens/documents/DocumentActionModal"
 
-import StarIcon from "../assets/svg/starfilled.svg"
-import StarOutlineIcon from "../assets/svg/favorite.svg"
-import SettingsIcon from "../assets/svg/threedots.svg"
-
-// eslint-disable-next-line react-native/no-inline-styles
-const PdfIconPlaceholder = () => <Text style={{ fontSize: 20 }}>📄</Text>
-// eslint-disable-next-line react-native/no-inline-styles
-const ImageIconPlaceholder = () => <Text style={{ fontSize: 20 }}>🖼️</Text>
-// eslint-disable-next-line react-native/no-inline-styles
-const DefaultIconPlaceholder = () => <Text style={{ fontSize: 20 }}>❓</Text>
-
 export interface DocumentCardProps {
     document: IDocument
     tags: Tag[]
-
     onPress: () => void
     onLongPress?: () => void
-
     isFavorite?: boolean
     onToggleFavorite?: () => void
     onShare?: () => void
     onDelete?: () => void
-    // TODO: Add other actions as needed, e.g., onViewDetails
-
     selected?: boolean
     showAddTagButton?: boolean
     selectedTagIds?: string[]
     onTagPress?: (tagId: string) => void
-
     testID?: string
 }
 
@@ -83,18 +67,40 @@ export function DocumentCard({
         }
     })()
 
-    const iconNode = React.useMemo(() => {
+    const iconNode = useMemo(() => {
         const docType = document.metadata?.type
+        const iconSize = 28
         if (docType === DocumentType.PDF) {
-            return <PdfIconPlaceholder />
+            return (
+                <FontAwesome6
+                    name="file-pdf"
+                    size={iconSize}
+                    color={colors.error}
+                    iconStyle="solid"
+                />
+            )
         } else if (
             docType === DocumentType.IMAGE ||
             docType === DocumentType.IMAGE_PNG
         ) {
-            return <ImageIconPlaceholder />
+            return (
+                <FontAwesome6
+                    name="file-image"
+                    size={iconSize}
+                    color={colors.primary}
+                    iconStyle="solid"
+                />
+            )
         }
-        return <DefaultIconPlaceholder />
-    }, [document.metadata?.type])
+        return (
+            <FontAwesome6
+                name="file-lines"
+                size={iconSize}
+                color={colors.secondaryText}
+                iconStyle="solid"
+            />
+        )
+    }, [document.metadata?.type, colors])
 
     const handleButtonPress =
         (handler?: () => void) => (event: GestureResponderEvent) => {
@@ -102,47 +108,53 @@ export function DocumentCard({
             handler?.()
         }
 
-    const actionIconsNode = React.useMemo(
+    const actionIconsNode = useMemo(
         () => (
             <View style={styles.actionButtonsContainer}>
-                {/* Favorite Button (only if handler provided) */}
                 {onToggleFavorite && (
                     <TouchableOpacity
                         onPress={handleButtonPress(onToggleFavorite)}
                         style={styles.actionButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 5 }}
                         testID={`doc-fav-btn-${document.id}`}
+                        accessibilityLabel={
+                            isFavorite
+                                ? "Quitar de favoritos"
+                                : "Añadir a favoritos"
+                        }
                     >
                         {isFavorite ? (
-                            <StarIcon
-                                width={18}
-                                height={18}
-                                fill={colors.warning}
+                            <FontAwesome6
+                                name="star"
+                                size={18}
+                                color={colors.warning}
+                                iconStyle="solid"
                             />
                         ) : (
-                            <StarOutlineIcon
-                                width={18}
-                                height={18}
-                                stroke={colors.secondaryText}
+                            <FontAwesome6
+                                name="star"
+                                size={18}
+                                color={colors.secondaryText}
+                                iconStyle="regular"
                             />
                         )}
                     </TouchableOpacity>
                 )}
-
-                {/* Options Button (only if delete or share handlers provided) */}
                 {(onDelete || onShare) && (
                     <TouchableOpacity
                         onPress={handleButtonPress(() =>
                             setActionModalVisible(true),
                         )}
                         style={styles.actionButton}
-                        hitSlop={{ top: 10, bottom: 10, left: 5, right: 10 }} // Adjust hitSlop
+                        hitSlop={{ top: 10, bottom: 10, left: 5, right: 10 }}
                         testID={`doc-options-btn-${document.id}`}
+                        accessibilityLabel="Más opciones"
                     >
-                        <SettingsIcon
-                            width={18}
-                            height={18}
-                            fill={colors.secondaryText}
+                        <FontAwesome6
+                            name="ellipsis-vertical"
+                            size={18}
+                            color={colors.secondaryText}
+                            iconStyle="solid"
                         />
                     </TouchableOpacity>
                 )}
@@ -159,12 +171,10 @@ export function DocumentCard({
         ],
     )
 
-    // Children Node
     const documentTags = tagContext.getTagsForItem(document.id, "document")
-    const childrenNode = React.useMemo(
+    const childrenNode = useMemo(
         () => (
             <Stack spacing={6} style={styles.childrenStack}>
-                {/* Tags */}
                 <ItemTagsManager
                     itemId={document.id}
                     itemType="document"
@@ -177,12 +187,17 @@ export function DocumentCard({
                     size="small"
                     initiallyExpanded={false}
                 />
-                {/* Visualizar Link */}
                 <View style={styles.viewContainer}>
                     <Text style={[styles.viewText, { color: colors.primary }]}>
-                        Visualizar documento
+                        Ver documento
                     </Text>
-                    <ArrowIcon width={16} height={16} stroke={colors.primary} />
+                    <FontAwesome6
+                        name="arrow-right"
+                        size={14}
+                        color={colors.primary}
+                        iconStyle="solid"
+                        style={styles.viewIcon}
+                    />
                 </View>
             </Stack>
         ),
@@ -197,15 +212,12 @@ export function DocumentCard({
         ],
     )
 
-    // Render Base Component
     return (
         <View style={styles.outerContainer}>
-            {/* Expired Overlay */}
             {isExpired && <View style={styles.expiredOverlay} />}
-
             <ListItemCard
                 id={document.id}
-                title={document.title ?? "Untitled Document"}
+                title={document.title ?? "Documento sin título"}
                 icon={iconNode}
                 onPress={onPress}
                 onLongPress={onLongPress}
@@ -215,8 +227,6 @@ export function DocumentCard({
             >
                 {childrenNode}
             </ListItemCard>
-
-            {/* Render Action Modal */}
             {document && (
                 <DocumentActionModal
                     isVisible={actionModalVisible}
@@ -236,7 +246,12 @@ export function DocumentCard({
                         setActionModalVisible(false)
                     }}
                     onViewDetails={() => {
-                        console.log("view details pressed")
+                        // TODO: This should ideally trigger the main onPress action for the card
+                        //       or navigate to a dedicated details screen.
+                        //       For now, it just logs. If onPress is the detail view, this might be redundant.
+                        onPress() // Or a specific detail view action
+                        setActionModalVisible(false)
+                        console.log("view details pressed from modal")
                     }}
                 />
             )}
@@ -257,8 +272,9 @@ const styles = StyleSheet.create({
     viewText: {
         fontSize: 14,
         fontWeight: "500",
-        marginRight: 5,
+        marginRight: 6,
     },
+    viewIcon: {},
     // eslint-disable-next-line react-native/no-color-literals
     expiredOverlay: {
         ...StyleSheet.absoluteFillObject,
@@ -273,7 +289,7 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         padding: 4,
-        marginLeft: 8,
+        marginLeft: 10,
         justifyContent: "center",
         alignItems: "center",
     },

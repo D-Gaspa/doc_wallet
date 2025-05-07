@@ -1,12 +1,13 @@
 import { FolderType } from "./FolderModal"
 import { IDocument } from "../../../../types/document"
+import { FA6IconName } from "../../../../types/icons.ts"
 
 export interface Folder {
     id: string
     title: string
     parentId: string | null
     type?: FolderType
-    customIconId?: string
+    customIconId?: FA6IconName
     isShared?: boolean
     sharedWith?: string[]
     createdAt: Date
