@@ -1,4 +1,3 @@
-// types/auth.ts
 import { IGoogleUser, IUser, IUserCredentials } from "./user"
 
 export enum AuthMethod {
@@ -13,9 +12,7 @@ export interface IAuthState {
     isAuthenticated: boolean
     isLoading: boolean
     preferredAuthMethod: AuthMethod
-    registeredUsers: IUserCredentials[] // Remove optional marker since we'll always have this
 
-    // Authentication methods - make them all required
     loginWithEmailPassword: (email: string, password: string) => Promise<IUser>
     registerUser: (
         data: Omit<IUserCredentials, "id" | "createdAt">,
@@ -26,7 +23,6 @@ export interface IAuthState {
     setupPin: (pin: string) => Promise<boolean>
 }
 
-// Keep the rest of your interfaces as they are
 export interface ITokens {
     accessToken: string
     refreshToken: string

@@ -1,7 +1,6 @@
-// store/useAuthStore.ts
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { AuthMethod, IAuthState } from "../types/auth"
+import { AuthMethod } from "../types/auth"
 import type { IUser, IUserCredentials } from "../types/user"
 import { GoogleAuthService } from "../services/auth/googleAuth"
 import { AuthService } from "../services/auth/authService"
@@ -9,11 +8,17 @@ import { TokenService } from "../services/auth/tokenService"
 import { LoggingService } from "../services/monitoring/loggingService"
 import { PerformanceMonitoringService } from "../services/monitoring/performanceMonitoringService"
 import { ErrorTrackingService } from "../services/monitoring/errorTrackingService"
+import { databaseAuth } from "../services/auth/databaseAuthAdapter"
+import { asyncStorageMiddleware } from "./middleware/persist"
+import { useDocStore } from "./useDocStore"
+import { useFolderStore } from "./useFolderStore"
+import { useNotificationStore } from "./useNotificationStore"
+import { useFavoriteDocumentsStore } from "./useFavoriteDocumentsStore"
+import { useTagStore } from "./useTagStore"
 
 const authService = new AuthService()
 const logger = LoggingService.getLogger("AuthStore")
 
-// Mock users for development - in production, this would come from a real API
 const MOCK_USERS: IUserCredentials[] = [
     {
         id: "user-1",
@@ -24,124 +29,133 @@ const MOCK_USERS: IUserCredentials[] = [
     },
 ]
 
-export const useAuthStore = create<IAuthState>()(
+if (databaseAuth && typeof databaseAuth.setMockUsers === "function") {
+    databaseAuth.setMockUsers(MOCK_USERS)
+} else {
+    logger.warn(
+        "databaseAuth adapter or setMockUsers not available for initialization.",
+    )
+}
+
+interface AuthStateForStore {
+    user: IUser | null
+    isAuthenticated: boolean
+    isLoading: boolean
+    preferredAuthMethod: AuthMethod
+
+    loginWithEmailPassword: (email: string, password: string) => Promise<IUser>
+    registerUser: (
+        data: Omit<IUserCredentials, "id" | "createdAt">,
+    ) => Promise<boolean>
+    login: (pin?: string) => Promise<IUser | null>
+    logout: () => Promise<void>
+    checkAuthStatus: () => Promise<void>
+    setupPin: (pin: string) => Promise<boolean>
+}
+
+const loadAllUserData = async (userId: string) => {
+    logger.debug(`Starting data load for user ${userId}`)
+    try {
+        await Promise.all([
+            useDocStore.getState().loadDocuments(userId),
+            useFolderStore.getState().loadFolders(userId),
+            useNotificationStore.getState().loadData(userId),
+            useFavoriteDocumentsStore.getState().loadData(userId),
+            useTagStore.getState().loadData(userId),
+        ])
+        logger.info(`Finished loading data for user ${userId}`)
+    } catch (error) {
+        logger.error(
+            `Error loading data for user ${userId} during login/check:`,
+            error,
+        )
+    }
+}
+
+const saveAllUserData = async (userId: string) => {
+    logger.debug(`Starting data save for user ${userId}`)
+    try {
+        await Promise.all([
+            useDocStore.getState().saveDocuments(userId),
+            useFolderStore.getState().saveFolders(userId),
+            useNotificationStore.getState().saveData(userId),
+            useFavoriteDocumentsStore.getState().saveData(userId),
+            useTagStore.getState().saveData(userId),
+        ])
+        logger.info(`Finished saving data for user ${userId}`)
+    } catch (error) {
+        logger.error(
+            `Error saving data for user ${userId} during logout:`,
+            error,
+        )
+    }
+}
+
+const resetAllUserDataStores = () => {
+    logger.debug("Resetting all user-specific data stores")
+    useDocStore.getState().reset()
+    useFolderStore.getState().reset()
+    useNotificationStore.getState().reset()
+    useFavoriteDocumentsStore.getState().reset()
+    useTagStore.getState().reset()
+}
+
+export const useAuthStore = create<AuthStateForStore>()(
     persist(
         (set, get) => ({
             user: null,
             isAuthenticated: false,
             isLoading: false,
             preferredAuthMethod: AuthMethod.PIN,
-            registeredUsers: MOCK_USERS,
 
-            // Email/Password login
-            loginWithEmailPassword: async (email: string, password: string) => {
+            loginWithEmailPassword: async (
+                email: string,
+                password: string,
+            ): Promise<IUser> => {
+                PerformanceMonitoringService.startMeasure("login_email_flow")
                 try {
                     logger.info("Email/password login started")
                     set({ isLoading: true })
 
-                    // Find user in mock data
-                    const user = get().registeredUsers.find(
-                        (u) =>
-                            u.email.toLowerCase() === email.toLowerCase() &&
-                            u.password === password,
+                    const verifiedUser = await databaseAuth.verifyCredentials(
+                        email,
+                        password,
                     )
 
-                    if (!user) {
-                        logger.warn("Login failed - invalid credentials")
-                        set({ isLoading: false })
-                        // Instead of throwing, return null or a result object
-                        return Promise.reject(
-                            new Error("Invalid email or password"),
+                    if (!verifiedUser) {
+                        logger.warn(
+                            "Login failed - invalid credentials via adapter",
                         )
+                        set({ isLoading: false })
+                        throw new Error("Invalid email or password")
                     }
 
-                    // Create safe user object without password
-                    const safeUser: IUser = {
-                        id: user.id,
-                        name: user.name,
-                        email: user.email,
-                    }
+                    await TokenService.storeUserData?.(verifiedUser)
 
-                    // Store user data for later auth
-                    await TokenService.storeUserData?.(safeUser)
+                    await loadAllUserData(verifiedUser.id)
 
-                    logger.info("Email/password login successful", {
-                        userId: safeUser.id,
-                        email: safeUser.email,
+                    logger.info("Email/password login successful via adapter", {
+                        /*...*/
                     })
-
                     set({
-                        user: safeUser,
+                        user: verifiedUser,
                         isAuthenticated: true,
                         isLoading: false,
                         preferredAuthMethod: AuthMethod.EMAIL_PASSWORD,
                     })
-
-                    return safeUser
+                    PerformanceMonitoringService.endMeasure("login_email_flow")
+                    return verifiedUser
                 } catch (error) {
-                    logger.error("Login failed:", error)
                     set({ isLoading: false })
-                    // Return a rejected promise instead of throwing
-                    return Promise.reject(error)
+                    PerformanceMonitoringService.endMeasure("login_email_flow")
+                    throw error
                 }
             },
 
-            // Register a new user
-            registerUser: async (
-                userData: Omit<IUserCredentials, "id" | "createdAt">,
-            ) => {
-                try {
-                    logger.info("User registration started")
-                    set({ isLoading: true })
-
-                    // Check if email already exists
-                    const emailExists = get().registeredUsers.some(
-                        (u) =>
-                            u.email.toLowerCase() ===
-                            userData.email.toLowerCase(),
-                    )
-
-                    if (emailExists) {
-                        logger.warn(
-                            "Registration failed - email already exists",
-                        )
-                        set({ isLoading: false })
-                        return Promise.reject(
-                            new Error("Email already registered"),
-                        )
-                    }
-
-                    // Create new user
-                    const newUser: IUserCredentials = {
-                        id: `user-${Date.now()}`,
-                        ...userData,
-                        createdAt: new Date().toISOString(),
-                    }
-
-                    // Add to registered users
-                    set((state) => ({
-                        registeredUsers: [...state.registeredUsers, newUser],
-                        isLoading: false,
-                    }))
-
-                    logger.info("User registration successful", {
-                        userId: newUser.id,
-                        email: newUser.email,
-                    })
-
-                    return true
-                } catch (error) {
-                    logger.error("Registration failed:", error)
-                    set({ isLoading: false })
-                    return Promise.reject(error)
-                }
-            },
-
-            // Original login method with auth service
-            login: async (pin?: string) => {
+            login: async (pin?: string): Promise<IUser | null> => {
                 PerformanceMonitoringService.startMeasure("login_flow")
                 try {
-                    logger.info("Login process started")
+                    logger.info("Login process started (non-email)")
                     set({ isLoading: true })
 
                     const preferredMethod =
@@ -152,33 +166,44 @@ export const useAuthStore = create<IAuthState>()(
 
                     let user: IUser | null = null
 
-                    if (preferredMethod === AuthMethod.BIOMETRIC) {
-                        user = await authService.authenticate(
-                            AuthMethod.BIOMETRIC,
-                        )
-                        if (!user && pin) {
-                            logger.debug(
-                                "Biometric auth failed, trying PIN fallback",
+                    switch (preferredMethod) {
+                        case AuthMethod.BIOMETRIC:
+                            logger.debug("Attempting biometric authentication")
+                            user = await authService.authenticate(
+                                AuthMethod.BIOMETRIC,
                             )
+                            if (!user && pin) {
+                                logger.debug(
+                                    "Biometric auth failed, trying PIN fallback",
+                                )
+                                user = await authService.authenticate(
+                                    AuthMethod.PIN,
+                                    { pin },
+                                )
+                            }
+                            break
+                        case AuthMethod.PIN:
+                            if (!pin) {
+                                /* handle missing pin */
+                                throw new Error("PIN is required")
+                            }
+                            logger.debug("Attempting PIN authentication")
                             user = await authService.authenticate(
                                 AuthMethod.PIN,
                                 { pin },
                             )
-                        }
-                    } else if (preferredMethod === AuthMethod.PIN) {
-                        if (!pin) {
-                            logger.warn("PIN required but not provided")
-                            set({ isLoading: false })
-                            PerformanceMonitoringService.endMeasure(
-                                "login_flow",
+                            break
+                        case AuthMethod.GOOGLE:
+                            logger.debug("Attempting Google authentication")
+                            user = await authService.authenticate(
+                                AuthMethod.GOOGLE,
                             )
-                            return Promise.reject(new Error("PIN is required"))
-                        }
-                        user = await authService.authenticate(AuthMethod.PIN, {
-                            pin,
-                        })
-                    } else {
-                        user = await authService.authenticate(AuthMethod.GOOGLE)
+                            break
+                        default:
+                            logger.warn(
+                                `Unsupported auth method: ${preferredMethod}`,
+                            )
+                            throw new Error("Unsupported authentication method")
                     }
 
                     if (!user) {
@@ -189,15 +214,19 @@ export const useAuthStore = create<IAuthState>()(
                             isLoading: false,
                         })
                         PerformanceMonitoringService.endMeasure("login_flow")
-                        return Promise.reject(
-                            new Error("Authentication failed"),
-                        )
+                        throw new Error("Authentication failed")
                     }
 
-                    logger.info("Login successful", {
+                    logger.info("Login successful (non-email)", {
                         userId: user.id,
                         email: user.email,
                     })
+
+                    if (preferredMethod === AuthMethod.GOOGLE) {
+                        await TokenService.storeUserData?.(user)
+                    }
+
+                    await loadAllUserData(user.id)
 
                     set({
                         user,
@@ -209,38 +238,98 @@ export const useAuthStore = create<IAuthState>()(
                     PerformanceMonitoringService.endMeasure("login_flow")
                     return user
                 } catch (error) {
-                    logger.error("Login failed:", error)
                     set({
                         user: null,
                         isAuthenticated: false,
                         isLoading: false,
                     })
                     PerformanceMonitoringService.endMeasure("login_flow")
-                    return Promise.reject(error)
+                    throw error
+                }
+            },
+
+            registerUser: async (
+                data: Omit<IUserCredentials, "id" | "createdAt">,
+            ): Promise<boolean> => {
+                try {
+                    logger.info("User registration started via adapter")
+                    set({ isLoading: true })
+
+                    const newUser = await databaseAuth.addUser(data)
+
+                    if (!newUser) {
+                        logger.warn(
+                            "Registration failed via adapter - user likely exists or error occurred",
+                        )
+                        set({ isLoading: false })
+
+                        throw new Error(
+                            "Email already registered or registration failed.",
+                        )
+                    }
+
+                    logger.info("User registration successful via adapter", {
+                        userId: newUser.id,
+                        email: newUser.email,
+                    })
+                    set({ isLoading: false })
+
+                    return true
+                } catch (error) {
+                    set({ isLoading: false })
+                    throw error
                 }
             },
 
             logout: async () => {
+                const currentUser = get().user
+                PerformanceMonitoringService.startMeasure("logout_flow")
                 try {
                     logger.info("Logout process started")
                     set({ isLoading: true })
 
+                    if (currentUser) {
+                        await saveAllUserData(currentUser.id)
+                    } else {
+                        logger.warn(
+                            "Logout called but no current user found to save data for.",
+                        )
+                    }
+
                     await GoogleAuthService.signOut()
                     await TokenService.clearUserData?.()
+                    await TokenService.clearTokens?.()
 
-                    logger.info("Logout successful")
+                    resetAllUserDataStores()
+
+                    logger.info(
+                        "Logout successful - state cleared and data saved",
+                    )
                     set({
                         user: null,
                         isAuthenticated: false,
                         isLoading: false,
+                        preferredAuthMethod: AuthMethod.PIN,
                     })
                 } catch (error) {
                     logger.error("Logout failed:", error)
+
                     set({
                         user: null,
                         isAuthenticated: false,
                         isLoading: false,
                     })
+                    try {
+                        resetAllUserDataStores()
+                    } catch (resetError) {
+                        logger.error(
+                            "Error resetting stores during failed logout:",
+                            resetError,
+                        )
+                    }
+                } finally {
+                    set({ isLoading: false })
+                    PerformanceMonitoringService.endMeasure("logout_flow")
                 }
             },
 
@@ -248,76 +337,76 @@ export const useAuthStore = create<IAuthState>()(
                 PerformanceMonitoringService.startMeasure("auth_status_check")
                 try {
                     logger.debug("Checking authentication status")
-                    // First check for stored user data (for PIN/biometric auth)
-                    const userData = await TokenService.getUserData?.()
+                    set({ isLoading: true })
 
-                    // Then check Google auth status
+                    const userData = await TokenService.getUserData?.()
                     const isGoogleAuthenticated =
                         await GoogleAuthService.isAuthenticated()
+                    let authenticatedUser: IUser | null = null
+                    let finalAuthMethod: AuthMethod = AuthMethod.EMAIL_PASSWORD
 
                     if (isGoogleAuthenticated) {
-                        logger.debug("Google authentication is valid")
                         const googleUser =
                             await GoogleAuthService.getCurrentUser()
-
                         if (googleUser) {
-                            const user: IUser = {
+                            authenticatedUser = {
                                 id: googleUser.id,
                                 name: googleUser.name || "User",
                                 email: googleUser.email,
+                                profileImage: googleUser.photo || undefined,
                             }
-
-                            logger.info("User authenticated via Google", {
-                                email: user.email,
-                            })
-                            // Store user data for PIN/biometric auth
-                            await TokenService.storeUserData?.(user)
-
-                            set({
-                                user,
-                                isAuthenticated: true,
-                                isLoading: false,
-                                preferredAuthMethod: AuthMethod.GOOGLE,
-                            })
-                            PerformanceMonitoringService.endMeasure(
-                                "auth_status_check",
+                            finalAuthMethod = AuthMethod.GOOGLE
+                            logger.info(
+                                "AuthCheck: User authenticated via Google token",
+                                { email: authenticatedUser.email },
                             )
-                            return
+
+                            await TokenService.storeUserData?.(
+                                authenticatedUser,
+                            )
+                        } else {
+                            logger.warn(
+                                "AuthCheck: Google authenticated but failed to get user details.",
+                            )
                         }
-                    } else if (userData) {
-                        logger.debug("Local authentication data found")
+                    }
+
+                    if (!authenticatedUser && userData) {
+                        authenticatedUser = userData
                         const isPinSet = await authService.isPinSet()
                         const isBiometricAvailable =
                             await authService.isBiometricAvailable()
-
-                        const preferredMethod = isBiometricAvailable
+                        finalAuthMethod = isBiometricAvailable
                             ? AuthMethod.BIOMETRIC
                             : isPinSet
                             ? AuthMethod.PIN
-                            : AuthMethod.GOOGLE
-
-                        logger.info("User authenticated via local auth data", {
-                            email: userData.email,
-                        })
-                        set({
-                            user: userData,
-                            isAuthenticated: true,
-                            isLoading: false,
-                            preferredAuthMethod: preferredMethod,
-                        })
-                        PerformanceMonitoringService.endMeasure(
-                            "auth_status_check",
+                            : AuthMethod.EMAIL_PASSWORD
+                        logger.info(
+                            "AuthCheck: User authenticated via stored local user data",
+                            { email: authenticatedUser.email },
                         )
-                        return
                     }
 
-                    logger.debug("No valid authentication found")
-                    set({
-                        user: null,
-                        isAuthenticated: false,
-                        isLoading: false,
-                    })
-                    PerformanceMonitoringService.endMeasure("auth_status_check")
+                    if (authenticatedUser) {
+                        await loadAllUserData(authenticatedUser.id)
+
+                        set({
+                            user: authenticatedUser,
+                            isAuthenticated: true,
+                            isLoading: false,
+                            preferredAuthMethod: finalAuthMethod,
+                        })
+                    } else {
+                        logger.debug("AuthCheck: No valid authentication found")
+
+                        resetAllUserDataStores()
+                        set({
+                            user: null,
+                            isAuthenticated: false,
+                            isLoading: false,
+                            preferredAuthMethod: AuthMethod.EMAIL_PASSWORD,
+                        })
+                    }
                 } catch (error) {
                     logger.error("Auth check failed:", error)
                     await ErrorTrackingService.handleError(
@@ -329,14 +418,20 @@ export const useAuthStore = create<IAuthState>()(
                             }`,
                         ),
                     )
-                    set({ user: null, isAuthenticated: false })
-                    PerformanceMonitoringService.endMeasure("auth_status_check")
+
+                    resetAllUserDataStores()
+                    set({
+                        user: null,
+                        isAuthenticated: false,
+                        isLoading: false,
+                    })
                 } finally {
                     set({ isLoading: false })
+                    PerformanceMonitoringService.endMeasure("auth_status_check")
                 }
             },
 
-            setupPin: async (pin: string) => {
+            setupPin: async (pin: string): Promise<boolean> => {
                 try {
                     logger.info("Setting up PIN")
                     set({ isLoading: true })
@@ -357,12 +452,11 @@ export const useAuthStore = create<IAuthState>()(
             },
         }),
         {
-            name: "auth-storage", // Name for the persisted storage
-            // Only persist certain fields for security
+            name: "auth-storage",
+            storage: asyncStorageMiddleware,
             partialize: (state) => ({
                 isAuthenticated: state.isAuthenticated,
                 preferredAuthMethod: state.preferredAuthMethod,
-                // Don't persist sensitive data like full user object or credentials
             }),
         },
     ),

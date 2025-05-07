@@ -1,8 +1,8 @@
 import { create } from "zustand"
-import { createJSONStorage, persist } from "zustand/middleware"
-import type { Folder } from "../components/ui/screens/folders/types"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import type { Folder } from "../components/ui/screens/folders/types"
 import { FA6IconName } from "../types/icons"
+import { LoggingService } from "../services/monitoring/loggingService"
 
 type FolderState = {
     folders: Folder[]
@@ -13,6 +13,15 @@ type FolderState = {
         updates: Partial<Omit<Folder, "id" | "createdAt" | "updatedAt">>,
     ) => void
 }
+
+type FolderStateWithPersistence = FolderState & {
+    loadFolders: (userId: string) => Promise<void>
+    saveFolders: (userId: string) => Promise<void>
+    reset: () => void
+}
+
+const folderLogger = LoggingService.getLogger("FolderStore")
+const FOLDER_STORE_PREFIX = "folder-store-"
 
 const defaultFolders: Folder[] = [
     {
@@ -108,39 +117,129 @@ const defaultFolders: Folder[] = [
     },
 ]
 
-export const useFolderStore = create<FolderState>()(
-    persist(
-        (set) => ({
-            folders: defaultFolders,
+export const useFolderStore = create<FolderStateWithPersistence>()(
+    (set, get) => ({
+        folders: [...defaultFolders.map((f) => ({ ...f }))],
 
-            setFolders: (folders) => set({ folders }),
+        loadFolders: async (userId: string) => {
+            if (!userId) {
+                folderLogger.warn(
+                    "loadFolders called without userId, resetting to default in-memory state.",
+                )
+                get().reset()
+                return
+            }
+            const key = `${FOLDER_STORE_PREFIX}${userId}`
+            folderLogger.debug(
+                `Attempting to load folders for user ${userId} from key: ${key}`,
+            )
+            try {
+                const storedData = await AsyncStorage.getItem(key)
+                if (storedData) {
+                    const parsedData = JSON.parse(storedData)
 
-            addFolder: (newFolder) =>
-                set((state) => ({
-                    folders: [...state.folders, newFolder],
-                })),
+                    const foldersToLoad = (
+                        Array.isArray(parsedData?.folders)
+                            ? parsedData.folders
+                            : []
+                    )
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        .map((f: any) => ({
+                            ...f,
 
-            updateFolder: (folderId, updates) =>
-                set((state) => ({
-                    folders: state.folders.map((f) =>
-                        f.id === folderId
-                            ? { ...f, ...updates, updatedAt: new Date() }
-                            : f,
-                    ),
-                })),
-        }),
-        {
-            name: "folder-store",
-            storage: createJSONStorage(() => AsyncStorage),
-            onRehydrateStorage: () => (state) => {
-                if (!state) return
-
-                state.folders = state.folders.map((f) => ({
-                    ...f,
-                    createdAt: new Date(f.createdAt),
-                    updatedAt: new Date(f.updatedAt),
-                }))
-            },
+                            createdAt: f.createdAt
+                                ? new Date(f.createdAt)
+                                : new Date(),
+                            updatedAt: f.updatedAt
+                                ? new Date(f.updatedAt)
+                                : new Date(),
+                        }))
+                    set({ folders: foldersToLoad })
+                    folderLogger.info(
+                        `Loaded ${foldersToLoad.length} folders for user ${userId}`,
+                    )
+                } else {
+                    folderLogger.info(
+                        `No persisted folder data found for user ${userId}, using default folders.`,
+                    )
+                    set({ folders: [...defaultFolders.map((f) => ({ ...f }))] })
+                }
+            } catch (error) {
+                folderLogger.error(
+                    `Failed to load folders for user ${userId} from key ${key}:`,
+                    error,
+                )
+                set({ folders: [...defaultFolders.map((f) => ({ ...f }))] })
+            }
         },
-    ),
+
+        saveFolders: async (userId: string) => {
+            if (!userId) {
+                folderLogger.warn(
+                    "saveFolders called without userId. No data will be saved.",
+                )
+                return
+            }
+            const key = `${FOLDER_STORE_PREFIX}${userId}`
+            folderLogger.debug(
+                `Attempting to save folders for user ${userId} to key: ${key}`,
+            )
+            try {
+                const stateToPersist = {
+                    folders: get().folders,
+                }
+                await AsyncStorage.setItem(key, JSON.stringify(stateToPersist))
+                folderLogger.info(
+                    `Saved ${stateToPersist.folders.length} folders for user ${userId}`,
+                )
+            } catch (error) {
+                folderLogger.error(
+                    `Failed to save folders for user ${userId} to key ${key}:`,
+                    error,
+                )
+            }
+        },
+
+        reset: () => {
+            folderLogger.info(
+                "Resetting FolderStore in-memory state to defaults.",
+            )
+
+            set({ folders: [...defaultFolders.map((f) => ({ ...f }))] })
+        },
+
+        setFolders: (newFolders) => {
+            folderLogger.debug(
+                `Setting folders directly. Count: ${newFolders.length}`,
+            )
+            set({ folders: newFolders })
+        },
+
+        addFolder: (newFolder) => {
+            folderLogger.info(
+                `Adding new folder: ${newFolder.title} (ID: ${newFolder.id})`,
+            )
+            set((state) => ({
+                folders: [
+                    ...state.folders,
+                    {
+                        ...newFolder,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                    },
+                ],
+            }))
+        },
+
+        updateFolder: (folderId, updates) => {
+            folderLogger.info(`Updating folder ID: ${folderId}`)
+            set((state) => ({
+                folders: state.folders.map((f) =>
+                    f.id === folderId
+                        ? { ...f, ...updates, updatedAt: new Date() }
+                        : f,
+                ),
+            }))
+        },
+    }),
 )
