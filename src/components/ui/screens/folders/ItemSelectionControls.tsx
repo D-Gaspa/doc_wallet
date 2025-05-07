@@ -35,13 +35,20 @@ export function ItemSelectionControls({
     const iconSize = 22
 
     let selectAllIconName: "square" | "square-check" | "square-minus"
+    let selectAllAccessibilityLabel: string
+
     if (allSelected) {
         selectAllIconName = "square-check"
+        selectAllAccessibilityLabel = "Deseleccionar todo"
     } else if (numSelected > 0 && numSelected < numTotal) {
         selectAllIconName = "square-minus"
+        selectAllAccessibilityLabel = "Deseleccionar todo"
     } else {
         selectAllIconName = "square"
+        selectAllAccessibilityLabel = "Seleccionar todo"
     }
+
+    const selectionText = numSelected === 1 ? "Seleccionado" : "Seleccionados"
 
     return (
         <View
@@ -62,7 +69,7 @@ export function ItemSelectionControls({
                     style={styles.actionButton}
                     testID="cancel-selection-icon-button"
                     activeOpacity={0.7}
-                    accessibilityLabel="Cancel selection mode"
+                    accessibilityLabel="Cancelar selección"
                 >
                     <FontAwesome6
                         name="xmark"
@@ -72,12 +79,23 @@ export function ItemSelectionControls({
                     />
                 </TouchableOpacity>
 
-                {/* Center: Selection Count */}
+                {/* Center: Selection Count - Redesigned */}
                 <View style={styles.infoContainer}>
                     <Text
-                        style={[styles.selectionText, { color: colors.text }]}
+                        style={[
+                            styles.selectionCountNumber,
+                            { color: colors.primary },
+                        ]}
                     >
-                        {`${numSelected} Selected`}
+                        {numSelected}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.selectionCountText,
+                            { color: colors.secondaryText },
+                        ]}
+                    >
+                        {selectionText}
                     </Text>
                 </View>
 
@@ -85,7 +103,7 @@ export function ItemSelectionControls({
                 <Row
                     spacing={0}
                     align="center"
-                    style={styles.actionButtonsContainer}
+                    style={styles.actionIconsContainer}
                 >
                     {numSelected > 0 && onDeletePress && (
                         <TouchableOpacity
@@ -93,7 +111,7 @@ export function ItemSelectionControls({
                             style={styles.actionButton}
                             testID="batch-delete-icon-button"
                             activeOpacity={0.7}
-                            accessibilityLabel="Delete selected items"
+                            accessibilityLabel="Eliminar seleccionados"
                         >
                             <FontAwesome6
                                 name="trash"
@@ -109,7 +127,7 @@ export function ItemSelectionControls({
                             style={styles.actionButton}
                             testID="move-items-icon-button"
                             activeOpacity={0.7}
-                            accessibilityLabel="Move selected items"
+                            accessibilityLabel="Mover seleccionados"
                         >
                             <FontAwesome6
                                 name="folder-open"
@@ -125,7 +143,7 @@ export function ItemSelectionControls({
                             style={styles.actionButton}
                             testID="batch-tags-icon-button"
                             activeOpacity={0.7}
-                            accessibilityLabel="Tag selected items"
+                            accessibilityLabel="Etiquetar seleccionados"
                         >
                             <FontAwesome6
                                 name="tags"
@@ -141,13 +159,7 @@ export function ItemSelectionControls({
                         testID="select-all-icon-button"
                         activeOpacity={0.7}
                         disabled={numTotal === 0}
-                        accessibilityLabel={
-                            allSelected
-                                ? "Deselect all items"
-                                : numSelected > 0 && numSelected < numTotal
-                                ? "Deselect all items"
-                                : "Select all items"
-                        }
+                        accessibilityLabel={selectAllAccessibilityLabel}
                     >
                         <FontAwesome6
                             name={selectAllIconName}
@@ -169,9 +181,9 @@ export function ItemSelectionControls({
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        minHeight: 56, // Adjusted for a more standard navbar height
+        minHeight: 56,
         justifyContent: "center",
-        paddingHorizontal: 12, // Slightly more padding
+        paddingHorizontal: 10,
         paddingVertical: 5,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderBottomWidth: StyleSheet.hairlineWidth,
@@ -179,22 +191,29 @@ const styles = StyleSheet.create({
     row: {
         width: "100%",
         minHeight: 40,
+        alignItems: "center",
     },
     infoContainer: {
         flex: 1,
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        paddingHorizontal: 8,
+        paddingHorizontal: 4,
+        overflow: "hidden",
     },
-    selectionText: {
-        fontSize: 16,
-        fontWeight: "600",
+    selectionCountNumber: {
+        fontSize: 18,
+        fontWeight: "bold",
+        lineHeight: 20,
     },
-    actionButtonsContainer: {
-        // Container for the right-aligned buttons
+    selectionCountText: {
+        fontSize: 11,
+        lineHeight: 14,
+        textTransform: "uppercase",
     },
+    actionIconsContainer: {},
     actionButton: {
         padding: 10,
-        marginHorizontal: 5, // Slightly increased margin for better separation
+        marginHorizontal: 3,
     },
 })

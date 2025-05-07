@@ -1,32 +1,57 @@
 import React from "react"
-import { View, StyleSheet, TouchableOpacity, ScrollView } from "react-native"
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import { useTheme } from "../../../../hooks/useTheme"
 import { Text } from "../../typography"
+import { FA6IconName } from "../../../../types/icons.ts"
 
-// Import all available icons
-import TravelIcon from "../../assets/svg/airplane.svg"
-import MedicalIcon from "../../assets/svg/medical.svg"
-import CarIcon from "../../assets/svg/car.svg"
-import EducationIcon from "../../assets/svg/book.svg"
-import CheckIcon from "../../assets/svg/Check.svg"
-import WarningIcon from "../../assets/svg/warning-outline.svg"
-import SuccessIcon from "../../assets/svg/success.svg"
-import ErrorIcon from "../../assets/svg/error.svg"
-import SearchIcon from "../../assets/svg/search.svg"
-
-// Define a proper type for the colors object
 export interface ThemeColors {
     primary: string
     error: string
     warning: string
     success: string
-    [key: string]: string // Allow for other color properties
+    text: string
+    secondaryText: string
+    border: string
+
+    [key: string]: string
 }
 
-// Each icon option with its component and color
+export const BASE_ICON_OPTIONS_CONFIG: {
+    id: string
+    faName: FA6IconName
+    colorRef: string | keyof ThemeColors
+}[] = [
+    { id: "plane", faName: "plane", colorRef: "#E74C3C" },
+    {
+        id: "briefcase-medical",
+        faName: "briefcase-medical",
+        colorRef: "#3498DB",
+    },
+    { id: "car", faName: "car", colorRef: "#9B59B6" },
+    { id: "graduation-cap", faName: "graduation-cap", colorRef: "#2ECC71" },
+    { id: "folder", faName: "folder", colorRef: "primary" },
+    { id: "star", faName: "star", colorRef: "warning" },
+    { id: "heart", faName: "heart", colorRef: "error" },
+    { id: "lightbulb", faName: "lightbulb", colorRef: "#F1C40F" },
+    { id: "shield-halved", faName: "shield-halved", colorRef: "primary" },
+    { id: "book", faName: "book", colorRef: "success" },
+    { id: "key", faName: "key", colorRef: "warning" },
+]
+
+function resolveColorRef(
+    colorRef: string | keyof ThemeColors,
+    themeColors: ThemeColors,
+): string {
+    if (themeColors[colorRef as string]) {
+        return themeColors[colorRef as string]
+    }
+    return colorRef as string
+}
+
 export interface IconOption {
     id: string
-    component: React.ReactNode
+    faName: FA6IconName
     color: string
 }
 
@@ -40,80 +65,55 @@ export function CustomIconSelector({
     onSelectIcon,
 }: CustomIconSelectorProps) {
     const { colors } = useTheme()
+    const iconDisplaySize = 28
 
-    // Define all available icons for custom selection
-    const iconOptions: IconOption[] = [
-        {
-            id: "travel",
-            component: <TravelIcon width={28} height={28} fill="#E74C3C" />,
-            color: "#E74C3C",
-        },
-        {
-            id: "medical",
-            component: <MedicalIcon width={28} height={28} fill="#3498DB" />,
-            color: "#3498DB",
-        },
-        {
-            id: "car",
-            component: <CarIcon width={28} height={28} fill="#9B59B6" />,
-            color: "#9B59B6",
-        },
-        {
-            id: "education",
-            component: <EducationIcon width={28} height={28} fill="#2ECC71" />,
-            color: "#2ECC71",
-        },
-        {
-            id: "check",
-            component: (
-                <CheckIcon width={28} height={28} stroke={colors.primary} />
-            ),
-            color: colors.primary,
-        },
-        {
-            id: "warning",
-            component: (
-                <WarningIcon width={28} height={28} fill={colors.warning} />
-            ),
-            color: colors.warning,
-        },
-        {
-            id: "success",
-            component: (
-                <SuccessIcon width={28} height={28} fill={colors.success} />
-            ),
-            color: colors.success,
-        },
-        {
-            id: "error",
-            component: <ErrorIcon width={28} height={28} fill={colors.error} />,
-            color: colors.error,
-        },
-    ]
+    const iconOptions: IconOption[] = React.useMemo(() => {
+        return BASE_ICON_OPTIONS_CONFIG.map((config) => ({
+            id: config.id,
+            faName: config.faName,
+            color: resolveColorRef(config.colorRef, colors),
+        }))
+    }, [colors])
 
     return (
         <View style={styles.container}>
-            <Text weight="medium" style={styles.title}>
+            <Text
+                weight="medium"
+                style={[styles.title, { color: colors.text }]}
+            >
                 Selecciona un icono
             </Text>
-
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.iconsRow}>
-                    {iconOptions.map((icon) => (
-                        <TouchableOpacity
-                            key={icon.id}
-                            style={[
-                                styles.iconItem,
-                                selectedIconId === icon.id && {
-                                    borderColor: icon.color,
-                                    backgroundColor: icon.color + "20", // 20% opacity
-                                },
-                            ]}
-                            onPress={() => onSelectIcon(icon.id)}
-                        >
-                            {icon.component}
-                        </TouchableOpacity>
-                    ))}
+                    {iconOptions.map((iconOpt) => {
+                        const isSelected = selectedIconId === iconOpt.id
+                        return (
+                            <TouchableOpacity
+                                key={iconOpt.id}
+                                style={[
+                                    styles.iconItem,
+                                    { borderColor: colors.border + "50" },
+                                    isSelected && {
+                                        borderColor: iconOpt.color,
+                                        backgroundColor: iconOpt.color + "20",
+                                    },
+                                ]}
+                                onPress={() => onSelectIcon(iconOpt.id)}
+                                accessibilityLabel={`Icono ${iconOpt.faName}`}
+                            >
+                                <FontAwesome6
+                                    name={iconOpt.faName}
+                                    size={iconDisplaySize}
+                                    color={
+                                        isSelected
+                                            ? iconOpt.color
+                                            : colors.secondaryText
+                                    }
+                                    iconStyle="solid"
+                                />
+                            </TouchableOpacity>
+                        )
+                    })}
                 </View>
             </ScrollView>
         </View>
@@ -122,113 +122,96 @@ export function CustomIconSelector({
 
 const styles = StyleSheet.create({
     container: {
-        marginVertical: 8,
+        marginVertical: 12,
     },
     title: {
-        marginBottom: 8,
+        marginBottom: 10,
+        fontSize: 16,
+        paddingHorizontal: 4,
     },
     iconsRow: {
         flexDirection: "row",
-        justifyContent: "flex-start",
-        paddingBottom: 8,
+        paddingVertical: 4,
     },
     iconItem: {
         width: 60,
         height: 60,
-        margin: 4,
+        marginHorizontal: 6,
         justifyContent: "center",
         alignItems: "center",
-        borderRadius: 8,
-        borderWidth: 1,
+        borderRadius: 12,
+        borderWidth: 1.5,
     },
 })
 
 export function getIconById(
     iconId: string,
-    colors: ThemeColors,
+    themeColors: ThemeColors,
     size: number = 24,
     colorOverride?: string,
 ): React.ReactNode {
-    switch (iconId) {
-        case "travel":
-            return (
-                <TravelIcon
-                    width={size}
-                    height={size}
-                    fill={colorOverride ?? "#E74C3C"}
-                />
+    let faName: FA6IconName | undefined
+    let effectiveColor = colorOverride
+
+    const customIconConfig = BASE_ICON_OPTIONS_CONFIG.find(
+        (config) => config.id === iconId,
+    )
+
+    if (customIconConfig) {
+        faName = customIconConfig.faName
+        if (!effectiveColor) {
+            effectiveColor = resolveColorRef(
+                customIconConfig.colorRef,
+                themeColors,
             )
-        case "medical":
-            return (
-                <MedicalIcon
-                    width={size}
-                    height={size}
-                    fill={colorOverride ?? "#3498DB"}
-                />
-            )
-        case "car":
-            return (
-                <CarIcon
-                    width={size}
-                    height={size}
-                    fill={colorOverride ?? "#9B59B6"}
-                />
-            )
-        case "education":
-            return (
-                <EducationIcon
-                    width={size}
-                    height={size}
-                    fill={colorOverride ?? "#2ECC71"}
-                />
-            )
-        case "check":
-            return (
-                <CheckIcon
-                    width={size}
-                    height={size}
-                    stroke={colorOverride ?? colors.primary}
-                />
-            )
-        case "warning":
-            return (
-                <WarningIcon
-                    width={size}
-                    height={size}
-                    fill={colorOverride ?? colors.warning}
-                />
-            )
-        case "success":
-            return (
-                <SuccessIcon
-                    width={size}
-                    height={size}
-                    fill={colorOverride ?? colors.success}
-                />
-            )
-        case "error":
-            return (
-                <ErrorIcon
-                    width={size}
-                    height={size}
-                    fill={colorOverride ?? colors.error}
-                />
-            )
-        case "search":
-            return (
-                <SearchIcon
-                    width={size}
-                    height={size}
-                    stroke={colorOverride ?? colors.primary}
-                />
-            )
-        default:
-            return (
-                <EducationIcon
-                    width={size}
-                    height={size}
-                    fill={colorOverride ?? colors.primary}
-                />
-            )
+        }
+    } else {
+        switch (iconId) {
+            case "travel":
+                faName = "plane-departure"
+                if (!effectiveColor) effectiveColor = "#E74C3C"
+                break
+            case "medical":
+                faName = "briefcase-medical"
+                if (!effectiveColor) effectiveColor = "#3498DB"
+                break
+            case "car":
+                faName = "car"
+                if (!effectiveColor) effectiveColor = "#9B59B6"
+                break
+            case "education":
+                faName = "graduation-cap"
+                if (!effectiveColor) effectiveColor = "#2ECC71"
+                break
+            case "search":
+                faName = "magnifying-glass"
+                if (!effectiveColor) effectiveColor = themeColors.primary
+                break
+            case "custom":
+                faName = "folder"
+                if (!effectiveColor) effectiveColor = themeColors.primary
+                break
+            default:
+                faName = "folder"
+                if (!effectiveColor) effectiveColor = themeColors.secondaryText
+                break
+        }
     }
+
+    if (!faName) {
+        faName = "folder"
+    }
+
+    if (!effectiveColor) {
+        effectiveColor = themeColors.primary
+    }
+
+    return (
+        <FontAwesome6
+            name={faName}
+            size={size}
+            color={effectiveColor}
+            iconStyle="solid"
+        />
+    )
 }
