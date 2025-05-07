@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
     Animated,
     FlatList,
@@ -8,7 +8,6 @@ import {
     SafeAreaView,
     StyleSheet,
     View,
-    ViewStyle,
 } from "react-native"
 import { useTheme } from "../../../../hooks/useTheme"
 import { BaseModal } from "../../../common/modal"
@@ -56,46 +55,6 @@ export function FolderModal({
     initialData = {},
 }: UnifiedFolderModalProps) {
     const { colors } = useTheme()
-    const isMounted = useRef(false)
-
-    const [folderName, setFolderName] = useState(initialData.name ?? "")
-    const [selectedType, setSelectedType] = useState<FolderType>(
-        initialData.type ?? "custom",
-    )
-    const defaultInitialIconName =
-        initialData.customIconId ??
-        (BASE_ICON_OPTIONS_CONFIG.find((opt) => opt.id === "folder")?.faName ||
-            "folder")
-    const defaultInitialIconColor =
-        initialData.customIconColor ??
-        resolveColorRef(
-            BASE_ICON_OPTIONS_CONFIG.find(
-                (opt) => opt.faName === defaultInitialIconName,
-            )?.colorRef || "primary",
-            colors as unknown as CustomIconSelectorThemeColors,
-        )
-    const [selectedCustomIconName, setSelectedCustomIconName] =
-        useState<FA6IconName | null>(defaultInitialIconName)
-    const [selectedCustomIconColor, setSelectedCustomIconColor] = useState<
-        string | null
-    >(defaultInitialIconColor)
-    const [showCustomSelectorUI, setShowCustomSelectorUI] = useState(
-        (initialData.type ?? "custom") === "custom",
-    )
-    const [iconSelectorHeight, setIconSelectorHeight] = useState(220)
-    const fadeAnim = useRef(
-        new Animated.Value(showCustomSelectorUI ? 1 : 0),
-    ).current
-
-    const animateIconSelector = (visible: boolean) => {
-        return new Promise<void>((resolve) => {
-            Animated.timing(fadeAnim, {
-                toValue: visible ? 1 : 0,
-                duration: 200,
-                useNativeDriver: false,
-            }).start(() => resolve())
-        })
-    }
 
     const folderTypes = useMemo(
         () => [
@@ -125,7 +84,7 @@ export function FolderModal({
             },
             {
                 type: "custom" as const,
-                label: "Personalizado",
+                label: "Propio",
                 defaultIcon: "folder" as FA6IconName,
                 defaultColorRef: "primary",
             },
@@ -133,65 +92,118 @@ export function FolderModal({
         [],
     )
 
+    const calculateInitialValues = useCallback(() => {
+        const type = initialData?.type ?? "custom"
+        const name = initialData?.name ?? ""
+        let iconName: FA6IconName | null = null
+        let iconColor: string | null
+
+        if (type === "custom") {
+            iconName =
+                initialData?.customIconId ||
+                BASE_ICON_OPTIONS_CONFIG.find((opt) => opt.id === "folder")
+                    ?.faName ||
+                "folder"
+            iconColor =
+                initialData?.customIconColor ||
+                resolveColorRef(
+                    BASE_ICON_OPTIONS_CONFIG.find(
+                        (opt) => opt.faName === iconName,
+                    )?.colorRef || "primary",
+                    colors as unknown as CustomIconSelectorThemeColors,
+                )
+        } else {
+            const predefinedType = folderTypes?.find((ft) => ft.type === type)
+            if (predefinedType) {
+                iconName = predefinedType.defaultIcon
+                iconColor = resolveColorRef(
+                    predefinedType.defaultColorRef,
+                    colors as unknown as CustomIconSelectorThemeColors,
+                )
+            } else {
+                iconName = "folder"
+                iconColor = resolveColorRef(
+                    "primary",
+                    colors as unknown as CustomIconSelectorThemeColors,
+                )
+            }
+        }
+        return { name, type, iconName, iconColor }
+    }, [initialData, folderTypes, colors]) // Dependencies for recalculation
+
+    // --- Initialize State using the calculated values ---
+    const initialValues = useMemo(
+        () => calculateInitialValues(),
+        [calculateInitialValues],
+    )
+
+    const [folderName, setFolderName] = useState<string>(initialValues.name)
+    const [selectedType, setSelectedType] = useState<FolderType>(
+        initialValues.type,
+    )
+    const [selectedCustomIconName, setSelectedCustomIconName] =
+        useState<FA6IconName | null>(initialValues.iconName)
+    const [selectedCustomIconColor, setSelectedCustomIconColor] = useState<
+        string | null
+    >(initialValues.iconColor)
+
+    // --- Initialize Refs using the calculated values ---
+    const initialNameRef = useRef<string>(initialValues.name)
+    const initialTypeRef = useRef<FolderType>(initialValues.type)
+    const initialIconNameRef = useRef<FA6IconName | null>(
+        initialValues.iconName,
+    )
+    const initialIconColorRef = useRef<string | null>(initialValues.iconColor)
+
+    // --- Other State/Refs ---
+    const [showCustomSelectorUI, setShowCustomSelectorUI] = useState(
+        initialValues.type === "custom",
+    )
+    const [iconSelectorHeight, setIconSelectorHeight] = useState(220)
+    const fadeAnim = useRef(
+        new Animated.Value(showCustomSelectorUI ? 1 : 0),
+    ).current
     const prevIsVisible = useRef(isVisible)
-    const prevInitialDataId = useRef(initialData.id)
+
+    // Animation function
+    const animateIconSelector = (visible: boolean) => {
+        return new Promise<void>((resolve) => {
+            Animated.timing(fadeAnim, {
+                toValue: visible ? 1 : 0,
+                duration: 200,
+                useNativeDriver: false,
+            }).start(() => resolve())
+        })
+    }
 
     useEffect(() => {
-        if (
-            isVisible &&
-            (!prevIsVisible.current ||
-                initialData.id !== prevInitialDataId.current)
-        ) {
-            const currentType = initialData.type ?? "custom"
-            let iconForInit: FA6IconName = "folder"
-            let colorForInit: string | null = null
+        const currentInitialVals = calculateInitialValues()
 
-            if (currentType === "custom") {
-                iconForInit =
-                    initialData.customIconId ||
-                    BASE_ICON_OPTIONS_CONFIG.find((opt) => opt.id === "folder")
-                        ?.faName ||
-                    "folder"
-                colorForInit =
-                    initialData.customIconColor ||
-                    resolveColorRef(
-                        BASE_ICON_OPTIONS_CONFIG.find(
-                            (opt) => opt.faName === iconForInit,
-                        )?.colorRef || "primary",
-                        colors as unknown as CustomIconSelectorThemeColors,
-                    )
-            } else {
-                const predefinedType = folderTypes.find(
-                    (ft) => ft.type === currentType,
-                )
-                if (predefinedType) {
-                    iconForInit = predefinedType.defaultIcon
-                    colorForInit = resolveColorRef(
-                        predefinedType.defaultColorRef,
-                        colors as unknown as CustomIconSelectorThemeColors,
-                    )
-                }
-            }
-            const isCustomUIToShow = currentType === "custom"
+        if (isVisible && !prevIsVisible.current) {
+            console.log(
+                `FolderModal OPENING - Mode: ${mode}, Initial Name: ${currentInitialVals.name}`,
+            )
 
-            setSelectedType(currentType)
-            setSelectedCustomIconName(iconForInit)
-            setSelectedCustomIconColor(colorForInit)
+            const isCustomUIToShow = currentInitialVals.type === "custom"
+
+            setFolderName(currentInitialVals.name)
+            setSelectedType(currentInitialVals.type)
+            setSelectedCustomIconName(currentInitialVals.iconName)
+            setSelectedCustomIconColor(currentInitialVals.iconColor)
             setShowCustomSelectorUI(isCustomUIToShow)
             fadeAnim.setValue(isCustomUIToShow ? 1 : 0)
 
-            const mountTimer = setTimeout(() => {
-                isMounted.current = true
-            }, 10)
-            prevIsVisible.current = isVisible
-            prevInitialDataId.current = initialData.id
-            return () => clearTimeout(mountTimer)
+            initialNameRef.current = currentInitialVals.name
+            initialTypeRef.current = currentInitialVals.type
+            initialIconNameRef.current = currentInitialVals.iconName
+            initialIconColorRef.current = currentInitialVals.iconColor
         } else if (!isVisible && prevIsVisible.current) {
-            isMounted.current = false
+            console.log(`FolderModal CLOSING - Mode was: ${mode}`)
             if (mode === "create") {
                 const defaultFolderType = folderTypes.find(
                     (ft) => ft.type === "custom",
                 )!
+
                 setFolderName("")
                 setSelectedType("custom")
                 setSelectedCustomIconName(defaultFolderType.defaultIcon)
@@ -204,17 +216,22 @@ export function FolderModal({
                 setShowCustomSelectorUI(true)
                 fadeAnim.setValue(1)
             }
-            prevIsVisible.current = isVisible
-            prevInitialDataId.current = undefined
-        } else {
-            if (isVisible && initialData.id !== prevInitialDataId.current) {
-                prevInitialDataId.current = initialData.id
-            }
-            if (isVisible !== prevIsVisible.current) {
-                prevIsVisible.current = isVisible
-            }
+            initialNameRef.current = ""
+            initialTypeRef.current = "custom"
+            initialIconNameRef.current = null
+            initialIconColorRef.current = null
         }
-    }, [isVisible, initialData, mode, fadeAnim, folderTypes, colors])
+
+        prevIsVisible.current = isVisible
+    }, [
+        isVisible,
+        initialData,
+        mode,
+        colors,
+        fadeAnim,
+        folderTypes,
+        calculateInitialValues,
+    ])
 
     const handleTypeSelect = async (type: FolderType) => {
         const isNowCustom = type === "custom"
@@ -239,7 +256,13 @@ export function FolderModal({
             setShowCustomSelectorUI(true)
         } else {
             const predefinedType = folderTypes.find((ft) => ft.type === type)
-            if (predefinedType) {
+            const initialTypeLabel = folderTypes.find(
+                (ft) => ft.type === initialTypeRef.current,
+            )?.label
+            if (
+                predefinedType &&
+                (folderName.trim() === "" || folderName === initialTypeLabel)
+            ) {
                 setFolderName(predefinedType.label)
             }
             await animateIconSelector(false)
@@ -262,10 +285,8 @@ export function FolderModal({
         }
     }
 
-    const handleSave = () => {
-        if (folderName.trim() === "") {
-            return
-        }
+    const handleSave = useCallback(() => {
+        if (folderName.trim() === "") return
 
         if (selectedType === "custom") {
             const customIconToSave =
@@ -286,7 +307,7 @@ export function FolderModal({
                 selectedType,
                 customIconToSave,
                 customColorToSave,
-                initialData.id,
+                initialData?.id,
             )
         } else {
             onSave(
@@ -294,14 +315,80 @@ export function FolderModal({
                 selectedType,
                 undefined,
                 undefined,
-                initialData.id,
+                initialData?.id,
             )
         }
         onClose()
-    }
-    const handleCancel = () => {
+    }, [
+        folderName,
+        selectedType,
+        selectedCustomIconName,
+        selectedCustomIconColor,
+        initialData?.id,
+        onSave,
+        onClose,
+        colors,
+    ])
+
+    const handleCancel = useCallback(() => {
         onClose()
-    }
+    }, [onClose])
+
+    const hasChanges = useMemo(() => {
+        if (mode !== "edit") return true
+
+        const currentNameTrimmed = folderName?.trim() ?? ""
+        const initialNameTrimmed = initialNameRef.current?.trim() ?? ""
+        if (currentNameTrimmed !== initialNameTrimmed) {
+            console.log(
+                `Change detected: Name ('${initialNameTrimmed}' -> '${currentNameTrimmed}')`,
+            )
+            return true
+        }
+
+        const currentType = selectedType
+        const initialType = initialTypeRef.current
+        if (currentType !== initialType) {
+            console.log(
+                `Change detected: Type ('${initialType}' -> '${currentType}')`,
+            )
+            return true
+        }
+
+        if (currentType === "custom") {
+            const currentIconName = selectedCustomIconName
+            const initialIconName = initialIconNameRef.current
+            if (currentIconName !== initialIconName) {
+                console.log(
+                    `Change detected: Icon Name ('${initialIconName}' -> '${currentIconName}')`,
+                )
+                return true
+            }
+
+            const currentIconColor = selectedCustomIconColor
+            const initialIconColor = initialIconColorRef.current
+            if (currentIconColor !== initialIconColor) {
+                console.log(
+                    `Change detected: Icon Color ('${initialIconColor}' -> '${currentIconColor}')`,
+                )
+                return true
+            }
+        }
+
+        console.log("No changes detected for edit mode.")
+        return false
+    }, [
+        mode,
+        folderName,
+        selectedType,
+        selectedCustomIconName,
+        selectedCustomIconColor,
+    ])
+
+    const modalTitle =
+        mode === "create" ? "Crear Nueva Carpeta" : "Editar Carpeta"
+    const saveButtonText =
+        mode === "create" ? "Crear Carpeta" : "Actualizar Carpeta"
 
     const listHeader = (
         <Stack spacing={20} style={styles.headerContent}>
@@ -329,9 +416,7 @@ export function FolderModal({
                 <Animated.View
                     style={[
                         styles.iconSelectorContainer,
-                        {
-                            opacity: fadeAnim,
-                        },
+                        { opacity: fadeAnim },
                     ]}
                     onLayout={(event) => {
                         const { height } = event.nativeEvent.layout
@@ -354,21 +439,12 @@ export function FolderModal({
         </>
     )
 
-    const buttonStyle: ViewStyle =
-        folderName.trim() === "" ? styles.disabledButton : {}
-    const modalTitle =
-        mode === "create" ? "Crear Nueva Carpeta" : "Editar Carpeta"
-    const actionButtonText =
-        mode === "create" ? "Crear Carpeta" : "Actualizar Carpeta"
-
     return (
         <BaseModal
             isVisible={isVisible}
             onClose={handleCancel}
             dismissOnBackdropPress={false}
-            containerStyle={{
-                ...styles.wideModal,
-            }}
+            containerStyle={styles.wideModal}
         >
             <SafeAreaView
                 style={[
@@ -376,7 +452,7 @@ export function FolderModal({
                     { backgroundColor: colors.background },
                 ]}
             >
-                {/* Header (Positioned at the top) */}
+                {/* Header Bar */}
                 <View
                     style={[
                         styles.headerBar,
@@ -398,6 +474,7 @@ export function FolderModal({
                     </Text>
                 </View>
 
+                {/* Keyboard Avoiding View and FlatList */}
                 <KeyboardAvoidingView
                     behavior={Platform.OS === "ios" ? "padding" : "height"}
                     style={styles.kavWrapper}
@@ -465,11 +542,17 @@ export function FolderModal({
                                                 ? colorForDisplayIcon
                                                 : undefined
                                         }
+                                        displayIconId={
+                                            item.type !== "custom"
+                                                ? iconToDisplay
+                                                : undefined
+                                        }
                                         selected={isSelectedType}
                                         onPress={() =>
                                             handleTypeSelect(item.type)
                                         }
                                         showTags={false}
+                                        itemManagerShowAddTagButton={false}
                                     />
                                 </Pressable>
                             )
@@ -477,7 +560,7 @@ export function FolderModal({
                     />
                 </KeyboardAvoidingView>
 
-                {/* Footer (Positioned at the bottom) */}
+                {/* Footer with Action Buttons */}
                 <View
                     style={[styles.footer, { borderTopColor: colors.border }]}
                 >
@@ -489,10 +572,13 @@ export function FolderModal({
                         testID="cancel-button"
                     />
                     <Button
-                        title={actionButtonText}
+                        title={saveButtonText}
                         onPress={handleSave}
-                        style={[styles.fullWidthBtn, buttonStyle]}
-                        disabled={folderName.trim() === ""}
+                        style={styles.fullWidthBtn}
+                        disabled={
+                            folderName.trim() === "" ||
+                            (mode === "edit" && !hasChanges)
+                        }
                         testID={
                             mode === "create"
                                 ? "create-button"
@@ -564,6 +650,14 @@ const styles = StyleSheet.create({
         width: "48%",
         overflow: "hidden",
     },
+    iconSelectorContainer: {
+        paddingHorizontal: 20,
+        marginTop: 10,
+        width: "100%",
+    },
+    emptyFooter: {
+        height: 30,
+    },
     footer: {
         paddingHorizontal: 20,
         paddingTop: 20,
@@ -574,16 +668,5 @@ const styles = StyleSheet.create({
     fullWidthBtn: {
         alignSelf: "stretch",
         marginBottom: 12,
-    },
-    disabledButton: {
-        opacity: 0.5,
-    },
-    emptyFooter: {
-        height: 30,
-    },
-    iconSelectorContainer: {
-        paddingHorizontal: 20,
-        marginTop: 10,
-        width: "100%",
     },
 })

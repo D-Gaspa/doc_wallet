@@ -143,35 +143,66 @@ export function CustomIconSelector({
     const [activeColor, setActiveColor] = useState<string | null>(
         currentIconColor,
     )
-
-    React.useEffect(() => {
-        setActiveIconName(currentIconName)
-        setActiveColor(currentIconColor)
-    }, [currentIconName, currentIconColor])
+    const [userHasSelectedColor, setUserHasSelectedColor] =
+        useState<boolean>(false)
 
     const iconOptions: IconOption[] = React.useMemo(() => {
         return BASE_ICON_OPTIONS_CONFIG.map((config) => ({
             id: config.id,
             faName: config.faName,
-            color: resolveColorRef(config.colorRef, colors),
+            color: resolveColorRef(
+                config.colorRef,
+                colors as unknown as ThemeColors,
+            ),
         }))
     }, [colors])
 
+    React.useEffect(() => {
+        setActiveIconName(currentIconName)
+        setActiveColor(currentIconColor)
+
+        if (currentIconName && currentIconColor) {
+            const iconConfig = BASE_ICON_OPTIONS_CONFIG.find(
+                (opt) => opt.faName === currentIconName,
+            )
+            if (iconConfig) {
+                const defaultColorForInitialIcon = resolveColorRef(
+                    iconConfig.colorRef,
+                    colors as unknown as ThemeColors,
+                )
+                if (currentIconColor !== defaultColorForInitialIcon) {
+                    setUserHasSelectedColor(true)
+                } else {
+                    setUserHasSelectedColor(false)
+                }
+            } else {
+                setUserHasSelectedColor(false)
+            }
+        } else {
+            setUserHasSelectedColor(false)
+        }
+    }, [currentIconName, currentIconColor, colors])
+
     const handleIconPress = (iconOpt: IconOption) => {
         const newIconName = iconOpt.faName
-        const newColor =
-            activeColor && activeIconName === newIconName
-                ? activeColor
-                : iconOpt.color
+        let newColorToSet: string
+
+        if (userHasSelectedColor && activeColor) {
+            newColorToSet = activeColor
+        } else {
+            newColorToSet = iconOpt.color
+            setUserHasSelectedColor(false)
+        }
 
         setActiveIconName(newIconName)
-        setActiveColor(newColor)
-        onSelectionChange({ iconName: newIconName, iconColor: newColor })
+        setActiveColor(newColorToSet)
+        onSelectionChange({ iconName: newIconName, iconColor: newColorToSet })
     }
 
     const handleColorPress = (color: string) => {
         if (activeIconName) {
             setActiveColor(color)
+            setUserHasSelectedColor(true)
             onSelectionChange({ iconName: activeIconName, iconColor: color })
         }
     }
@@ -190,7 +221,7 @@ export function CustomIconSelector({
                 contentContainerStyle={styles.iconsRowScrollContent}
             >
                 <View style={styles.iconsRow}>
-                    {iconOptions.map((iconOpt) => {
+                    {iconOptions.map((iconOpt: IconOption) => {
                         const isIconSelectedForEditing =
                             activeIconName === iconOpt.faName
                         return (
@@ -416,19 +447,19 @@ export function getIconById(
                 faName = "magnifying-glass"
                 if (!effectiveColor) effectiveColor = themeColors.primary
                 break
-            case "custom":
-                faName = "folder"
-                if (!effectiveColor) effectiveColor = themeColors.primary
-                break
             default:
-                faName = "folder"
-                if (!effectiveColor) effectiveColor = themeColors.secondaryText
+                faName = iconId as FA6IconName
+                if (!effectiveColor) {
+                    effectiveColor = themeColors.primary
+                }
                 break
         }
     }
 
-    if (!faName) faName = "folder"
-    if (!effectiveColor) effectiveColor = themeColors.primary
+    if (!faName) {
+        faName = "folder"
+        if (!effectiveColor) effectiveColor = themeColors.primary
+    }
 
     return (
         <FontAwesome6

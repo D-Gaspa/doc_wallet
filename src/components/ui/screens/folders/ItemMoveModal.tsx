@@ -260,8 +260,6 @@ export function ItemMoveModal({
                     />
                     <Spacer size={10} />
 
-                    {/* REMOVED: Selection Buttons (Select Root, Select Current Folder) */}
-                    {/* <Row style={styles.selectionButtonRow}> ... </Row> */}
                     <Spacer size={16} />
 
                     <Text
@@ -272,7 +270,6 @@ export function ItemMoveModal({
                             { color: colors.secondaryText },
                         ]}
                     >
-                        {/* Modified instruction text */}
                         Navigate to the desired destination folder:
                     </Text>
 
@@ -292,6 +289,7 @@ export function ItemMoveModal({
                                 items={folderItemsForList}
                                 isSelectionList={false}
                                 onFolderPress={handleNavigate}
+                                folderCardItemManagerShowAddTagButton={false}
                                 selectionMode={false}
                                 selectedItems={[]}
                                 emptyListMessage="No subfolders available here to move to"
