@@ -1,29 +1,26 @@
-import React, { useState, useRef, useEffect } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import {
-    View,
-    TouchableOpacity,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    ScrollView,
-    Animated,
     ActivityIndicator,
+    Animated,
     Keyboard,
+    KeyboardAvoidingView,
     Modal,
-    // Linking, // ---> Removed unused import
-    TextInput, // Keep for ref typing
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
     TouchableWithoutFeedback,
+    View,
 } from "react-native"
-import { useTheme } from "../../../../hooks/useTheme" // Adjust path
-import { Button } from "../../button" // Adjust path
-import { Stack, Spacer, Row } from "../../layout" // Adjust path
-import { Text } from "../../typography" // Adjust path
-import { TextField } from "../../form" // Adjust path
-import { Checkbox } from "../../form" // Import Checkbox
-import { DocWalletLogo } from "../../../common/DocWalletLogo" // Adjust path
-import EyeIcon from "../../assets/svg/Eye.svg" // Adjust path
-import EyeOffIcon from "../../assets/svg/EyeOff.svg" // Adjust path
-import { TermsAndConditionsScreen } from "./TermsAndConditions" // Import T&C Screen
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
+import { useTheme } from "../../../../hooks/useTheme"
+import { Button } from "../../button"
+import { Row, Spacer, Stack } from "../../layout"
+import { Text } from "../../typography"
+import { Checkbox, TextField } from "../../form"
+import { DocWalletLogo } from "../../../common/DocWalletLogo"
+import { TermsAndConditionsScreen } from "./TermsAndConditions"
 
 type RegisterData = {
     firstName: string
@@ -36,14 +33,15 @@ type RegisterData = {
 type RegisterScreenProps = {
     onRegister: (data: RegisterData) => Promise<void>
     onGoToLogin: () => void
+    testID?: string
 }
 
 export function RegisterScreen({
     onRegister,
     onGoToLogin,
+    testID,
 }: RegisterScreenProps) {
     const { colors } = useTheme()
-    // --- State ---
     const [firstName, setFirstName] = useState("")
     const [lastName, setLastName] = useState("")
     const [email, setEmail] = useState("")
@@ -51,26 +49,26 @@ export function RegisterScreen({
     const [confirmPassword, setConfirmPassword] = useState("")
     const [acceptedTerms, setAcceptedTerms] = useState(false)
     const [isPasswordVisible, setPasswordVisible] = useState(false)
+    const [isConfirmPasswordVisible, setConfirmPasswordVisible] =
+        useState(false)
     const [isRegistering, setIsRegistering] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [formTouched, setFormTouched] = useState<Record<string, boolean>>({})
     const [isTermsModalVisible, setIsTermsModalVisible] = useState(false)
 
-    // --- Refs ---
     const lastNameInputRef = useRef<TextInput>(null)
     const emailInputRef = useRef<TextInput>(null)
     const passwordInputRef = useRef<TextInput>(null)
     const confirmPasswordInputRef = useRef<TextInput>(null)
 
-    // --- Animations ---
     const buttonScale = useRef(new Animated.Value(1)).current
     const shakeAnimation = useRef(new Animated.Value(0)).current
 
-    // --- Password Strength ---
     const [passwordStrength, setPasswordStrength] = useState({
         score: 0,
         feedback: "",
     })
+
     useEffect(() => {
         if (!password) {
             setPasswordStrength({ score: 0, feedback: "" })
@@ -83,49 +81,50 @@ export function RegisterScreen({
         if (/[a-z]/.test(password)) score += 1
         if (/[0-9]/.test(password)) score += 1
         if (/[^A-Za-z0-9]/.test(password)) score += 1
-        // ---> Use const for feedback <---
-        const feedback =
-            score < 3
-                ? "Contraseña débil"
-                : score < 5
-                ? "Contraseña moderada"
-                : "Contraseña fuerte"
-        setPasswordStrength({ score: Math.min(score, 6), feedback })
-    }, [password, colors])
 
-    // --- Validation ---
+        let feedbackText: string
+        if (score < 3) feedbackText = "Contraseña débil"
+        else if (score < 5) feedbackText = "Contraseña moderada"
+        else feedbackText = "Contraseña fuerte"
+        setPasswordStrength({
+            score: Math.min(score, 6),
+            feedback: feedbackText,
+        })
+    }, [password])
+
     const validateField = (
         field: keyof RegisterData | "confirmPassword",
         value: string | boolean,
     ): string => {
-        let error = ""
+        let errorMsg = ""
         switch (field) {
             case "firstName":
-                if (!value) error = "El nombre es requerido"
+                if (!value) errorMsg = "El nombre es requerido"
                 break
             case "lastName":
-                if (!value) error = "El apellido es requerido"
+                if (!value) errorMsg = "El apellido es requerido"
                 break
             case "email":
-                if (!value) error = "El correo es requerido"
+                if (!value) errorMsg = "El correo es requerido"
                 else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value)))
-                    error = "Por favor, ingrese un correo válido"
+                    errorMsg = "Por favor, ingrese un correo válido"
                 break
             case "password":
-                if (!value) error = "La contraseña es requerida"
-                else if (String(value).length < 6)
-                    error = "La contraseña debe tener al menos 6 caracteres"
+                if (!value) errorMsg = "La contraseña es requerida"
+                else if (String(value).length < 8)
+                    errorMsg = "La contraseña debe tener al menos 8 caracteres"
                 break
             case "confirmPassword":
-                if (!value) error = "Por favor confirme la contraseña"
+                if (!value) errorMsg = "Por favor confirme la contraseña"
                 else if (String(value) !== password)
-                    error = "Las contraseñas no coinciden"
+                    errorMsg = "Las contraseñas no coinciden"
                 break
             case "acceptedTerms":
-                if (!value) error = "Debes aceptar los términos y condiciones"
+                if (!value)
+                    errorMsg = "Debes aceptar los términos y condiciones"
                 break
         }
-        return error
+        return errorMsg
     }
 
     const getFieldState = (field: keyof RegisterData | "confirmPassword") => {
@@ -143,22 +142,68 @@ export function RegisterScreen({
                 : acceptedTerms
         const touched = formTouched[field]
         const error = validateField(field, value)
-        return { valid: error === "", error: error, value, touched }
+        return { valid: error === "", error, value, touched }
     }
 
     const markTouched = (field: keyof RegisterData | "confirmPassword") => {
         setFormTouched((prev) => ({ ...prev, [field]: true }))
+        const value =
+            field === "firstName"
+                ? firstName
+                : field === "lastName"
+                ? lastName
+                : field === "email"
+                ? email
+                : field === "password"
+                ? password
+                : field === "confirmPassword"
+                ? confirmPassword
+                : acceptedTerms
+        const error = validateField(field, value)
+        setErrors((prev) => ({ ...prev, [field]: error }))
     }
 
-    // Animations
     const animateButtonPress = () => {
-        /* ... */
-    }
-    const shakeError = () => {
-        /* ... */
+        Animated.sequence([
+            Animated.timing(buttonScale, {
+                toValue: 0.96,
+                duration: 100,
+                useNativeDriver: true,
+            }),
+            Animated.timing(buttonScale, {
+                toValue: 1,
+                duration: 100,
+                useNativeDriver: true,
+            }),
+        ]).start()
     }
 
-    // --- Form Validation & Submission ---
+    const shakeError = () => {
+        shakeAnimation.setValue(0)
+        Animated.sequence([
+            Animated.timing(shakeAnimation, {
+                toValue: 10,
+                duration: 50,
+                useNativeDriver: true,
+            }),
+            Animated.timing(shakeAnimation, {
+                toValue: -10,
+                duration: 50,
+                useNativeDriver: true,
+            }),
+            Animated.timing(shakeAnimation, {
+                toValue: 10,
+                duration: 50,
+                useNativeDriver: true,
+            }),
+            Animated.timing(shakeAnimation, {
+                toValue: 0,
+                duration: 50,
+                useNativeDriver: true,
+            }),
+        ]).start()
+    }
+
     const isFormValid = (): boolean => {
         const fields: (keyof RegisterData | "confirmPassword")[] = [
             "firstName",
@@ -205,6 +250,8 @@ export function RegisterScreen({
         }
         animateButtonPress()
         setIsRegistering(true)
+        setErrors({})
+
         try {
             await onRegister({
                 firstName: firstName.trim(),
@@ -214,41 +261,28 @@ export function RegisterScreen({
                 acceptedTerms,
             })
         } catch (err) {
-            setErrors((prev) => ({
-                ...prev,
-                form:
-                    err instanceof Error
-                        ? err.message
-                        : "Registro fallido. Intente de nuevo.",
-            }))
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : "Error desconocido durante el registro."
+            setErrors((prev) => ({ ...prev, form: message }))
             shakeError()
         } finally {
             setIsRegistering(false)
         }
     }
 
-    // --- T&C Modal Handlers ---
     const handleAcceptTerms = () => {
         setAcceptedTerms(true)
         setIsTermsModalVisible(false)
         markTouched("acceptedTerms")
-        setErrors((prev) => {
-            const newErrors = { ...prev }
-            delete newErrors.acceptedTerms
-            return newErrors
-        })
     }
     const handleDeclineTerms = () => {
         setAcceptedTerms(false)
         setIsTermsModalVisible(false)
         markTouched("acceptedTerms")
-        const error = validateField("acceptedTerms", false)
-        if (error) {
-            setErrors((prev) => ({ ...prev, acceptedTerms: error }))
-        }
     }
 
-    // --- Password Strength Indicator ---
     const renderPasswordStrength = () => {
         if (!password) return null
         const maxBars = 6
@@ -270,7 +304,7 @@ export function RegisterScreen({
                                     backgroundColor:
                                         i < passwordStrength.score
                                             ? strengthColor
-                                            : colors.secondaryText + "30",
+                                            : colors.border + "30",
                                 },
                             ]}
                         />
@@ -287,7 +321,6 @@ export function RegisterScreen({
 
     const dismissKeyboard = () => Keyboard.dismiss()
 
-    // Get field states for error display
     const firstNameState = getFieldState("firstName")
     const lastNameState = getFieldState("lastName")
     const emailState = getFieldState("email")
@@ -302,10 +335,8 @@ export function RegisterScreen({
                     styles.container,
                     { backgroundColor: colors.background },
                 ]}
-                behavior={Platform.select({
-                    ios: "padding",
-                    android: "height",
-                })}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                testID={testID ?? "register-screen"}
             >
                 <ScrollView
                     contentContainerStyle={styles.scrollContainer}
@@ -318,7 +349,6 @@ export function RegisterScreen({
                     >
                         <View style={styles.inner}>
                             <Stack spacing={12}>
-                                {/* Logo */}
                                 <View style={styles.logoContainer}>
                                     <View
                                         style={[
@@ -338,7 +368,6 @@ export function RegisterScreen({
                                         />
                                     </View>
                                 </View>
-                                {/* Greeting */}
                                 <View style={styles.greetingContainer}>
                                     <Text
                                         variant="md"
@@ -362,7 +391,7 @@ export function RegisterScreen({
                                         forma segura
                                     </Text>
                                 </View>
-                                {/* Registration Form */}
+
                                 <Animated.View
                                     style={{
                                         transform: [
@@ -371,7 +400,6 @@ export function RegisterScreen({
                                     }}
                                 >
                                     <Stack spacing={10}>
-                                        {/* Names Row */}
                                         <Row
                                             style={styles.namesRow}
                                             spacing={10}
@@ -404,25 +432,21 @@ export function RegisterScreen({
                                                     }
                                                 />
                                                 {firstNameState.touched &&
-                                                firstNameState.error ? (
-                                                    <Text
-                                                        variant="xm"
-                                                        style={[
-                                                            styles.errorText,
+                                                    firstNameState.error && (
+                                                        <Text
+                                                            variant="xm"
+                                                            style={[
+                                                                styles.errorText,
+                                                                {
+                                                                    color: colors.error,
+                                                                },
+                                                            ]}
+                                                        >
                                                             {
-                                                                color: colors.error,
-                                                            },
-                                                        ]}
-                                                    >
-                                                        {firstNameState.error}
-                                                    </Text>
-                                                ) : (
-                                                    <View
-                                                        style={
-                                                            styles.errorPlaceholder
-                                                        }
-                                                    />
-                                                )}
+                                                                firstNameState.error
+                                                            }
+                                                        </Text>
+                                                    )}
                                             </View>
                                             <View style={styles.nameField}>
                                                 <Text
@@ -453,28 +477,24 @@ export function RegisterScreen({
                                                     }
                                                 />
                                                 {lastNameState.touched &&
-                                                lastNameState.error ? (
-                                                    <Text
-                                                        variant="xm"
-                                                        style={[
-                                                            styles.errorText,
+                                                    lastNameState.error && (
+                                                        <Text
+                                                            variant="xm"
+                                                            style={[
+                                                                styles.errorText,
+                                                                {
+                                                                    color: colors.error,
+                                                                },
+                                                            ]}
+                                                        >
                                                             {
-                                                                color: colors.error,
-                                                            },
-                                                        ]}
-                                                    >
-                                                        {lastNameState.error}
-                                                    </Text>
-                                                ) : (
-                                                    <View
-                                                        style={
-                                                            styles.errorPlaceholder
-                                                        }
-                                                    />
-                                                )}
+                                                                lastNameState.error
+                                                            }
+                                                        </Text>
+                                                    )}
                                             </View>
                                         </Row>
-                                        {/* Email */}
+
                                         <View>
                                             <Text
                                                 variant="sm"
@@ -506,25 +526,21 @@ export function RegisterScreen({
                                                 }
                                             />
                                             {emailState.touched &&
-                                            emailState.error ? (
-                                                <Text
-                                                    variant="xm"
-                                                    style={[
-                                                        styles.errorText,
-                                                        { color: colors.error },
-                                                    ]}
-                                                >
-                                                    {emailState.error}
-                                                </Text>
-                                            ) : (
-                                                <View
-                                                    style={
-                                                        styles.errorPlaceholder
-                                                    }
-                                                />
-                                            )}
+                                                emailState.error && (
+                                                    <Text
+                                                        variant="xm"
+                                                        style={[
+                                                            styles.errorText,
+                                                            {
+                                                                color: colors.error,
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {emailState.error}
+                                                    </Text>
+                                                )}
                                         </View>
-                                        {/* Password */}
+
                                         <View>
                                             <Text
                                                 variant="sm"
@@ -541,7 +557,7 @@ export function RegisterScreen({
                                             >
                                                 <TextField
                                                     ref={passwordInputRef}
-                                                    placeholder="Mínimo 6 caracteres"
+                                                    placeholder="Mínimo 8 caracteres"
                                                     value={password}
                                                     onChangeText={setPassword}
                                                     onBlur={() =>
@@ -568,53 +584,43 @@ export function RegisterScreen({
                                                     style={
                                                         styles.eyeIconContainer
                                                     }
-                                                    hitSlop={{
-                                                        top: 10,
-                                                        bottom: 10,
-                                                        left: 10,
-                                                        right: 10,
-                                                    }}
+                                                    accessibilityLabel={
+                                                        isPasswordVisible
+                                                            ? "Ocultar contraseña"
+                                                            : "Mostrar contraseña"
+                                                    }
                                                 >
-                                                    {isPasswordVisible ? (
-                                                        <EyeIcon
-                                                            width={20}
-                                                            height={20}
-                                                            color={
-                                                                colors.secondaryText
-                                                            }
-                                                        />
-                                                    ) : (
-                                                        <EyeOffIcon
-                                                            width={20}
-                                                            height={20}
-                                                            color={
-                                                                colors.secondaryText
-                                                            }
-                                                        />
-                                                    )}
+                                                    <FontAwesome6
+                                                        name={
+                                                            isPasswordVisible
+                                                                ? "eye"
+                                                                : "eye-slash"
+                                                        }
+                                                        size={20}
+                                                        color={
+                                                            colors.secondaryText
+                                                        }
+                                                        iconStyle="solid"
+                                                    />
                                                 </TouchableOpacity>
                                             </View>
                                             {renderPasswordStrength()}
                                             {passwordState.touched &&
-                                            passwordState.error ? (
-                                                <Text
-                                                    variant="xm"
-                                                    style={[
-                                                        styles.errorText,
-                                                        { color: colors.error },
-                                                    ]}
-                                                >
-                                                    {passwordState.error}
-                                                </Text>
-                                            ) : (
-                                                <View
-                                                    style={
-                                                        styles.errorPlaceholder
-                                                    }
-                                                />
-                                            )}
+                                                passwordState.error && (
+                                                    <Text
+                                                        variant="xm"
+                                                        style={[
+                                                            styles.errorText,
+                                                            {
+                                                                color: colors.error,
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {passwordState.error}
+                                                    </Text>
+                                                )}
                                         </View>
-                                        {/* Confirm Password */}
+
                                         <View>
                                             <Text
                                                 variant="sm"
@@ -644,7 +650,7 @@ export function RegisterScreen({
                                                         )
                                                     }
                                                     secureTextEntry={
-                                                        !isPasswordVisible
+                                                        !isConfirmPasswordVisible
                                                     }
                                                     returnKeyType="done"
                                                     onSubmitEditing={
@@ -655,28 +661,54 @@ export function RegisterScreen({
                                                         !!confirmPasswordState.error
                                                     }
                                                 />
+                                                <TouchableOpacity
+                                                    onPress={() =>
+                                                        setConfirmPasswordVisible(
+                                                            !isConfirmPasswordVisible,
+                                                        )
+                                                    }
+                                                    style={
+                                                        styles.eyeIconContainer
+                                                    }
+                                                    accessibilityLabel={
+                                                        isConfirmPasswordVisible
+                                                            ? "Ocultar confirmación de contraseña"
+                                                            : "Mostrar confirmación de contraseña"
+                                                    }
+                                                >
+                                                    <FontAwesome6
+                                                        name={
+                                                            isConfirmPasswordVisible
+                                                                ? "eye"
+                                                                : "eye-slash"
+                                                        }
+                                                        size={20}
+                                                        color={
+                                                            colors.secondaryText
+                                                        }
+                                                        iconStyle="solid"
+                                                    />
+                                                </TouchableOpacity>
                                             </View>
                                             {confirmPasswordState.touched &&
-                                            confirmPasswordState.error ? (
-                                                <Text
-                                                    variant="xm"
-                                                    style={[
-                                                        styles.errorText,
-                                                        { color: colors.error },
-                                                    ]}
-                                                >
-                                                    {confirmPasswordState.error}
-                                                </Text>
-                                            ) : (
-                                                <View
-                                                    style={
-                                                        styles.errorPlaceholder
-                                                    }
-                                                />
-                                            )}
+                                                confirmPasswordState.error && (
+                                                    <Text
+                                                        variant="xm"
+                                                        style={[
+                                                            styles.errorText,
+                                                            {
+                                                                color: colors.error,
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {
+                                                            confirmPasswordState.error
+                                                        }
+                                                    </Text>
+                                                )}
                                         </View>
-                                        {/* General form error */}
-                                        {errors.form ? (
+
+                                        {errors.form && (
                                             <Text
                                                 variant="sm"
                                                 style={[
@@ -686,19 +718,17 @@ export function RegisterScreen({
                                             >
                                                 {errors.form}
                                             </Text>
-                                        ) : null}
+                                        )}
                                     </Stack>
                                 </Animated.View>
-                                {/* Terms and Conditions */}
+
                                 <View style={styles.termsContainer}>
                                     <View style={styles.checkboxWrapper}>
                                         <Checkbox
                                             checked={acceptedTerms}
-                                            onToggle={() => {
+                                            onToggle={() =>
                                                 setIsTermsModalVisible(true)
-                                                markTouched("acceptedTerms")
-                                            }}
-                                            // Removed style prop
+                                            }
                                         />
                                     </View>
                                     <View style={styles.termsTextContainer}>
@@ -725,24 +755,21 @@ export function RegisterScreen({
                                             </Text>
                                         </Text>
                                         {acceptedTermsState.touched &&
-                                        acceptedTermsState.error ? (
-                                            <Text
-                                                variant="xm"
-                                                style={[
-                                                    styles.errorText,
-                                                    { color: colors.error },
-                                                ]}
-                                            >
-                                                {acceptedTermsState.error}
-                                            </Text>
-                                        ) : (
-                                            <View
-                                                style={styles.errorPlaceholder}
-                                            />
-                                        )}
+                                            acceptedTermsState.error && (
+                                                <Text
+                                                    variant="xm"
+                                                    style={[
+                                                        styles.errorText,
+                                                        styles.termsErrorText,
+                                                        { color: colors.error },
+                                                    ]}
+                                                >
+                                                    {acceptedTermsState.error}
+                                                </Text>
+                                            )}
                                     </View>
                                 </View>
-                                {/* Register Button */}
+
                                 <Animated.View
                                     style={[
                                         { transform: [{ scale: buttonScale }] },
@@ -771,7 +798,7 @@ export function RegisterScreen({
                                         )}
                                     </Button>
                                 </Animated.View>
-                                {/* Login Link */}
+
                                 <Row
                                     style={styles.loginContainer}
                                     justify="center"
@@ -808,7 +835,6 @@ export function RegisterScreen({
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            {/* Terms and Conditions Modal */}
             <Modal
                 visible={isTermsModalVisible}
                 animationType="slide"
@@ -823,16 +849,12 @@ export function RegisterScreen({
     )
 }
 
-// --- Styles ---
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    scrollContainer: { flexGrow: 1 },
+    scrollContainer: { flexGrow: 1, justifyContent: "center" },
     inner: {
         paddingHorizontal: 24,
-        paddingTop: 60,
-        paddingBottom: 30,
-        flex: 1,
-        justifyContent: "center",
+        paddingVertical: 30,
     },
     logoContainer: { alignItems: "center", marginBottom: 15 },
     logoShadow: {
@@ -846,22 +868,26 @@ const styles = StyleSheet.create({
     title: { textAlign: "center" },
     subtitle: { textAlign: "center", marginTop: 4 },
     namesRow: {
-        /* Using Row component spacing */
+        /* Uses Row component spacing */
     },
     nameField: { flex: 1 },
     inputLabel: { marginBottom: 6, marginLeft: 4, fontSize: 14 },
-    // inputBase style removed
-    // inputError style removed
     passwordContainer: { position: "relative", justifyContent: "center" },
     eyeIconContainer: {
         position: "absolute",
-        right: 16,
+        right: 0,
+        paddingHorizontal: 16,
         height: "100%",
         justifyContent: "center",
+        alignItems: "center",
     },
-    errorText: { marginTop: 4, fontSize: 12, minHeight: 16 },
-    errorPlaceholder: { minHeight: 16 },
-    formErrorText: { textAlign: "center", marginVertical: 8 },
+    errorText: {
+        marginTop: 4,
+        fontSize: 12,
+        minHeight: 16,
+    },
+    termsErrorText: { textAlign: "left", marginLeft: 0 },
+    formErrorText: { textAlign: "center", marginVertical: 8, fontSize: 14 },
     termsContainer: {
         flexDirection: "row",
         alignItems: "flex-start",
@@ -869,7 +895,7 @@ const styles = StyleSheet.create({
     },
     checkboxWrapper: {
         marginRight: 10,
-        marginTop: 3,
+        marginTop: 1,
     },
     termsTextContainer: { flex: 1 },
     termsText: { lineHeight: 20 },
