@@ -1,7 +1,7 @@
 import React from "react"
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
-import { useTheme } from "../../../hooks/useTheme.ts"
-import ExpiredIcon from "../assets/svg/error.svg"
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
+import { useTheme } from "../../../hooks/useTheme"
 
 export interface ExpiredDocumentCardProps {
     documentName: string
@@ -17,6 +17,7 @@ export function ExpiredDocumentCard({
     testID,
 }: ExpiredDocumentCardProps) {
     const { colors } = useTheme()
+    const iconSize = 36
 
     return (
         <TouchableOpacity
@@ -27,20 +28,35 @@ export function ExpiredDocumentCard({
                     backgroundColor: colors.card,
                     borderColor: colors.error,
                     borderWidth: 1.5,
-                    opacity: 0.7,
+                    opacity: 0.75,
                 },
             ]}
             onPress={onPress}
-            testID={testID}
+            testID={
+                testID ??
+                `expired-doc-${documentName.replace(/\s+/g, "-").toLowerCase()}`
+            }
+            activeOpacity={0.8}
         >
-            <ExpiredIcon width={40} height={40} />
+            <View style={styles.iconContainer}>
+                <FontAwesome6
+                    name="calendar-xmark"
+                    size={iconSize}
+                    color={colors.error}
+                    iconStyle="solid"
+                />
+            </View>
             <View
                 style={[styles.textContainer, { shadowColor: colors.shadow }]}
             >
                 <Text style={[styles.title, { color: colors.error }]}>
-                    Documento expirado
+                    Documento Expirado
                 </Text>
-                <Text style={[styles.document, { color: colors.text }]}>
+                <Text
+                    style={[styles.documentName, { color: colors.text }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                >
                     {documentName}
                 </Text>
                 <Text style={[styles.date, { color: colors.error }]}>
@@ -55,27 +71,37 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
         alignItems: "center",
-        padding: 10,
-        borderRadius: 10,
+        padding: 12,
+        borderRadius: 12,
         shadowOpacity: 0.1,
-        shadowOffset: { width: 0, height: 3 },
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
         elevation: 3,
         height: 90,
-        marginHorizontal: 5,
+        marginHorizontal: 8,
+        minWidth: 220,
+    },
+    iconContainer: {
+        marginRight: 12,
+        alignItems: "center",
+        justifyContent: "center",
     },
     textContainer: {
-        marginLeft: 20,
+        marginLeft: 0,
+        flex: 1,
     },
     title: {
         fontSize: 14,
         fontWeight: "bold",
+        marginBottom: 2,
     },
-    document: {
+    documentName: {
         fontSize: 14,
+        fontWeight: "500",
+        marginBottom: 2,
     },
     date: {
         fontSize: 12,
-        fontWeight: "bold",
+        fontWeight: "500",
     },
 })

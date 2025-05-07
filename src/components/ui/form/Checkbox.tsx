@@ -1,16 +1,27 @@
 import React from "react"
-import { TouchableOpacity, View, Text, StyleSheet } from "react-native"
-import { useTheme } from "../../../hooks/useTheme.ts"
-import CheckIcon from "../assets/svg/Check.svg"
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
+import { useTheme } from "../../../hooks/useTheme"
 
 export interface CheckboxProps {
     checked: boolean
     onToggle: () => void
     label?: string
     testID?: string
+    checkboxSize?: number
+    iconSize?: number
+    labelStyle?: object
 }
 
-export function Checkbox({ checked, onToggle, label, testID }: CheckboxProps) {
+export function Checkbox({
+    checked,
+    onToggle,
+    label,
+    testID,
+    checkboxSize = 24,
+    iconSize = 16,
+    labelStyle,
+}: CheckboxProps) {
     const { colors } = useTheme()
 
     return (
@@ -19,28 +30,41 @@ export function Checkbox({ checked, onToggle, label, testID }: CheckboxProps) {
             onPress={onToggle}
             testID={testID ?? "checkbox"}
             activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked }}
+            accessibilityLabel={label}
         >
             {/* Checkbox Square */}
             <View
                 style={[
-                    styles.checkbox,
+                    styles.checkboxSquare,
                     // eslint-disable-next-line react-native/no-color-literals,react-native/no-inline-styles
                     {
+                        width: checkboxSize,
+                        height: checkboxSize,
                         borderColor: colors.primary,
                         backgroundColor: checked
                             ? colors.primary
                             : "transparent",
+                        borderRadius: checkboxSize * 0.25,
                     },
                 ]}
             >
                 {checked && (
-                    <CheckIcon width={18} height={18} stroke={"#FFFFFF"} />
+                    <FontAwesome6
+                        name="check"
+                        size={iconSize}
+                        color={"#FFFFFF"}
+                        iconStyle="solid"
+                    />
                 )}
             </View>
 
             {/* Label */}
             {label && (
-                <Text style={[styles.label, { color: colors.secondaryText }]}>
+                <Text
+                    style={[styles.label, { color: colors.text }, labelStyle]}
+                >
                     {label}
                 </Text>
             )}
@@ -52,17 +76,15 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
         alignItems: "center",
+        paddingVertical: 4,
     },
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: 6, // Slightly rounded corners
+    checkboxSquare: {
         borderWidth: 2,
         alignItems: "center",
         justifyContent: "center",
     },
     label: {
         fontSize: 16,
-        marginLeft: 8,
+        marginLeft: 10,
     },
 })

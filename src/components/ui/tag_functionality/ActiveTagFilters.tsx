@@ -1,14 +1,14 @@
 import React from "react"
 import {
-    View,
-    StyleSheet,
-    TouchableOpacity,
     ScrollView,
+    StyleSheet,
     Text,
+    TouchableOpacity,
+    View,
 } from "react-native"
 import { Row } from "../layout"
 import { useTheme } from "../../../hooks/useTheme"
-import { useTagContext, Tag } from "./TagContext"
+import { Tag, useTagContext } from "./TagContext"
 
 interface ActiveTagFiltersProps {
     selectedTagFilters: string[]
@@ -37,7 +37,7 @@ export function ActiveTagFilters({
         <View style={styles.container} testID={testID ?? "active-tag-filters"}>
             <Row align="center" spacing={5} style={styles.rowContainer}>
                 <Text style={[styles.label, { color: colors.secondaryText }]}>
-                    Filtered by:
+                    Filtrado por
                 </Text>
 
                 <ScrollView

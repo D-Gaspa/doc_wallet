@@ -1,16 +1,16 @@
 import React, { useState } from "react"
 import {
-    View,
+    GestureResponderEvent,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    ScrollView,
-    GestureResponderEvent,
+    View,
+    ViewStyle,
 } from "react-native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import { Tag, TagProps } from "./Tag"
 import { useTheme } from "../../../hooks/useTheme"
-import PlusIcon from "../assets/svg/plus.svg"
-import ChevronUpIcon from "../assets/svg/chevronup.svg"
 
 export interface TagItem {
     id: string
@@ -31,6 +31,10 @@ export interface TagListProps {
     size?: TagProps["size"]
 }
 
+const getCollapsedDotSelectedStyle = (color: string): ViewStyle => ({
+    borderColor: color,
+})
+
 export function TagList({
     tags,
     onTagPress,
@@ -46,62 +50,66 @@ export function TagList({
     const { colors } = useTheme()
     const [isExpanded, setIsExpanded] = useState(initiallyExpanded)
 
-    const PREVIEW_COUNT = 3
-    const previewTags = tags.slice(0, PREVIEW_COUNT)
-    const remainingTagsCount = tags.length - PREVIEW_COUNT
-    const showMoreIndicator = remainingTagsCount > 0
+    const PREVIEW_DOT_COUNT = 3
+    const PREVIEW_TAG_COUNT_VERTICAL = 3
+
     const canShowAddButton = showAddTagButton && onAddTagPress
 
-    if (tags.length === 0 && !canShowAddButton) return null
+    if (tags.length === 0 && !canShowAddButton) {
+        return null
+    }
 
-    /* Handlers */
     const handleTagPress = (tagId: string) => onTagPress?.(tagId)
     const handleTagLongPress = (tagId: string) => onTagLongPress?.(tagId)
 
-    const expandTags = () => {
-        if (previewTags.length > 0 || showMoreIndicator || canShowAddButton) {
-            setIsExpanded(true)
-        }
-    }
-
-    const collapseTags = (e?: GestureResponderEvent) => {
+    const toggleExpansion = (e?: GestureResponderEvent) => {
         e?.stopPropagation()
-        setIsExpanded(false)
+        setIsExpanded((prev) => !prev)
     }
 
-    /* Render */
-    return (
-        <View style={styles.outerContainer}>
-            {isExpanded ? (
+    const renderSmallAddButton = () => (
+        <TouchableOpacity
+            style={[
+                styles.addTagButtonSmall,
+                {
+                    backgroundColor: colors.primary + "20",
+                    borderColor: colors.primary,
+                },
+            ]}
+            onPress={onAddTagPress}
+            testID="add-tag-button-small"
+            accessibilityLabel="Añadir etiqueta"
+            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+        >
+            <FontAwesome6
+                name="plus"
+                size={10}
+                color={colors.primary}
+                iconStyle="solid"
+            />
+        </TouchableOpacity>
+    )
+
+    if (isExpanded) {
+        return (
+            <View
+                style={
+                    horizontal
+                        ? styles.expandedHorizontalContainer
+                        : styles.expandedVerticalContainer
+                }
+            >
                 <ScrollView
                     horizontal={horizontal}
                     showsHorizontalScrollIndicator={false}
                     showsVerticalScrollIndicator={false}
-                    style={[
-                        styles.scrollContainer,
-                        !horizontal && styles.verticalScroll,
-                    ]}
-                    contentContainerStyle={[
-                        styles.container,
+                    contentContainerStyle={
                         horizontal
-                            ? styles.horizontalContainer
-                            : styles.verticalContainer,
-                    ]}
+                            ? styles.scrollContentHorizontal
+                            : styles.scrollContentVertical
+                    }
                     testID={testID ?? "tag-list-expanded"}
                 >
-                    <TouchableOpacity
-                        style={styles.collapseButton}
-                        onPress={collapseTags}
-                        testID="collapse-tags-button"
-                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                    >
-                        <ChevronUpIcon
-                            width={14}
-                            height={14}
-                            stroke={colors.secondaryText}
-                        />
-                    </TouchableOpacity>
-
                     {tags.map((tag) => (
                         <Tag
                             key={tag.id}
@@ -114,166 +122,222 @@ export function TagList({
                             size={size}
                         />
                     ))}
-
                     {canShowAddButton && (
                         <TouchableOpacity
                             style={[
-                                styles.addTagButtonSmall,
-                                {
-                                    backgroundColor: colors.primary + "20",
-                                    borderColor: colors.primary,
-                                },
+                                styles.addTagButtonExpanded,
+                                { borderColor: colors.primary },
                             ]}
                             onPress={onAddTagPress}
                             testID="add-tag-button-expanded"
-                            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                            accessibilityLabel="Añadir etiqueta"
                         >
-                            <PlusIcon
-                                width={10}
-                                height={10}
-                                fill={colors.primary}
+                            <FontAwesome6
+                                name="plus"
+                                size={10}
+                                color={colors.primary}
+                                iconStyle="solid"
                             />
+                            <Text
+                                style={[
+                                    styles.addTagButtonText,
+                                    { color: colors.primary },
+                                ]}
+                            >
+                                Añadir
+                            </Text>
                         </TouchableOpacity>
                     )}
                 </ScrollView>
-            ) : (
+                {/* Collapse Button - shown only when expanded */}
                 <TouchableOpacity
-                    style={[
-                        styles.container,
-                        styles.collapsedContainer,
-                        !horizontal && styles.verticalContainer,
-                    ]}
-                    onPress={expandTags}
-                    disabled={
-                        !(
-                            previewTags.length > 0 ||
-                            showMoreIndicator ||
-                            canShowAddButton
-                        )
-                    }
-                    testID={testID ?? "tag-list-collapsed"}
-                    activeOpacity={0.7}
+                    style={styles.commonChevronButton}
+                    onPress={toggleExpansion}
+                    testID="collapse-tags-button"
+                    accessibilityLabel="Mostrar menos etiquetas"
                 >
-                    {previewTags.map((tag) => (
+                    <FontAwesome6
+                        name="chevron-up"
+                        size={14}
+                        color={colors.secondaryText}
+                        iconStyle="solid"
+                    />
+                </TouchableOpacity>
+            </View>
+        )
+    }
+
+    const itemsToShowCollapsed = horizontal
+        ? PREVIEW_DOT_COUNT
+        : PREVIEW_TAG_COUNT_VERTICAL
+    const displayedCollapsedTags = tags.slice(0, itemsToShowCollapsed)
+    const remainingCount = tags.length - displayedCollapsedTags.length
+    const showMoreCollapsedIndicator = remainingCount > 0
+
+    return (
+        <TouchableOpacity
+            style={styles.collapsedOuterContainer}
+            onPress={toggleExpansion}
+            disabled={tags.length === 0 && !canShowAddButton}
+            testID={testID ?? "tag-list-collapsed"}
+            activeOpacity={0.7}
+            accessibilityLabel="Mostrar más etiquetas"
+        >
+            <View style={styles.collapsedInnerContainer}>
+                {displayedCollapsedTags.map((tag) =>
+                    horizontal ? (
                         <View
                             key={tag.id}
                             style={[
                                 styles.collapsedDot,
                                 { backgroundColor: tag.color },
                                 selectedTags.includes(tag.id) &&
-                                    styles.collapsedDotSelected,
+                                    getCollapsedDotSelectedStyle(
+                                        colors.primary,
+                                    ),
                             ]}
                         />
-                    ))}
-                    {showMoreIndicator && (
-                        <View style={styles.moreTagsIndicator}>
-                            <Text
-                                style={[
-                                    styles.moreTagsText,
-                                    { color: colors.secondaryText },
-                                ]}
-                            >
-                                +{remainingTagsCount}
-                            </Text>
-                        </View>
-                    )}
-                    {canShowAddButton && (
-                        <TouchableOpacity
+                    ) : (
+                        <Tag
+                            key={tag.id}
+                            id={tag.id}
+                            name={tag.name}
+                            color={tag.color}
+                            selected={selectedTags.includes(tag.id)}
+                            onPress={() => {
+                                handleTagPress(tag.id)
+                            }}
+                            onLongPress={() => {
+                                handleTagLongPress(tag.id)
+                            }}
+                            size="small"
+                        />
+                    ),
+                )}
+                {showMoreCollapsedIndicator && (
+                    <View style={styles.moreTagsIndicator}>
+                        <Text
                             style={[
-                                styles.addTagButtonSmall,
-                                {
-                                    backgroundColor: colors.primary + "20",
-                                    borderColor: colors.primary,
-                                },
+                                styles.moreTagsText,
+                                { color: colors.secondaryText },
                             ]}
-                            onPress={onAddTagPress}
-                            testID="add-tag-button-collapsed"
-                            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                         >
-                            <PlusIcon
-                                width={10}
-                                height={10}
-                                fill={colors.primary}
-                            />
-                        </TouchableOpacity>
-                    )}
+                            +{remainingCount}
+                        </Text>
+                    </View>
+                )}
+                {canShowAddButton && renderSmallAddButton()}
+            </View>
+            {/* Expand Chevron - shown only when collapsed and there's something to expand */}
+            {(tags.length > itemsToShowCollapsed ||
+                (tags.length > 0 &&
+                    !isExpanded &&
+                    canShowAddButton &&
+                    !showMoreCollapsedIndicator &&
+                    displayedCollapsedTags.length === tags.length)) && (
+                <TouchableOpacity
+                    style={styles.commonChevronButton}
+                    onPress={toggleExpansion}
+                    accessibilityLabel="Mostrar más etiquetas"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                    <FontAwesome6
+                        name="chevron-down"
+                        size={14}
+                        color={colors.secondaryText}
+                        iconStyle="solid"
+                    />
                 </TouchableOpacity>
             )}
-        </View>
+        </TouchableOpacity>
     )
 }
 
 const styles = StyleSheet.create({
-    outerContainer: {
-        minHeight: 28,
-        justifyContent: "center",
-    },
-    container: {
+    expandedHorizontalContainer: {
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 2,
+        width: "100%",
     },
-    horizontalContainer: {
-        flexWrap: "nowrap",
-    },
-    verticalContainer: {
+    expandedVerticalContainer: {
         flexDirection: "column",
         alignItems: "flex-start",
-        flexWrap: "wrap",
+        width: "100%",
     },
-    scrollContainer: {
-        maxHeight: 120,
+    scrollContentHorizontal: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingRight: 5,
     },
-    verticalScroll: {
-        maxHeight: undefined,
+    scrollContentVertical: {
+        flexDirection: "column",
+        alignItems: "flex-start",
+        paddingBottom: 5,
     },
-    collapsedContainer: {
-        flexWrap: "nowrap",
+    collapsedOuterContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        width: "100%",
+        paddingVertical: 2,
+    },
+    collapsedInnerContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        flexShrink: 1,
         overflow: "hidden",
-        paddingLeft: 2,
     },
+    // eslint-disable-next-line react-native/no-color-literals
     collapsedDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        marginHorizontal: 2.5,
-        marginVertical: 2,
-    },
-    collapsedDotSelected: {
-        borderWidth: 1.5,
-        opacity: 0.8,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginHorizontal: 2,
+        marginVertical: 4,
+        borderWidth: 0.5,
+        borderColor: "transparent",
     },
     moreTagsIndicator: {
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        marginHorizontal: 2,
-        marginVertical: 2,
-        height: 22,
+        paddingHorizontal: 5,
         justifyContent: "center",
         alignItems: "center",
-        borderRadius: 12,
+        height: 20,
+        marginHorizontal: 1,
     },
     moreTagsText: {
         fontSize: 10,
+        fontWeight: "500",
+    },
+    addTagButtonExpanded: {
+        flexDirection: "row",
+        alignItems: "center",
+        borderRadius: 14,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        marginHorizontal: 4,
+        marginVertical: 2,
+        borderWidth: 1,
+    },
+    addTagButtonText: {
+        marginLeft: 4,
+        fontSize: 12,
         fontWeight: "500",
     },
     addTagButtonSmall: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: 12,
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        height: 22,
+        borderRadius: 10,
+        paddingHorizontal: 5,
+        paddingVertical: 2.5,
+        height: 20,
         marginHorizontal: 2,
-        marginVertical: 2,
         borderWidth: 1,
     },
-    collapseButton: {
-        justifyContent: "center",
+    commonChevronButton: {
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+        marginLeft: 4,
         alignItems: "center",
-        paddingHorizontal: 4,
-        marginRight: 4,
-        height: 22,
+        justifyContent: "center",
     },
 })
