@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useMemo } from "react"
 import {
     ScrollView,
     StyleSheet,
@@ -6,8 +6,8 @@ import {
     TouchableOpacity,
     View,
 } from "react-native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import { useTheme } from "../../../../hooks/useTheme"
-import RightChevronIcon from "../../assets/svg/chevron-right.svg"
 
 export interface BreadcrumbItem {
     id: string | null
@@ -26,13 +26,20 @@ export function BreadcrumbNavigation({
     testID,
 }: BreadcrumbNavigationProps) {
     const { colors } = useTheme()
+    const iconSize = 12
 
-    const displayPath =
-        path.length > 0 && path[0].id !== null
-            ? [{ id: null, title: "Root" }, ...path]
-            : path.length === 0
-            ? [{ id: null, title: "Root" }]
-            : path
+    const displayPath = useMemo(() => {
+        const rootLabel = "Inicio"
+        if (path.length === 0) {
+            return [{ id: null, title: rootLabel }]
+        }
+        if (path[0].id !== null && path[0].title !== rootLabel) {
+            return [{ id: null, title: rootLabel }, ...path]
+        }
+        return path.map((item) =>
+            item.id === null ? { ...item, title: rootLabel } : item,
+        )
+    }, [path])
 
     return (
         <View
@@ -44,39 +51,47 @@ export function BreadcrumbNavigation({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-                {displayPath.map((item, index) => (
-                    <React.Fragment key={item.id ?? "root"}>
-                        <TouchableOpacity
-                            style={styles.breadcrumbItem}
-                            onPress={() => onNavigate(item.id)}
-                            disabled={index === displayPath.length - 1}
-                        >
-                            <Text
-                                style={[
-                                    styles.breadcrumbText,
-                                    index === displayPath.length - 1
-                                        ? // eslint-disable-next-line react-native/no-inline-styles
-                                          {
-                                              color: colors.text,
-                                              fontWeight: "bold",
-                                          }
-                                        : { color: colors.primary },
-                                ]}
-                                numberOfLines={1}
+                {displayPath.map((item, index) => {
+                    const isLastItem = index === displayPath.length - 1
+                    return (
+                        <React.Fragment key={item.id ?? "root-breadcrumb"}>
+                            <TouchableOpacity
+                                style={styles.breadcrumbItem}
+                                onPress={() => onNavigate(item.id)}
+                                disabled={isLastItem}
+                                accessibilityRole="button"
+                                accessibilityLabel={item.title}
+                                accessibilityState={{ disabled: isLastItem }}
                             >
-                                {item.title}
-                            </Text>
-                        </TouchableOpacity>
-                        {index < displayPath.length - 1 && (
-                            <RightChevronIcon
-                                width={12}
-                                height={12}
-                                stroke={colors.secondaryText}
-                                style={styles.separator}
-                            />
-                        )}
-                    </React.Fragment>
-                ))}
+                                <Text
+                                    style={[
+                                        styles.breadcrumbText,
+                                        isLastItem
+                                            ? // eslint-disable-next-line react-native/no-inline-styles
+                                              {
+                                                  color: colors.text,
+                                                  fontWeight: "bold",
+                                              }
+                                            : { color: colors.primary },
+                                    ]}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                >
+                                    {item.title}
+                                </Text>
+                            </TouchableOpacity>
+                            {!isLastItem && (
+                                <FontAwesome6
+                                    name="chevron-right"
+                                    size={iconSize}
+                                    color={colors.secondaryText}
+                                    iconStyle="solid"
+                                    style={styles.separator}
+                                />
+                            )}
+                        </React.Fragment>
+                    )
+                })}
             </ScrollView>
         </View>
     )
@@ -85,19 +100,21 @@ export function BreadcrumbNavigation({
 const styles = StyleSheet.create({
     container: {
         paddingVertical: 8,
-        marginBottom: 8,
         minHeight: 35,
     },
     scrollContent: {
         alignItems: "center",
+        paddingHorizontal: 4,
     },
     breadcrumbItem: {
-        paddingHorizontal: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+        borderRadius: 4,
     },
     breadcrumbText: {
         fontSize: 14,
     },
     separator: {
-        marginHorizontal: 4,
+        marginHorizontal: 6,
     },
 })

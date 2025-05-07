@@ -1,18 +1,17 @@
 import React from "react"
 import {
-    View,
-    Text,
-    StyleSheet,
+    Dimensions,
     Image,
     ImageSourcePropType,
+    StyleSheet,
+    Text,
     TouchableOpacity,
-    Dimensions, // Import Dimensions
+    View,
 } from "react-native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import { useTheme } from "../../../hooks/useTheme"
 import { useNavigation } from "@react-navigation/native"
-import SettingsIcon from "../assets/svg/settings.svg"
-import NotificationsIcon from "../assets/svg/bell.svg"
-import DefaultProfile from "../../ui/assets/images/default-avatar.png"
+import DefaultProfile from "../assets/images/default-avatar.png"
 
 const screenWidth = Dimensions.get("window").width
 const containerPadding = 20
@@ -21,8 +20,9 @@ export interface ProfileHeaderProps {
     username: string
     profileImage?: string
     coverImage?: string
-    onPressEdit: () => void
+    onPressEdit?: () => void
     onPressNotifications?: () => void
+    testID?: string
 }
 
 export function ProfileHeader({
@@ -30,6 +30,7 @@ export function ProfileHeader({
     profileImage,
     coverImage,
     onPressNotifications,
+    testID,
 }: ProfileHeaderProps) {
     const { colors } = useTheme()
     const navigation = useNavigation()
@@ -46,21 +47,18 @@ export function ProfileHeader({
         navigation.navigate("Settings" as never)
     }
 
-    // Placeholder for navigation to notifications
     const handleGoToNotifications = () => {
         if (onPressNotifications) {
             onPressNotifications()
         } else {
-            // navigation.navigate("Notifications" as never); // Example navigation
+            navigation.navigate("Notifications" as never)
             console.log("Navigate to Notifications")
         }
     }
 
     return (
-        // Note: Container style is removed as positioning is handled internally now
-        <View style={styles.outerContainer}>
-            {/* Cover Photo Area - Use negative margin to extend edge-to-edge */}
-            {/* This assumes the parent container has horizontal padding */}
+        <View style={styles.outerContainer} testID={testID ?? "profile-header"}>
+            {/* Cover Photo Area */}
             <View
                 style={[
                     styles.coverPhotoContainer,
@@ -79,34 +77,39 @@ export function ProfileHeader({
 
                 {/* Icons Wrapper (Top Right) */}
                 <View style={styles.headerIconsWrapper}>
+                    {/* Notifications Button */}
                     <TouchableOpacity
-                        onPress={handleGoToNotifications} // Use the new handler
+                        onPress={handleGoToNotifications}
                         style={[
-                            styles.iconButton, // Use common style
+                            styles.iconButton,
                             { backgroundColor: colors.card + "aa" },
                         ]}
                         testID="go-to-notifications"
+                        accessibilityLabel="Ir a notificaciones"
                     >
-                        {/* Use the new Notifications Icon */}
-                        <NotificationsIcon
-                            width={22}
-                            height={22}
+                        <FontAwesome6
+                            name="bell"
+                            size={20}
                             color={colors.text}
+                            iconStyle="solid"
                         />
                     </TouchableOpacity>
 
+                    {/* Settings Button */}
                     <TouchableOpacity
                         onPress={handleGoToSettings}
                         style={[
-                            styles.iconButton, // Use common style
+                            styles.iconButton,
                             { backgroundColor: colors.card + "aa" },
                         ]}
                         testID="go-to-settings"
+                        accessibilityLabel="Ir a configuración"
                     >
-                        <SettingsIcon
-                            width={22}
-                            height={22}
+                        <FontAwesome6
+                            name="gear"
+                            size={20}
                             color={colors.text}
+                            iconStyle="solid"
                         />
                     </TouchableOpacity>
                 </View>
@@ -114,8 +117,8 @@ export function ProfileHeader({
 
             {/* Profile Content Area (Avatar and Name) */}
             <View style={styles.profileInfoContainer}>
-                {/* Profile Picture (Overlapping Cover) - No edit overlay */}
-                <View // Changed Pressable to View, edit button is now separate
+                {/* Profile Picture */}
+                <View
                     style={[
                         styles.avatarWrapper,
                         { borderColor: colors.background },
@@ -127,7 +130,7 @@ export function ProfileHeader({
                     />
                 </View>
 
-                {/* Username Below Avatar */}
+                {/* Username */}
                 <Text style={[styles.username, { color: colors.text }]}>
                     {username}
                 </Text>
@@ -139,15 +142,15 @@ export function ProfileHeader({
 const styles = StyleSheet.create({
     outerContainer: {
         alignItems: "center",
-        width: "100%", // Takes full width from parent
+        width: "100%",
+        marginBottom: 20,
     },
     coverPhotoContainer: {
-        width: screenWidth, // Force full screen width
-        // Use negative margin to counter parent padding (adjust 'containerPadding' if needed)
+        width: screenWidth,
         marginHorizontal: -containerPadding,
         height: 180,
-        position: "relative", // Needed for absolute positioning of icons
-        marginBottom: 60, // Ensure space for the overlapping avatar height
+        position: "relative",
+        marginBottom: 60,
     },
     coverPhoto: {
         width: "100%",
@@ -158,18 +161,19 @@ const styles = StyleSheet.create({
         height: "100%",
     },
     headerIconsWrapper: {
-        // Wrapper for top-right icons
         position: "absolute",
-        top: 40, // Adjust as needed for status bar
-        right: containerPadding, // Align with original content edge before negative margin
+        top: 45,
+        right: containerPadding + 10,
         flexDirection: "row",
         zIndex: 2,
     },
     iconButton: {
-        // Common style for top-right icon buttons
-        padding: 8,
+        width: 36,
+        height: 36,
         borderRadius: 18,
-        marginLeft: 8, // Space between icons
+        justifyContent: "center",
+        alignItems: "center",
+        marginLeft: 8,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.2,
         shadowRadius: 2,
@@ -188,16 +192,15 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         overflow: "hidden",
-        elevation: 5, // Android shadow
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
-        shadowRadius: 3,
+        shadowRadius: 4,
+        elevation: 5,
     },
     avatar: {
         width: "100%",
         height: "100%",
     },
-    // editIconWrapper style is removed
     username: {
         marginTop: 12,
         fontSize: 22,

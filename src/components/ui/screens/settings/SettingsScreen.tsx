@@ -1,28 +1,31 @@
 import React, { useState } from "react"
 import {
-    View,
+    Alert as RNAlert,
+    Platform,
+    ScrollView,
     StyleSheet,
     Switch,
-    Platform,
-    Alert,
-    ScrollView,
+    TouchableOpacity,
+    View,
 } from "react-native"
+import type { NavigationProp } from "@react-navigation/native"
+import { useNavigation } from "@react-navigation/native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import { useTheme } from "../../../../hooks/useTheme"
 import { Toast } from "../../feedback"
-import { Container, Spacer, Stack } from "../../layout"
+import { Container, Row, Spacer, Stack } from "../../layout"
 import { Text } from "../../typography"
 import { useAuthStore } from "../../../../store"
-
-// Icons
-import InfoIcon from "../../assets/svg/info.svg"
-import BellIcon from "../../assets/svg/bell.svg"
-import LanguageIcon from "../../assets/svg/language.svg"
-import ThemeIcon from "../../assets/svg/theme.svg"
-import LogoutIcon from "../../assets/svg/logout.svg"
 import { SettingItem } from "./SettingsItem"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import type { TabParamList } from "../../../../App"
+
+const iconSize = 22
 
 export function SettingsScreen() {
     const { colors, themeType, toggleTheme } = useTheme()
+    const navigation = useNavigation<NavigationProp<TabParamList>>()
+    const insets = useSafeAreaInsets()
     const [toastVisible, setToastVisible] = useState(false)
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
     const { logout } = useAuthStore()
@@ -34,18 +37,22 @@ export function SettingsScreen() {
 
     const handleToggleNotifications = (value: boolean) => {
         setNotificationsEnabled(value)
+        console.log("Notifications enabled:", value)
     }
 
     const handleLanguagePress = () => {
-        console.log("Language setting pressed")
+        RNAlert.alert(
+            "Idioma",
+            "La selección de idioma aún no está implementada.",
+        )
     }
 
     const handleAboutPress = () => {
-        console.log("About setting pressed")
+        RNAlert.alert("Acerca de", "Versión de la aplicación: 0.0.1")
     }
 
     const handleLogout = () => {
-        Alert.alert(
+        RNAlert.alert(
             "Cerrar Sesión",
             "¿Estás seguro de que quieres cerrar sesión?",
             [
@@ -59,22 +66,53 @@ export function SettingsScreen() {
         )
     }
 
-    return (
-        <Container style={styles.container}>
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContainer}
-            >
-                <Stack>
-                    <Text variant="md" weight="bold" style={styles.header}>
-                        Configuración
-                    </Text>
-                    <Spacer size={16} />
+    const handleGoBack = () => {
+        navigation.navigate("Profile")
+    }
 
-                    {/* Apariencia */}
+    return (
+        <Container style={styles.screenContainer}>
+            <Row
+                align="center"
+                style={[
+                    styles.headerRow,
+                    {
+                        borderBottomColor: colors.border,
+                        paddingTop:
+                            insets.top + (Platform.OS === "ios" ? 5 : 10),
+                    },
+                ]}
+            >
+                <TouchableOpacity
+                    onPress={handleGoBack}
+                    style={styles.backButton}
+                    accessibilityLabel="Regresar a Perfil"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                    <FontAwesome6
+                        name="chevron-left"
+                        size={18}
+                        color={colors.primary}
+                        iconStyle="solid"
+                    />
+                </TouchableOpacity>
+                <Text
+                    variant="md"
+                    weight="bold"
+                    style={[styles.headerTitle, { color: colors.text }]}
+                >
+                    Configuración
+                </Text>
+                <View style={styles.headerPlaceholder} />
+            </Row>
+
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContentContainer}
+                showsVerticalScrollIndicator={false}
+            >
+                <Stack spacing={0}>
                     <Text
-                        variant="sm"
-                        weight="medium"
                         style={[
                             styles.sectionHeaderText,
                             { color: colors.secondaryText },
@@ -85,16 +123,20 @@ export function SettingsScreen() {
                     <View
                         style={[
                             styles.sectionContainer,
-                            { backgroundColor: colors.card },
+                            {
+                                backgroundColor: colors.card,
+                                shadowColor: colors.shadow,
+                            },
                         ]}
                     >
                         <SettingItem
                             label="Modo Oscuro"
                             icon={
-                                <ThemeIcon
-                                    width={22}
-                                    height={22}
+                                <FontAwesome6
+                                    name="palette"
+                                    size={iconSize}
                                     color={colors.primary}
+                                    iconStyle="solid"
                                 />
                             }
                             rightContent={
@@ -104,25 +146,22 @@ export function SettingsScreen() {
                                     thumbColor={
                                         Platform.OS === "android"
                                             ? colors.background
-                                            : ""
+                                            : undefined
                                     }
                                     trackColor={{
                                         true: colors.primary,
                                         false: colors.border + "80",
                                     }}
                                     ios_backgroundColor={colors.border + "80"}
+                                    testID="dark-mode-switch"
                                 />
                             }
                             isLastItem
+                            testID="setting-dark-mode"
                         />
                     </View>
-
                     <Spacer size={20} />
-
-                    {/* Notificaciones */}
                     <Text
-                        variant="sm"
-                        weight="medium"
                         style={[
                             styles.sectionHeaderText,
                             { color: colors.secondaryText },
@@ -133,16 +172,20 @@ export function SettingsScreen() {
                     <View
                         style={[
                             styles.sectionContainer,
-                            { backgroundColor: colors.card },
+                            {
+                                backgroundColor: colors.card,
+                                shadowColor: colors.shadow,
+                            },
                         ]}
                     >
                         <SettingItem
                             label="Habilitar Notificaciones"
                             icon={
-                                <BellIcon
-                                    width={22}
-                                    height={22}
+                                <FontAwesome6
+                                    name="bell"
+                                    size={iconSize}
                                     color={colors.primary}
+                                    iconStyle="solid"
                                 />
                             }
                             rightContent={
@@ -152,25 +195,22 @@ export function SettingsScreen() {
                                     thumbColor={
                                         Platform.OS === "android"
                                             ? colors.background
-                                            : ""
+                                            : undefined
                                     }
                                     trackColor={{
                                         true: colors.primary,
                                         false: colors.border + "80",
                                     }}
                                     ios_backgroundColor={colors.border + "80"}
+                                    testID="notifications-switch"
                                 />
                             }
                             isLastItem
+                            testID="setting-notifications"
                         />
                     </View>
-
                     <Spacer size={20} />
-
-                    {/* Preferencias */}
                     <Text
-                        variant="sm"
-                        weight="medium"
                         style={[
                             styles.sectionHeaderText,
                             { color: colors.secondaryText },
@@ -181,31 +221,29 @@ export function SettingsScreen() {
                     <View
                         style={[
                             styles.sectionContainer,
-                            { backgroundColor: colors.card },
+                            {
+                                backgroundColor: colors.card,
+                                shadowColor: colors.shadow,
+                            },
                         ]}
                     >
                         <SettingItem
                             label="Idioma"
                             icon={
-                                <LanguageIcon
-                                    width={22}
-                                    height={22}
+                                <FontAwesome6
+                                    name="language"
+                                    size={iconSize}
                                     color={colors.primary}
+                                    iconStyle="solid"
                                 />
                             }
                             onPress={handleLanguagePress}
                             isLastItem
+                            testID="setting-language"
                         />
                     </View>
-
                     <Spacer size={20} />
-
-                    <Spacer size={20} />
-
-                    {/* Información */}
                     <Text
-                        variant="sm"
-                        weight="medium"
                         style={[
                             styles.sectionHeaderText,
                             { color: colors.secondaryText },
@@ -216,27 +254,29 @@ export function SettingsScreen() {
                     <View
                         style={[
                             styles.sectionContainer,
-                            { backgroundColor: colors.card },
+                            {
+                                backgroundColor: colors.card,
+                                shadowColor: colors.shadow,
+                            },
                         ]}
                     >
                         <SettingItem
                             label="Acerca de"
                             icon={
-                                <InfoIcon
-                                    width={22}
-                                    height={22}
+                                <FontAwesome6
+                                    name="circle-info"
+                                    size={iconSize}
                                     color={colors.primary}
+                                    iconStyle="solid"
                                 />
                             }
                             onPress={handleAboutPress}
                             isLastItem
+                            testID="setting-about"
                         />
                     </View>
-
-                    {/* Cuenta */}
+                    <Spacer size={20} />
                     <Text
-                        variant="sm"
-                        weight="medium"
                         style={[
                             styles.sectionHeaderText,
                             { color: colors.secondaryText },
@@ -247,24 +287,28 @@ export function SettingsScreen() {
                     <View
                         style={[
                             styles.sectionContainer,
-                            { backgroundColor: colors.card },
+                            {
+                                backgroundColor: colors.card,
+                                shadowColor: colors.shadow,
+                            },
                         ]}
                     >
                         <SettingItem
                             label="Cerrar Sesión"
                             labelStyle={{ color: colors.error }}
                             icon={
-                                <LogoutIcon
-                                    width={22}
-                                    height={22}
+                                <FontAwesome6
+                                    name="right-from-bracket"
+                                    size={iconSize}
                                     color={colors.error}
+                                    iconStyle="solid"
                                 />
                             }
                             onPress={handleLogout}
                             isLastItem
+                            testID="setting-logout"
                         />
                     </View>
-
                     <Spacer size={30} />
                 </Stack>
             </ScrollView>
@@ -281,25 +325,53 @@ export function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
+    screenContainer: {
+        flex: 1,
+        paddingHorizontal: 0,
+        paddingTop: 0,
+    },
+    headerRow: {
+        paddingBottom: 10,
+        paddingHorizontal: 15,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        alignItems: "center",
+    },
+    backButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 5,
+        paddingRight: 10,
+    },
+    headerTitle: {
+        flex: 1,
+        textAlign: "center",
+        fontSize: 18,
+    },
+    headerPlaceholder: {
+        width: 28,
+    },
+    scrollView: {
         flex: 1,
     },
-    scrollContainer: {
-        paddingBottom: 24,
-    },
-    header: {
-        marginBottom: 10,
-        paddingHorizontal: 5,
+    scrollContentContainer: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 40,
     },
     sectionHeaderText: {
-        marginBottom: 8,
-        marginLeft: 5,
+        marginBottom: 10,
+        marginLeft: 0,
         textTransform: "uppercase",
         fontSize: 12,
+        fontWeight: "600",
     },
     sectionContainer: {
-        borderRadius: 10,
+        borderRadius: 12,
         overflow: "hidden",
-        marginBottom: 5,
+        marginBottom: 10,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
     },
 })

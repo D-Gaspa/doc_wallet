@@ -8,9 +8,9 @@ import {
     TouchableWithoutFeedback,
     View,
 } from "react-native"
-import { useTheme } from "../../../hooks/useTheme.ts"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
+import { useTheme } from "../../../hooks/useTheme"
 import { Stack } from "../../ui/layout"
-import ExitIcon from "../../ui/assets/svg/close.svg"
 
 export interface ActionOption {
     label: string
@@ -38,13 +38,14 @@ export function ActionModalBase({
     const allOptions: ActionOption[] = [
         ...menuOptions,
         {
-            label: "Close",
+            label: "Cerrar",
             action: onClose,
             icon: (
-                <ExitIcon
-                    width={20}
-                    height={20}
-                    stroke={colors.secondaryText}
+                <FontAwesome6
+                    name="xmark"
+                    size={20}
+                    color={colors.secondaryText}
+                    iconStyle="solid"
                 />
             ),
             style: { color: colors.secondaryText },
@@ -78,6 +79,7 @@ export function ActionModalBase({
                                 },
                             ]}
                         >
+                            {/* Modal Title */}
                             <Text
                                 style={[styles.title, { color: colors.text }]}
                                 numberOfLines={1}
@@ -85,6 +87,7 @@ export function ActionModalBase({
                             >
                                 {title}
                             </Text>
+                            {/* Options List */}
                             <Stack spacing={0} style={styles.optionsStack}>
                                 {allOptions.map((option, index) => (
                                     <TouchableOpacity
@@ -102,11 +105,13 @@ export function ActionModalBase({
                                         testID={option.testID}
                                         activeOpacity={0.7}
                                     >
+                                        {/* Icon */}
                                         {option.icon && (
                                             <View style={styles.iconWrapper}>
                                                 {option.icon}
                                             </View>
                                         )}
+                                        {/* Label */}
                                         <Text
                                             style={[
                                                 styles.optionText,
