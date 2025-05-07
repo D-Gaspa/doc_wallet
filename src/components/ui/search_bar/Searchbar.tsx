@@ -1,16 +1,17 @@
-import React, { useState, useRef, useCallback, useEffect } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import {
-    View,
+    FlatList,
+    Keyboard,
+    StyleSheet,
+    Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
-    FlatList,
-    Text,
     TouchableWithoutFeedback,
-    Keyboard,
+    View,
 } from "react-native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import { useTheme } from "../../../hooks/useTheme.ts"
-import SearchIcon from "../assets/svg/search.svg"
+
 import { useSearchHistory } from "../../../hooks/useSearchHistory.ts"
 import { useSearchSuggestions } from "../../../hooks/useSearchSuggestions.ts"
 
@@ -22,7 +23,7 @@ export interface SearchBarProps {
 }
 
 export function SearchBar({
-    placeholder = "Search...",
+    placeholder = "Buscar...",
     onSearch,
     onReset,
     testID,
@@ -32,26 +33,18 @@ export function SearchBar({
     const [showSuggestions, setShowSuggestions] = useState(false)
     const inputRef = useRef<TextInput>(null)
 
-    // Use our custom hooks
     const { history, addToHistory } = useSearchHistory()
     const suggestions = useSearchSuggestions(query, history)
 
-    // Reset flags after 300ms to prevent any stuck state
     useEffect(() => {
-        const timerId = setTimeout(() => {
-            // This ensures our buttons become responsive again
-            // after any operation, even if there was an error
-        }, 300)
+        const timerId = setTimeout(() => {}, 300)
 
         return () => clearTimeout(timerId)
     }, [query])
 
-    // Execute search
     const runSearch = useCallback(
         async (text: string = query) => {
             const trimmed = text.trim()
-
-            // Hide suggestions and dismiss keyboard first
             setShowSuggestions(false)
             Keyboard.dismiss()
 
@@ -62,9 +55,7 @@ export function SearchBar({
             }
 
             try {
-                // Add to history
                 await addToHistory(trimmed)
-                // Execute search
                 onSearch?.(trimmed)
             } catch (e) {
                 console.error("Failed during search operation:", e)
@@ -73,36 +64,22 @@ export function SearchBar({
         [query, onSearch, onReset, addToHistory],
     )
 
-    // Handle selection of a suggestion
     const handleSelectSuggestion = useCallback(
         (suggestion: string) => {
-            // Hide suggestions first
             setShowSuggestions(false)
-
-            // Set the query
             setQuery(suggestion)
-
-            // Execute the search immediately
             setTimeout(() => {
-                runSearch(suggestion)
+                runSearch(suggestion).then((r) => r)
             }, 50)
         },
         [runSearch],
     )
 
-    // Clear the search
     const clearSearch = useCallback(() => {
-        // First hide suggestions
         setShowSuggestions(false)
-
-        // Clear query
         setQuery("")
-
-        // Dismiss keyboard
         Keyboard.dismiss()
-
         onReset?.()
-
         onSearch?.("")
     }, [onSearch, onReset])
 
@@ -111,7 +88,10 @@ export function SearchBar({
             <View
                 style={[
                     styles.container,
-                    { backgroundColor: colors.searchbar },
+                    {
+                        backgroundColor: colors.searchbar,
+                        borderColor: colors.border,
+                    },
                 ]}
                 testID={testID ?? "search-bar"}
             >
@@ -144,8 +124,14 @@ export function SearchBar({
                         onPress={clearSearch}
                         testID="clear-button"
                         activeOpacity={0.6}
+                        accessibilityLabel="Limpiar búsqueda"
                     >
-                        <Text style={{ color: colors.secondaryText }}>✕</Text>
+                        <FontAwesome6
+                            name="xmark"
+                            size={18}
+                            color={colors.secondaryText}
+                            iconStyle="solid"
+                        />
                     </TouchableOpacity>
                 )}
 
@@ -154,8 +140,14 @@ export function SearchBar({
                     onPress={() => runSearch()}
                     testID="search-button"
                     activeOpacity={0.8}
+                    accessibilityLabel="Buscar"
                 >
-                    <SearchIcon width={20} height={20} stroke="#FFF" />
+                    <FontAwesome6
+                        name="magnifying-glass"
+                        size={18}
+                        color={colors.tabbarIcon_active}
+                        iconStyle="solid"
+                    />
                 </TouchableOpacity>
             </View>
 
@@ -183,13 +175,19 @@ export function SearchBar({
                                         { borderBottomColor: colors.border },
                                     ]}
                                 >
-                                    <SearchIcon
-                                        width={16}
-                                        height={16}
-                                        stroke={colors.secondaryText}
+                                    <FontAwesome6
+                                        name="clock-rotate-left"
+                                        size={14}
+                                        color={colors.secondaryText}
+                                        iconStyle="solid"
                                         style={styles.suggestionIcon}
                                     />
-                                    <Text style={{ color: colors.text }}>
+                                    <Text
+                                        style={[
+                                            styles.suggestionText,
+                                            { color: colors.text },
+                                        ]}
+                                    >
                                         {item}
                                     </Text>
                                 </View>
@@ -211,51 +209,58 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
         alignItems: "center",
-        borderRadius: 15,
-        paddingHorizontal: 15,
-        height: 50,
+        borderRadius: 25,
+        paddingHorizontal: 12,
+        height: 48,
+        borderWidth: 1,
     },
     input: {
         flex: 1,
-        fontSize: 16,
+        fontSize: 15,
         paddingVertical: 10,
+        marginRight: 8,
     },
     clearButton: {
         padding: 8,
-        minWidth: 32,
-        minHeight: 32,
-        alignItems: "center",
         justifyContent: "center",
+        alignItems: "center",
     },
     button: {
-        width: 40,
-        height: 40,
-        borderRadius: 15,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         alignItems: "center",
         justifyContent: "center",
         marginLeft: 5,
     },
+    // eslint-disable-next-line react-native/no-color-literals
     suggestions: {
         position: "absolute",
-        top: 55,
+        top: 52,
         left: 0,
         right: 0,
-        maxHeight: 200,
+        maxHeight: 220,
         borderWidth: 1,
-        borderRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
+        borderRadius: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 3,
+        shadowRadius: 4,
+        elevation: 5,
         zIndex: 1000,
     },
     suggestionItem: {
         flexDirection: "row",
         alignItems: "center",
-        padding: 12,
-        borderBottomWidth: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     suggestionIcon: {
-        marginRight: 10,
+        marginRight: 12,
+        opacity: 0.7,
+    },
+    suggestionText: {
+        fontSize: 14,
     },
 })

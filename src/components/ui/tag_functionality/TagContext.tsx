@@ -214,7 +214,6 @@ export function TagProvider({ children }: { children: ReactNode }) {
             tagId,
             itemId,
             itemType,
-            createdAt: new Date(),
         })
         logger.debug("Created tag association", { tagId, itemId, itemType })
         return true

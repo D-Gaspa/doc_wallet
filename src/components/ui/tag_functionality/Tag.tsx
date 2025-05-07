@@ -1,5 +1,5 @@
 import React from "react"
-import { TouchableOpacity, Text, StyleSheet, View } from "react-native"
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import { useTheme } from "../../../hooks/useTheme"
 
 export interface TagProps {
@@ -33,8 +33,14 @@ export function Tag({
     }
     const containerStyle = [
         styles.container,
-        { backgroundColor: color + "20", borderColor: color },
+        {
+            backgroundColor: color + "20",
+            borderColor: color,
+        },
         selected && styles.selected,
+        selected && {
+            backgroundColor: color + "40",
+        },
         size === "small" && styles.containerSmall,
     ]
     const dotStyle = [
@@ -64,6 +70,7 @@ export function Tag({
         </TouchableOpacity>
     )
 }
+
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
@@ -81,7 +88,7 @@ const styles = StyleSheet.create({
         margin: 2,
     },
     selected: {
-        borderWidth: 1.5,
+        borderWidth: 3,
     },
     dot: {
         width: 8,

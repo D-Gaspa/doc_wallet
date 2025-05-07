@@ -12,6 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native"
+import LinearGradient from "react-native-linear-gradient"
 import { Button } from "../../button"
 import { IDocument } from "../../../../types/document.ts"
 import { useTagContext } from "../../tag_functionality/TagContext.tsx"
@@ -32,6 +33,7 @@ interface Props {
     document: IDocument | null
     onClose: () => void
     onSave: (doc: IDocument, folderId: string, tagIds: string[]) => void
+    initialFolderId?: string | null
 }
 
 export const AddDocumentDetailsSheet = ({
@@ -39,6 +41,7 @@ export const AddDocumentDetailsSheet = ({
     document,
     onClose,
     onSave,
+    initialFolderId = null,
 }: Props) => {
     const { colors } = useTheme()
     const tagContext = useTagContext()
@@ -58,12 +61,12 @@ export const AddDocumentDetailsSheet = ({
     const [showDatePicker, setShowDatePicker] = useState(false)
 
     const notificationChoices = [
-        { label: "1 day before", value: 1 },
-        { label: "3 days before", value: 3 },
-        { label: "1 week before", value: 7 },
-        { label: "2 weeks before", value: 14 },
-        { label: "1 month before", value: 30 },
-        { label: "2 months before", value: 60 },
+        { label: "1 día antes", value: 1 },
+        { label: "3 días antes", value: 3 },
+        { label: "1 semana antes", value: 7 },
+        { label: "2 semanas antes", value: 14 },
+        { label: "1 mes antes", value: 30 },
+        { label: "2 meses antes", value: 60 },
     ]
     const toggleNotification = (val: number) => {
         setNotificationTimes((prev) =>
@@ -73,8 +76,9 @@ export const AddDocumentDetailsSheet = ({
 
     useEffect(() => {
         if (visible) {
-            setCurrentViewFolderId(null)
-            setFolderPath([])
+            const startFolderId = initialFolderId ?? null
+            setCurrentViewFolderId(startFolderId)
+            setFolderPath(buildFolderPath(startFolderId))
             setSelectedTagIds([])
             setHasExpiration(false)
             setExpirationDate("")
@@ -82,7 +86,7 @@ export const AddDocumentDetailsSheet = ({
             setLoading(false)
             setIsNavigating(false)
         }
-    }, [visible, document])
+    }, [visible, document, initialFolderId])
 
     const buildFolderPath = (
         targetFolderId: string | null,
@@ -230,12 +234,12 @@ export const AddDocumentDetailsSheet = ({
                 >
                     {/* Header */}
                     <Text style={[styles.title, { color: colors.text }]}>
-                        Add Document Details
+                        Agregar Detalles del Documento
                     </Text>
 
                     {/* Folder Selection */}
                     <Text style={[styles.subtitle, { color: colors.text }]}>
-                        Choose Destination Folder:
+                        Seleccionar Carpeta de Destino:
                     </Text>
 
                     {/* Breadcrumbs */}
@@ -250,9 +254,10 @@ export const AddDocumentDetailsSheet = ({
                     <View
                         style={[
                             styles.listContainer,
+                            // eslint-disable-next-line react-native/no-inline-styles
                             {
-                                borderTopColor: colors.border,
-                                borderBottomColor: colors.border,
+                                borderTopWidth: 0,
+                                borderBottomWidth: 0,
                             },
                         ]}
                     >
@@ -270,10 +275,26 @@ export const AddDocumentDetailsSheet = ({
                                 emptyListMessage="No subfolders here"
                                 testID="add-doc-folder-select-list"
                                 folderCardItemManagerShowAddTagButton={false}
+                                contentContainerStyle={
+                                    styles.listContentPadding
+                                }
                             />
                         )}
+                        <LinearGradient
+                            colors={[
+                                `${colors.background}00`,
+                                `${colors.background}FF`,
+                            ]}
+                            style={styles.fadeOverlay}
+                            pointerEvents="none"
+                        />
                     </View>
 
+                    {/* Spacer between folder and tag selection */}
+                    <Spacer size={18} />
+
+                    {/* Document Name */}
+                    {/* TODO: Add ability to change document name*/}
                     {/* Tag Selection */}
                     <Text
                         style={[
@@ -282,7 +303,7 @@ export const AddDocumentDetailsSheet = ({
                             { color: colors.text, marginTop: 15 },
                         ]}
                     >
-                        Select Tags (Optional):
+                        Seleccionar Tags (Opcional):
                     </Text>
                     <TagList
                         tags={tags || []}
@@ -330,7 +351,7 @@ export const AddDocumentDetailsSheet = ({
                                 )}
                             </View>
                             <Text style={{ color: colors.text }}>
-                                This document has an expiration date
+                                Agregar fecha de expiración
                             </Text>
                         </TouchableOpacity>
 
@@ -342,7 +363,7 @@ export const AddDocumentDetailsSheet = ({
                                         { color: colors.text },
                                     ]}
                                 >
-                                    Expiration Date (YYYY-MM-DD):
+                                    Fecha de Expiración (YYYY-MM-DD):
                                 </Text>
                                 {Platform.OS === "android" ? (
                                     <>
@@ -369,7 +390,7 @@ export const AddDocumentDetailsSheet = ({
                                                 }}
                                             >
                                                 {expirationDate ||
-                                                    "Select date"}
+                                                    "Selecciona una fecha"}
                                             </Text>
                                         </TouchableOpacity>
 
@@ -434,7 +455,7 @@ export const AddDocumentDetailsSheet = ({
                                         { color: colors.text, marginTop: 12 },
                                     ]}
                                 >
-                                    When do you want to be notified?
+                                    ¿Cuándo quieres ser notificado?
                                 </Text>
                                 <View style={styles.notifyContainer}>
                                     {notificationChoices.map((opt) => (
@@ -486,14 +507,14 @@ export const AddDocumentDetailsSheet = ({
                     {/* Action Buttons at the bottom */}
                     <View style={styles.buttonContainer}>
                         <Button
-                            title="Save Document"
+                            title="Guardar"
                             onPress={handleSave}
                             disabled={isLoading || currentViewFolderId === null}
                             style={styles.saveBtn}
                             loading={isLoading}
                         />
                         <Button
-                            title="Cancel"
+                            title="Cancelar"
                             variant="outline"
                             onPress={onClose}
                             disabled={isLoading}
@@ -533,25 +554,34 @@ const styles = StyleSheet.create({
         fontWeight: "500",
         marginBottom: 4,
     },
-
     listContainer: {
         flexGrow: 1,
         flexShrink: 1,
         minHeight: 100,
         maxHeight: 250,
-
         borderTopWidth: StyleSheet.hairlineWidth,
         borderBottomWidth: StyleSheet.hairlineWidth,
-
         marginBottom: 10,
         overflow: "hidden",
         marginHorizontal: -20,
+        position: "relative",
+    },
+    listContentPadding: {
+        paddingBottom: 30,
     },
     loadingIndicator: {
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
         padding: 20,
+        paddingBottom: 50,
+    },
+    fadeOverlay: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 30,
     },
     expirationContainer: {
         marginVertical: 10,
@@ -578,7 +608,6 @@ const styles = StyleSheet.create({
         marginTop: 16,
         paddingHorizontal: 5,
     },
-
     expirationDateInput: {
         borderWidth: 1,
         padding: 10,
@@ -597,7 +626,6 @@ const styles = StyleSheet.create({
         marginRight: 16,
         marginBottom: 10,
     },
-
     buttonContainer: {
         paddingTop: 10,
     },

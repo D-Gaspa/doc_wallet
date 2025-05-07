@@ -1,14 +1,15 @@
 import React from "react"
 import { StyleSheet, TouchableOpacity } from "react-native"
-import { Row, Stack, Spacer } from "../../layout"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
+import { Row, Spacer, Stack } from "../../layout"
 import { Text } from "../../typography"
 import { SearchBar } from "../../search_bar"
 import { TagFilterDropdown } from "../../tag_functionality/TagFilter"
 import { Folder } from "./types"
 import { ActiveTagFilters } from "../../tag_functionality/ActiveTagFilters"
-import { SortDropdown, SortOption } from "../../search_engine/SortDropdown.tsx"
+import { SortDropdown, SortOption } from "../../search_engine/SortDropdown"
+import { useTheme } from "../../../../hooks/useTheme"
 
-// Define sort options
 export type FolderSortOption = "name" | "date" | "type"
 
 interface FolderHeaderProps {
@@ -37,59 +38,77 @@ export function FolderHeader({
     setSortOption,
     testID,
 }: FolderHeaderProps) {
-    // Handler for removing a single tag filter
+    const { colors } = useTheme()
+
     const handleRemoveFilter = (tagId: string) => {
         setSelectedTagFilters(selectedTagFilters.filter((id) => id !== tagId))
     }
 
-    // Handler for clearing all tag filters
     const handleClearFilters = () => {
         setSelectedTagFilters([])
     }
 
-    // Handler for search
     const handleSearch = (query: string) => {
         setSearchQuery(query)
     }
 
+    const getParentFolderName = () => {
+        if (!currentFolderId) return "Carpetas"
+        const currentFolder = folders.find(
+            (folder) => folder.id === currentFolderId,
+        )
+        if (!currentFolder?.parentId) return "Carpetas"
+        const parentFolder = folders.find(
+            (f) => f.id === currentFolder.parentId,
+        )
+        return parentFolder ? parentFolder.title : "Carpetas"
+    }
+
     return (
         <Stack spacing={8} testID={testID ?? "folder-header"}>
-            {/* Breadcrumb navigation */}
+            {/* Breadcrumb navigation - simplified back button */}
             {currentFolderId && (
-                <Row
-                    align="center"
-                    justify="flex-start"
-                    spacing={4}
-                    style={styles.breadcrumb}
+                <TouchableOpacity
+                    onPress={handleBackPress}
+                    style={styles.backButtonContainer}
+                    accessibilityLabel="Regresar"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                    <TouchableOpacity onPress={handleBackPress}>
-                        <Text variant="sm" weight="medium">
-                            {"< Regresar a " +
-                                (folders.find(
-                                    (f) =>
-                                        f.id ===
-                                        folders.find(
-                                            (folder) =>
-                                                folder.id === currentFolderId,
-                                        )?.parentId,
-                                )?.title || "Folders")}
-                        </Text>
-                    </TouchableOpacity>
-                </Row>
+                    <FontAwesome6
+                        name="chevron-left"
+                        size={18}
+                        color={colors.primary}
+                        iconStyle="solid"
+                    />
+                    <Text
+                        variant="sm"
+                        weight="medium"
+                        style={[
+                            styles.backButtonText,
+                            { color: colors.primary },
+                        ]}
+                    >
+                        Regresar a {getParentFolderName()}
+                    </Text>
+                </TouchableOpacity>
             )}
-
-            <Spacer size={20} />
-
+            <Spacer size={currentFolderId ? 10 : 20} />
             {/* Current folder title with filter dropdown */}
             <Row justify="space-between" align="center" style={styles.titleRow}>
-                <Text variant="md" weight="bold" style={styles.titleText}>
+                <Text
+                    variant="md"
+                    weight="bold"
+                    style={[styles.titleText, { color: colors.text }]}
+                >
                     {getCurrentFolderName()}
                 </Text>
-                <Row spacing={8} align="center">
+                <Row spacing={0} align="center">
                     {setSortOption && (
                         <SortDropdown
                             sortOption={sortOption as SortOption}
-                            onSelect={(opt) => setSortOption(opt)}
+                            onSelect={(opt) =>
+                                setSortOption(opt as FolderSortOption)
+                            }
                             testID="folder-sort-dropdown"
                         />
                     )}
@@ -100,14 +119,12 @@ export function FolderHeader({
                     />
                 </Row>
             </Row>
-
             {/* Search bar */}
             <SearchBar
-                placeholder="Search folders or documents..."
+                placeholder="Buscar carpetas o documentos..."
                 onSearch={handleSearch}
                 testID="folder-search-bar"
             />
-
             {/* Active tag filters display */}
             <ActiveTagFilters
                 selectedTagFilters={selectedTagFilters}
@@ -120,14 +137,20 @@ export function FolderHeader({
 }
 
 const styles = StyleSheet.create({
-    breadcrumb: {
+    backButtonContainer: {
+        flexDirection: "row",
+        alignItems: "center",
         marginTop: 24,
         paddingVertical: 10,
+    },
+    backButtonText: {
+        marginLeft: 8,
     },
     titleRow: {
         marginBottom: 12,
     },
     titleText: {
-        flex: 1, // This allows the title to take up most of the space but shrink if needed
+        flex: 1,
+        marginRight: 8,
     },
 })

@@ -55,7 +55,6 @@ export function ItemSelectionControls({
             style={[
                 styles.container,
                 {
-                    backgroundColor: colors.card,
                     borderTopColor: colors.border,
                     borderBottomColor: colors.border,
                 },
@@ -184,8 +183,7 @@ const styles = StyleSheet.create({
         minHeight: 56,
         justifyContent: "center",
         paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderTopWidth: StyleSheet.hairlineWidth,
+        paddingVertical: 10,
         borderBottomWidth: StyleSheet.hairlineWidth,
     },
     row: {

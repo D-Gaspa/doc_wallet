@@ -1,5 +1,12 @@
 import React, { useCallback } from "react"
-import { FlatList, StyleSheet, Text, View } from "react-native"
+import {
+    FlatList,
+    StyleProp,
+    StyleSheet,
+    Text,
+    View,
+    ViewStyle,
+} from "react-native"
 import { DocumentCard, FolderCard } from "../../cards"
 import { useTheme } from "../../../../hooks/useTheme"
 import { Folder, ListItem } from "./types"
@@ -31,6 +38,7 @@ interface ItemsListProps {
     folderCardItemManagerShowAddTagButton?: boolean
 
     testID?: string
+    contentContainerStyle?: StyleProp<ViewStyle>
 }
 
 export function ItemsList({
@@ -55,6 +63,7 @@ export function ItemsList({
     onDocumentLongPress,
     folderCardItemManagerShowAddTagButton,
     testID,
+    contentContainerStyle,
 }: ItemsListProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
@@ -199,6 +208,10 @@ export function ItemsList({
             folderCardItemManagerShowAddTagButton,
             colors,
             tagContext,
+            getIsDocumentFavorite,
+            onDocumentToggleFavorite,
+            onDocumentShare,
+            onDocumentDelete,
         ],
     )
 
@@ -224,6 +237,7 @@ export function ItemsList({
             contentContainerStyle={[
                 styles.content,
                 items.length === 0 && styles.emptyContent,
+                contentContainerStyle,
             ]}
             extraData={{
                 selectionMode,
