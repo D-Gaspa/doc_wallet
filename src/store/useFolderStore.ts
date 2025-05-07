@@ -2,18 +2,22 @@ import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import type { Folder } from "../components/ui/screens/folders/types"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import { FA6IconName } from "../types/icons"
 
 type FolderState = {
     folders: Folder[]
     setFolders: (folders: Folder[]) => void
     addFolder: (folder: Folder) => void
-    updateFolder: (folder: Folder) => void
+    updateFolder: (
+        folderId: string,
+        updates: Partial<Omit<Folder, "id" | "createdAt" | "updatedAt">>,
+    ) => void
 }
 
 const defaultFolders: Folder[] = [
     {
         id: "1",
-        title: "Travel documents",
+        title: "Documentos de Viaje",
         parentId: null,
         type: "travel",
         isShared: false,
@@ -25,7 +29,7 @@ const defaultFolders: Folder[] = [
     },
     {
         id: "2",
-        title: "Medical Records",
+        title: "Registros Médicos",
         parentId: null,
         type: "medical",
         isShared: true,
@@ -38,7 +42,7 @@ const defaultFolders: Folder[] = [
     },
     {
         id: "3",
-        title: "Vehicle documents",
+        title: "Documentos del Vehículo",
         parentId: null,
         type: "car",
         isShared: false,
@@ -50,7 +54,7 @@ const defaultFolders: Folder[] = [
     },
     {
         id: "4",
-        title: "Education Certificates",
+        title: "Certificados de Educación",
         parentId: null,
         type: "education",
         isShared: false,
@@ -62,10 +66,11 @@ const defaultFolders: Folder[] = [
     },
     {
         id: "5",
-        title: "Passport",
+        title: "Pasaporte",
         parentId: "1",
         type: "custom",
-        customIconId: "file",
+        customIconId: "passport" as FA6IconName,
+        customIconColor: "#3498DB",
         isShared: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -78,7 +83,8 @@ const defaultFolders: Folder[] = [
         title: "Visas",
         parentId: "1",
         type: "custom",
-        customIconId: "check",
+        customIconId: "file-contract" as FA6IconName,
+        customIconColor: "#2ECC71",
         isShared: true,
         sharedWith: ["user789"],
         createdAt: new Date(),
@@ -89,10 +95,10 @@ const defaultFolders: Folder[] = [
     },
     {
         id: "7",
-        title: "Important Notes",
+        title: "Notas Importantes",
         parentId: null,
         type: "custom",
-        customIconId: "warning",
+        customIconId: "note-sticky" as FA6IconName,
         isShared: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -109,15 +115,17 @@ export const useFolderStore = create<FolderState>()(
 
             setFolders: (folders) => set({ folders }),
 
-            addFolder: (folder) =>
+            addFolder: (newFolder) =>
                 set((state) => ({
-                    folders: [...state.folders, folder],
+                    folders: [...state.folders, newFolder],
                 })),
 
-            updateFolder: (updated) =>
+            updateFolder: (folderId, updates) =>
                 set((state) => ({
                     folders: state.folders.map((f) =>
-                        f.id === updated.id ? { ...f, ...updated } : f,
+                        f.id === folderId
+                            ? { ...f, ...updates, updatedAt: new Date() }
+                            : f,
                     ),
                 })),
         }),

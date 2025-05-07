@@ -8,6 +8,7 @@ export interface Folder {
     parentId: string | null
     type?: FolderType
     customIconId?: FA6IconName
+    customIconColor?: string
     isShared?: boolean
     sharedWith?: string[]
     createdAt: Date

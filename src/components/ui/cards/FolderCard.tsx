@@ -5,37 +5,35 @@ import {
     TouchableOpacity,
     View,
 } from "react-native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import { useTheme } from "../../../hooks/useTheme"
 import { ItemTagsManager } from "../tag_functionality/ItemTagsManager"
 import { useTagContext } from "../tag_functionality/TagContext"
 import { ListItemCard } from "./ListItemCard"
 import { Folder } from "../screens/folders/types"
-import { getIconById, ThemeColors } from "../screens/folders/CustomIconSelector"
-
-import StarIcon from "../assets/svg/starfilled.svg"
-import StarOutlineIcon from "../assets/svg/favorite.svg"
-import SettingsIcon from "../assets/svg/threedots.svg"
+import {
+    getIconById,
+    ThemeColors as CustomIconSelectorThemeColors,
+} from "../screens/folders/CustomIconSelector"
+import { FA6IconName } from "../../../types/icons"
 
 export interface FolderCardProps {
     folderId: string
     title: string
     subtitle?: string
     type?: Folder["type"]
-    customIconId?: Folder["customIconId"]
+    customIconId?: FA6IconName
+    customIconColor?: string
     isFavorite?: boolean
     selected?: boolean
     showTags?: boolean
-    displayIconId?: string
-
-    // Handlers
+    displayIconId?: FA6IconName
     onPress: () => void
     onLongPress?: () => void
     onToggleFavorite?: () => void
     onShowOptions?: () => void
-
     onTagPress?: (tagId: string) => void
     selectedTagIds?: string[]
-
     testID?: string
 }
 
@@ -45,6 +43,7 @@ export function FolderCard({
     subtitle,
     type = "custom",
     customIconId,
+    customIconColor,
     isFavorite = false,
     selected = false,
     showTags = true,
@@ -60,23 +59,24 @@ export function FolderCard({
     const { colors } = useTheme()
     const tagContext = useTagContext()
 
-    const iconNode = React.useMemo(() => {
+    const iconNode = useMemo(() => {
         const iconSizeForCard = 28
+        const effectiveIconId =
+            displayIconId ||
+            (type === "custom" && customIconId ? customIconId : type)
 
-        if (displayIconId) {
-            return getIconById(
-                displayIconId,
-                colors as ThemeColors,
-                iconSizeForCard,
-            )
-        }
+        const colorForIconOverride =
+            type === "custom" && customIconId && customIconColor
+                ? customIconColor
+                : undefined
 
         return getIconById(
-            type === "custom" && customIconId ? customIconId : type,
-            colors as ThemeColors,
+            effectiveIconId,
+            colors as unknown as CustomIconSelectorThemeColors,
             iconSizeForCard,
+            colorForIconOverride,
         )
-    }, [type, customIconId, colors, displayIconId])
+    }, [type, customIconId, customIconColor, colors, displayIconId])
 
     const handleButtonPress =
         (handler?: () => void) => (event: GestureResponderEvent) => {
@@ -84,7 +84,7 @@ export function FolderCard({
             handler?.()
         }
 
-    const actionIconsNode = React.useMemo(
+    const actionIconsNode = useMemo(
         () => (
             <View style={styles.actionButtonsContainer}>
                 {onToggleFavorite && (
@@ -93,58 +93,57 @@ export function FolderCard({
                         style={styles.actionButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 5 }}
                         testID={`folder-fav-btn-${folderId}`}
+                        accessibilityLabel={
+                            isFavorite
+                                ? "Quitar de favoritos"
+                                : "Añadir a favoritos"
+                        }
                     >
                         {isFavorite ? (
-                            <StarIcon
-                                width={18}
-                                height={18}
-                                fill={colors.warning}
+                            <FontAwesome6
+                                name="star"
+                                size={18}
+                                color={colors.warning}
+                                iconStyle="solid"
                             />
                         ) : (
-                            <StarOutlineIcon
-                                width={18}
-                                height={18}
-                                stroke={colors.secondaryText}
+                            <FontAwesome6
+                                name="star"
+                                size={18}
+                                color={colors.secondaryText}
+                                iconStyle="regular"
                             />
                         )}
                     </TouchableOpacity>
                 )}
-
-                {/* Options Button */}
                 {onShowOptions && (
                     <TouchableOpacity
                         onPress={handleButtonPress(onShowOptions)}
                         style={styles.actionButton}
                         hitSlop={{ top: 10, bottom: 10, left: 5, right: 10 }}
                         testID={`folder-options-btn-${folderId}`}
+                        accessibilityLabel="Más opciones"
                     >
-                        <SettingsIcon
-                            width={18}
-                            height={18}
-                            fill={colors.secondaryText}
+                        <FontAwesome6
+                            name="ellipsis-vertical"
+                            size={18}
+                            color={colors.secondaryText}
+                            iconStyle="solid"
                         />
                     </TouchableOpacity>
                 )}
             </View>
         ),
-
-        [
-            isFavorite,
-            onToggleFavorite,
-            onShowOptions,
-            colors,
-            folderId,
-            handleButtonPress,
-        ],
+        [isFavorite, onToggleFavorite, onShowOptions, colors, folderId],
     )
 
-    // --- Prepare Children (Tags) ---
     const folderTags = showTags
         ? tagContext.getTagsForItem(folderId, "folder")
         : []
+
     const childrenNode = useMemo(
         () =>
-            showTags ? (
+            showTags && folderTags.length > 0 ? (
                 <ItemTagsManager
                     itemId={folderId}
                     itemType="folder"
@@ -154,6 +153,8 @@ export function FolderCard({
                     selectedTagIds={selectedTagIds}
                     horizontal={true}
                     showAddTagButton={true}
+                    size="small"
+                    initiallyExpanded={false}
                 />
             ) : null,
         [
@@ -176,7 +177,7 @@ export function FolderCard({
             onPress={onPress}
             onLongPress={onLongPress}
             selected={selected}
-            testID={testID}
+            testID={testID ?? `folder-card-${folderId}`}
         >
             {childrenNode}
         </ListItemCard>
@@ -190,7 +191,7 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         padding: 4,
-        marginLeft: 8,
+        marginLeft: 10,
         justifyContent: "center",
         alignItems: "center",
     },
