@@ -1,9 +1,7 @@
 import React from "react"
 import { useTheme } from "../../../../hooks/useTheme"
 import { Folder } from "./types"
-import ShareIcon from "../../assets/svg/share.svg"
-import EditIcon from "../../assets/svg/edit.svg"
-import DeleteIcon from "../../assets/svg/trash.svg"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import {
     ActionModalBase,
     ActionOption,
@@ -36,33 +34,56 @@ export function FolderActionModal({
 
     const folderMenuOptions: ActionOption[] = [
         {
-            label: "Share",
+            label: "Compartir",
             action: handleShare,
-            icon: <ShareIcon width={20} height={20} stroke={colors.primary} />,
+            icon: (
+                <FontAwesome6
+                    name="share"
+                    size={20}
+                    color={colors.primary}
+                    iconStyle="solid"
+                />
+            ),
             style: { color: colors.primary },
             testID: "folder-action-share",
         },
         {
-            label: "Edit",
+            label: "Editar",
             action: handleEdit,
-            icon: <EditIcon width={20} height={20} stroke={colors.primary} />,
+            icon: (
+                <FontAwesome6
+                    name="pen-to-square"
+                    size={20}
+                    color={colors.primary}
+                    iconStyle="solid"
+                />
+            ),
             style: { color: colors.primary },
             testID: "folder-action-edit",
         },
         {
-            label: "Delete",
+            label: "Eliminar",
             action: handleDelete,
-            icon: <DeleteIcon width={20} height={20} stroke={colors.error} />,
+            icon: (
+                <FontAwesome6
+                    name="trash"
+                    size={20}
+                    color={colors.error}
+                    iconStyle="solid"
+                />
+            ),
             style: { color: colors.error },
             testID: "folder-action-delete",
         },
     ]
 
+    const modalTitle = `Opciones para "${folder.title}"`
+
     return (
         <ActionModalBase
             isVisible={isVisible}
             onClose={onClose}
-            title={`${folder.title} Options`}
+            title={modalTitle}
             menuOptions={folderMenuOptions}
         />
     )

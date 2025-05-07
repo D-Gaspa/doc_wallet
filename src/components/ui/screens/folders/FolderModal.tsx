@@ -553,6 +553,11 @@ export function FolderModal({
                                         }
                                         showTags={false}
                                         itemManagerShowAddTagButton={false}
+                                        subtitle={
+                                            item.type === "custom"
+                                                ? "Personalizable"
+                                                : undefined
+                                        }
                                     />
                                 </Pressable>
                             )

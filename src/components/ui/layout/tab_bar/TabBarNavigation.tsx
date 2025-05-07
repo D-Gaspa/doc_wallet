@@ -1,18 +1,14 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import {
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    Text,
     Animated,
     Dimensions,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native"
-import { useTheme } from "../../../../hooks/useTheme.ts" // Adjust path
-
-// Import icons
-import HouseIcon from "../../assets/svg/Home.svg" // Ensure path is correct
-import ProfileIcon from "../../assets/svg/Profile.svg" // Ensure path is correct
-import AddFileIcon from "../../assets/svg/add-file-icon.svg" // Ensure path is correct
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
+import { useTheme } from "../../../../hooks/useTheme"
 
 export interface TabBarNavigationProps {
     activeTab: string
@@ -21,17 +17,14 @@ export interface TabBarNavigationProps {
     testID?: string
 }
 
-// --- Constants ---
-export const INDICATOR_HEIGHT = 3
-const ICON_SIZE = 32
-const TAB_PADDING_TOP = 6 + INDICATOR_HEIGHT
-const TAB_PADDING_BOTTOM = 4
+const INDICATOR_HEIGHT = 3
+const ICON_SIZE = 24
+const TAB_PADDING_VERTICAL = 6
 
-// Updated tabs array
 const tabs = [
-    { key: "Home", label: "Inicio", icon: HouseIcon },
-    { key: "Files", label: "Documentos", icon: AddFileIcon },
-    { key: "Profile", label: "Perfil", icon: ProfileIcon },
+    { key: "Home", label: "Inicio", iconName: "house" as const },
+    { key: "Files", label: "Escanear", iconName: "expand" as const }, // Could use "camera" icon
+    { key: "Profile", label: "Perfil", iconName: "user" as const },
 ]
 const tabKeys = tabs.map((t) => t.key)
 
@@ -46,33 +39,19 @@ export function TabBarNavigation({
         Dimensions.get("window").width,
     )
     const indicatorPosition = useRef(new Animated.Value(0)).current
+
     const itemWidth = tabs.length > 0 ? containerWidth / tabs.length : 0
 
-    // Effect for initial position
-    useEffect(() => {
-        const initialActiveIndex = tabKeys.indexOf(activeTab)
-        // Calculate initial position carefully, handle itemWidth possibly being 0 initially
-        const calculatedItemWidth = Dimensions.get("window").width / tabs.length
-        const initialPosition =
-            initialActiveIndex >= 0 && calculatedItemWidth > 0
-                ? initialActiveIndex * calculatedItemWidth
-                : 0
-        indicatorPosition.setValue(initialPosition)
-    }, [])
-
-    // Effect for animating position changes
     useEffect(() => {
         const activeIndex = tabKeys.indexOf(activeTab)
-        // Only animate if itemWidth is calculated and valid
         if (activeIndex !== -1 && itemWidth > 0) {
             const targetPosition = activeIndex * itemWidth
             Animated.timing(indicatorPosition, {
                 toValue: targetPosition,
-                duration: 300,
+                duration: 250,
                 useNativeDriver: true,
             }).start()
         }
-        // Dependencies are correct: animation depends on activeTab and itemWidth
     }, [activeTab, itemWidth, indicatorPosition])
 
     const handleTabPress = (tabKey: string) => {
@@ -103,22 +82,21 @@ export function TabBarNavigation({
             testID={testID ?? "tab-bar-navigation"}
             onLayout={handleLayout}
         >
-            {/* Animated Indicator */}
+            {/* Animated Indicator Line */}
             <Animated.View
                 style={[
-                    styles.indicator, // Base styles from StyleSheet
+                    styles.indicator,
                     // eslint-disable-next-line react-native/no-inline-styles
                     {
-                        // Inline styles ONLY for dynamic/animated properties
-                        width: itemWidth > 0 ? itemWidth : 0, // Dynamic width
-                        backgroundColor: colors.primary, // Moved to styles.indicator initially, but needs theme color
-                        transform: [{ translateX: indicatorPosition }], // Animated transform
+                        width: itemWidth > 0 ? itemWidth : 0,
+                        backgroundColor: colors.primary,
+                        transform: [{ translateX: indicatorPosition }],
                     },
                 ]}
             />
 
             {/* Tab Items */}
-            {tabs.map(({ key, label, icon: Icon }) => {
+            {tabs.map(({ key, label, iconName }) => {
                 const isActive = activeTab === key
                 const currentIconColor = isActive
                     ? colors.primary
@@ -134,11 +112,15 @@ export function TabBarNavigation({
                         onPress={() => handleTabPress(key)}
                         testID={`tab-${key.toLowerCase()}`}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={label}
+                        accessibilityState={{ selected: isActive }}
                     >
-                        <Icon
-                            width={ICON_SIZE}
-                            height={ICON_SIZE}
+                        <FontAwesome6
+                            name={iconName}
+                            size={ICON_SIZE}
                             color={currentIconColor}
+                            iconStyle="solid"
                             style={styles.icon}
                         />
                         <Text style={[styles.label, { color: labelColor }]}>
@@ -167,8 +149,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        paddingTop: TAB_PADDING_TOP,
-        paddingBottom: TAB_PADDING_BOTTOM,
+        paddingVertical: TAB_PADDING_VERTICAL,
     },
     icon: {
         marginBottom: 2,

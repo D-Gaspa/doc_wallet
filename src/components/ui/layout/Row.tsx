@@ -1,12 +1,12 @@
 import React from "react"
-import { View, StyleSheet, ViewStyle } from "react-native"
+import { StyleProp, StyleSheet, View, ViewStyle } from "react-native"
 
 export interface RowProps {
     children: React.ReactNode
     spacing?: number
     align?: "flex-start" | "center" | "flex-end"
     justify?: "flex-start" | "center" | "space-between" | "space-around"
-    style?: ViewStyle
+    style?: StyleProp<ViewStyle>
     testID?: string
 }
 

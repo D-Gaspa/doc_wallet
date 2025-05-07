@@ -1,25 +1,28 @@
-import React, { useState, useRef, useEffect } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import {
-    View,
-    StyleSheet,
-    TouchableOpacity,
-    Text,
+    Dimensions,
     FlatList,
     Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
     TouchableWithoutFeedback,
+    View,
 } from "react-native"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import { useTheme } from "../../../hooks/useTheme"
-import { useTagContext } from "./TagContext"
+import { Tag, useTagContext } from "./TagContext"
 import { Checkbox } from "../form"
-import FilterIcon from "../assets/svg/filter.svg"
 
 export interface TagFilterDropdownProps {
     selectedTagIds: string[]
     onSelectTags: (tagIds: string[]) => void
-    itemName?: string // Optional item name for tag suggestions
-    itemType?: "folder" | "document" // Optional item type for tag suggestions
+    itemName?: string
+    itemType?: "folder" | "document"
     testID?: string
 }
+
+const screenWidth = Dimensions.get("window").width
 
 export function TagFilterDropdown({
     selectedTagIds = [],
@@ -31,33 +34,37 @@ export function TagFilterDropdown({
     const { colors } = useTheme()
     const { tags, getSuggestedTags } = useTagContext()
 
-    // Dropdown state
     const [isOpen, setIsOpen] = useState(false)
     const buttonRef = useRef<View>(null)
     const [dropdownPosition, setDropdownPosition] = useState({
         top: 0,
         right: 0,
+        width: 250,
     })
     const [tempSelectedTags, setTempSelectedTags] = useState<string[]>([
         ...selectedTagIds,
     ])
 
-    // Get tag suggestions if itemName and itemType are provided
-    const suggestedTags =
+    const suggestedTags: Tag[] =
         itemName && itemType
             ? getSuggestedTags(itemType, itemName).filter(
-                  (tag) => !selectedTagIds.includes(tag.id),
-              ) // Don't suggest already selected tags
+                  (tag) => !tempSelectedTags.includes(tag.id),
+              )
             : []
 
     const toggleDropdown = () => {
-        if (buttonRef.current) {
-            buttonRef.current.measureInWindow((x, y, width, height) => {
+        if (isOpen) {
+            setIsOpen(false)
+        } else {
+            buttonRef.current?.measureInWindow((x, y, width, height) => {
+                const calculatedRight = screenWidth - (x + width)
                 setDropdownPosition({
                     top: y + height + 5,
-                    right: 20,
+                    right: calculatedRight < 20 ? 20 : calculatedRight,
+                    width: 280,
                 })
-                setIsOpen(!isOpen)
+                setTempSelectedTags([...selectedTagIds])
+                setIsOpen(true)
             })
         }
     }
@@ -80,40 +87,44 @@ export function TagFilterDropdown({
     const resetFilters = () => {
         setTempSelectedTags([])
         onSelectTags([])
-        setIsOpen(false)
     }
 
-    // Reset local selection when selected tags change externally
     useEffect(() => {
-        setTempSelectedTags([...selectedTagIds])
-    }, [selectedTagIds])
+        if (!isOpen) {
+            setTempSelectedTags([...selectedTagIds])
+        }
+    }, [selectedTagIds, isOpen])
 
-    // Group tags for better organization
+    const allNonSuggestedTags = tags.filter(
+        (tag) => !suggestedTags.find((st) => st.id === tag.id),
+    )
+
     const groupedTags = [
-        // First show the suggested tags section if there are suggestions
         ...(suggestedTags.length > 0
-            ? [
-                  {
-                      title: "Suggested Tags",
-                      data: suggestedTags,
-                  },
-              ]
+            ? [{ title: "Etiquetas Sugeridas", data: suggestedTags }]
             : []),
-        // Then show all available tags
-        {
-            title: "All Tags",
-            data: tags,
-        },
+        { title: "Todas las Etiquetas", data: allNonSuggestedTags },
     ]
 
     return (
-        <View ref={buttonRef} testID={testID ?? "tag-filter-dropdown"}>
-            {/* Filter Button */}
+        <View testID={testID ?? "tag-filter-dropdown"}>
             <TouchableOpacity
+                ref={buttonRef}
                 style={styles.filterButton}
                 onPress={toggleDropdown}
+                accessibilityLabel="Abrir filtro de etiquetas"
+                accessibilityHint="Filtra elementos por etiquetas"
             >
-                <FilterIcon width={24} height={24} stroke={colors.primary} />
+                <FontAwesome6
+                    name="filter"
+                    size={22}
+                    color={
+                        selectedTagIds.length > 0
+                            ? colors.primary
+                            : colors.secondaryText
+                    }
+                    iconStyle="solid"
+                />
                 {selectedTagIds.length > 0 && (
                     <View
                         style={[
@@ -124,7 +135,7 @@ export function TagFilterDropdown({
                         <Text
                             style={[
                                 styles.filterBadgeText,
-                                { color: colors.background },
+                                { color: colors.tabbarIcon_active },
                             ]}
                         >
                             {selectedTagIds.length}
@@ -133,7 +144,6 @@ export function TagFilterDropdown({
                 )}
             </TouchableOpacity>
 
-            {/* Dropdown Menu Modal */}
             <Modal
                 visible={isOpen}
                 transparent
@@ -151,7 +161,8 @@ export function TagFilterDropdown({
                                     {
                                         top: dropdownPosition.top,
                                         right: dropdownPosition.right,
-                                        backgroundColor: colors.background,
+                                        width: dropdownPosition.width,
+                                        backgroundColor: colors.card, // Use card color for dropdown
                                         borderColor: colors.border,
                                     },
                                 ]}
@@ -162,14 +173,14 @@ export function TagFilterDropdown({
                                         { color: colors.text },
                                     ]}
                                 >
-                                    Filter by Tags
+                                    Filtrar por Etiquetas {/* Translated */}
                                 </Text>
 
                                 {tags.length > 0 ? (
                                     <FlatList
                                         data={groupedTags}
                                         keyExtractor={(item, index) =>
-                                            `group-${index}`
+                                            `group-${item.title}-${index}`
                                         }
                                         renderItem={({ item: group }) => (
                                             <View style={styles.tagGroup}>
@@ -192,6 +203,15 @@ export function TagFilterDropdown({
                                                                 tag.id,
                                                             )
                                                         }
+                                                        accessibilityLabel={`Etiqueta ${
+                                                            tag.name
+                                                        }, ${
+                                                            tempSelectedTags.includes(
+                                                                tag.id,
+                                                            )
+                                                                ? "seleccionada"
+                                                                : "no seleccionada"
+                                                        }`}
                                                     >
                                                         <Checkbox
                                                             checked={tempSelectedTags.includes(
@@ -213,9 +233,12 @@ export function TagFilterDropdown({
                                                             ]}
                                                         />
                                                         <Text
-                                                            style={{
-                                                                color: colors.text,
-                                                            }}
+                                                            style={[
+                                                                styles.tagName,
+                                                                {
+                                                                    color: colors.text,
+                                                                },
+                                                            ]}
                                                         >
                                                             {tag.name}
                                                         </Text>
@@ -224,6 +247,7 @@ export function TagFilterDropdown({
                                             </View>
                                         )}
                                         style={styles.tagsList}
+                                        showsVerticalScrollIndicator={false}
                                     />
                                 ) : (
                                     <Text
@@ -232,12 +256,17 @@ export function TagFilterDropdown({
                                             { color: colors.secondaryText },
                                         ]}
                                     >
-                                        No tags available
+                                        No hay etiquetas disponibles{" "}
+                                        {/* Translated */}
                                     </Text>
                                 )}
 
-                                {/* Action buttons */}
-                                <View style={styles.actionButtons}>
+                                <View
+                                    style={[
+                                        styles.actionButtons,
+                                        { borderTopColor: colors.border },
+                                    ]}
+                                >
                                     <TouchableOpacity
                                         style={[
                                             styles.actionButton,
@@ -246,7 +275,7 @@ export function TagFilterDropdown({
                                         onPress={resetFilters}
                                     >
                                         <Text style={{ color: colors.error }}>
-                                            Reset
+                                            Limpiar
                                         </Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
@@ -257,9 +286,11 @@ export function TagFilterDropdown({
                                         onPress={applyFilters}
                                     >
                                         <Text
-                                            style={{ color: colors.background }}
+                                            style={{
+                                                color: colors.tabbarIcon_active,
+                                            }}
                                         >
-                                            Apply
+                                            Aplicar
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
@@ -276,14 +307,16 @@ const styles = StyleSheet.create({
     filterButton: {
         padding: 8,
         position: "relative",
+        flexDirection: "row",
+        alignItems: "center",
     },
     filterBadge: {
         position: "absolute",
         top: 0,
         right: 0,
-        width: 16,
-        height: 16,
-        borderRadius: 8,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -294,64 +327,77 @@ const styles = StyleSheet.create({
     overlay: {
         flex: 1,
     },
+    // eslint-disable-next-line react-native/no-color-literals
     dropdown: {
         position: "absolute",
-        width: 250,
-        maxHeight: 500,
+        maxHeight: Dimensions.get("window").height * 0.6,
         borderRadius: 8,
         borderWidth: 1,
-        padding: 12,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 5,
+        elevation: 6,
+        overflow: "hidden",
     },
+    // eslint-disable-next-line react-native/no-color-literals
     dropdownTitle: {
         fontSize: 16,
         fontWeight: "600",
-        marginBottom: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
         textAlign: "center",
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: "rgba(0,0,0,0.1)",
     },
     tagsList: {
-        maxHeight: 350,
+        paddingHorizontal: 16,
     },
     tagGroup: {
-        marginBottom: 12,
+        marginVertical: 8,
     },
     groupTitle: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: "500",
         marginBottom: 8,
-        paddingHorizontal: 4,
+        textTransform: "uppercase",
     },
     tagItem: {
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 8,
+        paddingVertical: 10,
     },
     tagColor: {
         width: 12,
         height: 12,
         borderRadius: 6,
-        marginLeft: 8,
+        marginLeft: 12,
         marginRight: 8,
+    },
+    tagName: {
+        fontSize: 14,
+        flex: 1,
     },
     emptyText: {
         textAlign: "center",
-        padding: 12,
+        paddingVertical: 20,
         fontStyle: "italic",
     },
     actionButtons: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginTop: 4,
+        paddingTop: 12,
+        paddingBottom: 12,
+        paddingHorizontal: 16,
+        borderTopWidth: StyleSheet.hairlineWidth,
     },
     actionButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 4,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 6,
         borderWidth: 1,
-        minWidth: 80,
+        flex: 1,
         alignItems: "center",
+        marginHorizontal: 4,
     },
 })

@@ -1,11 +1,7 @@
 import React from "react"
-import { useTheme } from "../../../../hooks/useTheme.ts"
-import { IDocument } from "../../../../types/document.ts"
-import StarIcon from "../../assets/svg/starfilled.svg"
-import StarOutlineIcon from "../../assets/svg/favorite.svg"
-import ShareIcon from "../../assets/svg/share.svg"
-import InfoIcon from "../../assets/svg/info.svg"
-import TrashIcon from "../../assets/svg/trash.svg"
+import { useTheme } from "../../../../hooks/useTheme"
+import { IDocument } from "../../../../types/document"
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
 import {
     ActionModalBase,
     ActionOption,
@@ -43,48 +39,70 @@ export function DocumentActionModal({
 
     const documentMenuOptions: ActionOption[] = [
         {
-            label: isFavorite ? "Remove Favorite" : "Add Favorite",
+            label: isFavorite ? "Quitar de favoritos" : "Añadir a favoritos",
             action: handleToggleFavorite,
-            icon: isFavorite ? (
-                <StarIcon width={20} height={20} fill={colors.warning} />
-            ) : (
-                <StarOutlineIcon
-                    width={20}
-                    height={20}
-                    stroke={colors.primary}
+            icon: (
+                <FontAwesome6
+                    name="star"
+                    size={20}
+                    color={isFavorite ? colors.warning : colors.primary}
+                    iconStyle={isFavorite ? "solid" : "regular"}
                 />
             ),
             style: { color: isFavorite ? colors.warning : colors.primary },
             testID: "doc-action-favorite",
         },
         {
-            label: "Share",
+            label: "Compartir",
             action: handleShare,
-            icon: <ShareIcon width={20} height={20} stroke={colors.primary} />,
+            icon: (
+                <FontAwesome6
+                    name="share"
+                    size={20}
+                    color={colors.primary}
+                    iconStyle="solid"
+                />
+            ),
             style: { color: colors.primary },
             testID: "doc-action-share",
         },
         {
-            label: "View Details",
+            label: "Ver detalles",
             action: handleViewDetails,
-            icon: <InfoIcon width={20} height={20} stroke={colors.primary} />,
+            icon: (
+                <FontAwesome6
+                    name="circle-info"
+                    size={20}
+                    color={colors.primary}
+                    iconStyle="solid"
+                />
+            ),
             style: { color: colors.primary },
             testID: "doc-action-details",
         },
         {
-            label: "Delete",
+            label: "Eliminar",
             action: handleDelete,
-            icon: <TrashIcon width={20} height={20} stroke={colors.error} />,
+            icon: (
+                <FontAwesome6
+                    name="trash"
+                    size={20}
+                    color={colors.error}
+                    iconStyle="solid"
+                />
+            ),
             style: { color: colors.error },
             testID: "doc-action-delete",
         },
     ]
 
+    const modalTitle = `Opciones para "${document.title || "Documento"}"`
+
     return (
         <ActionModalBase
             isVisible={isVisible}
             onClose={onClose}
-            title={`${document.title || "Document"} Options`}
+            title={modalTitle}
             menuOptions={documentMenuOptions}
         />
     )
