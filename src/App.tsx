@@ -1,3 +1,5 @@
+//App.tsx
+
 import React, { useEffect, useState } from "react"
 import { StyleSheet, View } from "react-native"
 import { ThemeProvider } from "./context/ThemeContext"
@@ -55,6 +57,7 @@ type RegisterData = {
     email: string
     password: string
     acceptedTerms: boolean
+    enableBioAuth: boolean
 }
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>()
@@ -137,6 +140,7 @@ export default function App() {
     const {
         isAuthenticated,
         loginWithEmailPassword,
+        loginWithBiometrics,
         registerUser,
         checkAuthStatus,
     } = useAuthStore()
@@ -195,11 +199,17 @@ export default function App() {
     }, [checkAuthStatus])
 
     const handleLogin = async (
-        email: string,
-        password: string,
+        email: string | undefined,
+        password: string | undefined,
+        useBiometrics: boolean = false,
     ): Promise<void> => {
         try {
-            await loginWithEmailPassword(email, password)
+            if (useBiometrics) {
+                await loginWithBiometrics()
+            }
+            if (typeof email === "string" && typeof password === "string") {
+                await loginWithEmailPassword(email, password)
+            }
         } catch (error) {
             console.error("Login failed:", error)
             // Handle login error feedback to the user if needed
@@ -213,7 +223,19 @@ export default function App() {
             name: `${data.firstName} ${data.lastName}`,
         }
         try {
-            await registerUser(userData)
+            const registerResult = await registerUser(
+                userData,
+                data.enableBioAuth,
+            )
+
+            if (typeof registerResult === "string") {
+                // Remove biometric for other account
+                console.warn(
+                    `Biometric conflict with existing user: ${registerResult}`,
+                )
+
+                await registerUser(userData, data.enableBioAuth)
+            }
             // Automatically log in after successful registration
             await loginWithEmailPassword(data.email, data.password)
         } catch (error) {

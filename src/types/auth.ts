@@ -16,10 +16,12 @@ export interface IAuthState {
     registeredUsers: IUserCredentials[] // Remove optional marker since we'll always have this
 
     // Authentication methods - make them all required
+    loginWithBiometrics: () => Promise<IUser | null>
     loginWithEmailPassword: (email: string, password: string) => Promise<IUser>
     registerUser: (
         data: Omit<IUserCredentials, "id" | "createdAt">,
-    ) => Promise<boolean>
+        enableBiometrics: boolean,
+    ) => Promise<boolean | string>
     login: (pin?: string) => Promise<IUser | null>
     logout: () => Promise<void>
     checkAuthStatus: () => Promise<void>

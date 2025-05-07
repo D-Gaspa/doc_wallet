@@ -1,3 +1,5 @@
+//components/ui/screens/auth/RegisterScreen.tsx
+
 import React, { useState, useRef, useEffect } from "react"
 import {
     View,
@@ -14,16 +16,16 @@ import {
     TextInput, // Keep for ref typing
     TouchableWithoutFeedback,
 } from "react-native"
-import { useTheme } from "../../../../hooks/useTheme" // Adjust path
-import { Button } from "../../button" // Adjust path
-import { Stack, Spacer, Row } from "../../layout" // Adjust path
-import { Text } from "../../typography" // Adjust path
-import { TextField } from "../../form" // Adjust path
-import { Checkbox } from "../../form" // Import Checkbox
-import { DocWalletLogo } from "../../../common/DocWalletLogo" // Adjust path
-import EyeIcon from "../../assets/svg/Eye.svg" // Adjust path
-import EyeOffIcon from "../../assets/svg/EyeOff.svg" // Adjust path
-import { TermsAndConditionsScreen } from "./TermsAndConditions" // Import T&C Screen
+import { useTheme } from "../../../../hooks/useTheme"
+import { Button } from "../../button"
+import { Stack, Spacer, Row } from "../../layout"
+import { Text } from "../../typography"
+import { TextField } from "../../form"
+import { Checkbox } from "../../form"
+import { DocWalletLogo } from "../../../common/DocWalletLogo"
+import EyeIcon from "../../assets/svg/Eye.svg"
+import EyeOffIcon from "../../assets/svg/EyeOff.svg"
+import { TermsAndConditionsScreen } from "./TermsAndConditions"
 
 type RegisterData = {
     firstName: string
@@ -31,6 +33,7 @@ type RegisterData = {
     email: string
     password: string
     acceptedTerms: boolean
+    enableBioAuth: boolean
 }
 
 type RegisterScreenProps = {
@@ -43,7 +46,6 @@ export function RegisterScreen({
     onGoToLogin,
 }: RegisterScreenProps) {
     const { colors } = useTheme()
-    // --- State ---
     const [firstName, setFirstName] = useState("")
     const [lastName, setLastName] = useState("")
     const [email, setEmail] = useState("")
@@ -55,8 +57,8 @@ export function RegisterScreen({
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [formTouched, setFormTouched] = useState<Record<string, boolean>>({})
     const [isTermsModalVisible, setIsTermsModalVisible] = useState(false)
+    const [enableBiometrics, setEnableBiometrics] = useState(false)
 
-    // --- Refs ---
     const lastNameInputRef = useRef<TextInput>(null)
     const emailInputRef = useRef<TextInput>(null)
     const passwordInputRef = useRef<TextInput>(null)
@@ -83,7 +85,6 @@ export function RegisterScreen({
         if (/[a-z]/.test(password)) score += 1
         if (/[0-9]/.test(password)) score += 1
         if (/[^A-Za-z0-9]/.test(password)) score += 1
-        // ---> Use const for feedback <---
         const feedback =
             score < 3
                 ? "Contraseña débil"
@@ -93,7 +94,6 @@ export function RegisterScreen({
         setPasswordStrength({ score: Math.min(score, 6), feedback })
     }, [password, colors])
 
-    // --- Validation ---
     const validateField = (
         field: keyof RegisterData | "confirmPassword",
         value: string | boolean,
@@ -121,6 +121,8 @@ export function RegisterScreen({
                 else if (String(value) !== password)
                     error = "Las contraseñas no coinciden"
                 break
+            case "enableBioAuth":
+                break
             case "acceptedTerms":
                 if (!value) error = "Debes aceptar los términos y condiciones"
                 break
@@ -128,7 +130,9 @@ export function RegisterScreen({
         return error
     }
 
-    const getFieldState = (field: keyof RegisterData | "confirmPassword") => {
+    const getFieldState = (
+        field: keyof RegisterData | "confirmPassword" | "enableBioAuth",
+    ) => {
         const value =
             field === "firstName"
                 ? firstName
@@ -141,6 +145,8 @@ export function RegisterScreen({
                 : field === "confirmPassword"
                 ? confirmPassword
                 : acceptedTerms
+                ? acceptedTerms
+                : enableBiometrics
         const touched = formTouched[field]
         const error = validateField(field, value)
         return { valid: error === "", error: error, value, touched }
@@ -212,6 +218,7 @@ export function RegisterScreen({
                 email: email.trim(),
                 password,
                 acceptedTerms,
+                enableBioAuth: enableBiometrics,
             })
         } catch (err) {
             setErrors((prev) => ({
@@ -294,6 +301,7 @@ export function RegisterScreen({
     const passwordState = getFieldState("password")
     const confirmPasswordState = getFieldState("confirmPassword")
     const acceptedTermsState = getFieldState("acceptedTerms")
+    const enableBiometricsState = getFieldState("enableBioAuth")
 
     return (
         <>
@@ -689,6 +697,48 @@ export function RegisterScreen({
                                         ) : null}
                                     </Stack>
                                 </Animated.View>
+                                {/*  Enable Biometrics Checkbox */}
+                                <View style={styles.termsContainer}>
+                                    <View style={styles.checkboxWrapper}>
+                                        <Checkbox
+                                            checked={enableBiometrics}
+                                            onToggle={() => {
+                                                setEnableBiometrics(
+                                                    !enableBiometrics,
+                                                )
+                                                markTouched("enableBioAuth")
+                                            }}
+                                        />
+                                    </View>
+                                    <View style={styles.termsTextContainer}>
+                                        <Text
+                                            variant="sm"
+                                            style={[
+                                                styles.termsText,
+                                                { color: colors.secondaryText },
+                                            ]}
+                                        >
+                                            Habilitar Biometría
+                                        </Text>
+                                        {enableBiometricsState.touched &&
+                                        enableBiometricsState.error ? (
+                                            <Text
+                                                variant="xm"
+                                                style={[
+                                                    styles.errorText,
+                                                    { color: colors.error },
+                                                ]}
+                                            >
+                                                {enableBiometricsState.error}
+                                            </Text>
+                                        ) : (
+                                            <View
+                                                style={styles.errorPlaceholder}
+                                            />
+                                        )}
+                                    </View>
+                                </View>
+
                                 {/* Terms and Conditions */}
                                 <View style={styles.termsContainer}>
                                     <View style={styles.checkboxWrapper}>

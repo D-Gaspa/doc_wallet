@@ -9,6 +9,7 @@ import { TokenService } from "../services/auth/tokenService"
 import { LoggingService } from "../services/monitoring/loggingService"
 import { PerformanceMonitoringService } from "../services/monitoring/performanceMonitoringService"
 import { ErrorTrackingService } from "../services/monitoring/errorTrackingService"
+import * as Keychain from "react-native-keychain"
 
 const authService = new AuthService()
 const logger = LoggingService.getLogger("AuthStore")
@@ -32,6 +33,37 @@ export const useAuthStore = create<IAuthState>()(
             isLoading: false,
             preferredAuthMethod: AuthMethod.PIN,
             registeredUsers: MOCK_USERS,
+
+            loginWithBiometrics: async (): Promise<IUser | null> => {
+                try {
+                    const biometricSuccess = await authService.authenticate(
+                        AuthMethod.BIOMETRIC,
+                    )
+                    if (biometricSuccess) {
+                        const credentials = await Keychain.getGenericPassword({
+                            service: "biometric_user",
+                        })
+                        if (credentials) {
+                            const email = credentials.username
+                            const user = get().registeredUsers.find(
+                                (u) => u.email === email,
+                            )
+                            if (user) {
+                                // ... login success ...
+                            } else {
+                                // ... user not found ...
+                            }
+                        } else {
+                            // ... no biometric association ...
+                        }
+                    } else {
+                        // ... biometric auth failed ...
+                    }
+                } catch (error) {
+                    logger.debug("Error login with biometrics: ", error)
+                }
+                return null
+            },
 
             // Email/Password login
             loginWithEmailPassword: async (email: string, password: string) => {
@@ -89,6 +121,7 @@ export const useAuthStore = create<IAuthState>()(
             // Register a new user
             registerUser: async (
                 userData: Omit<IUserCredentials, "id" | "createdAt">,
+                enableBiometrics: boolean,
             ) => {
                 try {
                     logger.info("User registration started")
@@ -118,6 +151,54 @@ export const useAuthStore = create<IAuthState>()(
                         createdAt: new Date().toISOString(),
                     }
 
+                    if (enableBiometrics) {
+                        try {
+                            const existingAssociation =
+                                await Keychain.getGenericPassword({
+                                    service: `biometric_user`,
+                                })
+                            if (existingAssociation) {
+                                // Biometric conflict - return the associated email
+                                const existingUser = get().registeredUsers.find(
+                                    (u) =>
+                                        u.id === existingAssociation.password,
+                                )
+                                const existingUserEmail = existingUser
+                                    ? existingUser.email
+                                    : "unknown"
+                                set({ isLoading: false })
+                                return existingUserEmail
+                            } else {
+                                const biometricSuccess =
+                                    await authService.authenticate(
+                                        AuthMethod.BIOMETRIC,
+                                    )
+
+                                if (biometricSuccess) {
+                                    await Keychain.setGenericPassword(
+                                        `biometric_user`,
+                                        newUser.id,
+                                        {
+                                            service:
+                                                "com.doc_wallet.auth.biometrics",
+                                        },
+                                    )
+                                } else {
+                                    logger.warn(
+                                        "Biometric enrollment failed during registration",
+                                    )
+                                    // Decide how to handle this - maybe still allow registration?
+                                }
+                            }
+                        } catch (biometricError) {
+                            logger.error(
+                                "Error during biometric association:",
+                                biometricError,
+                            )
+                            // Consider how to handle this - maybe don't fail the whole registration?
+                        }
+                    }
+
                     // Add to registered users
                     set((state) => ({
                         registeredUsers: [...state.registeredUsers, newUser],
@@ -132,6 +213,41 @@ export const useAuthStore = create<IAuthState>()(
                     return true
                 } catch (error) {
                     logger.error("Registration failed:", error)
+                    set({ isLoading: false })
+                    return Promise.reject(error)
+                }
+            },
+
+            overrideBiometricAssociation: async (
+                newUserId: string,
+                deviceId: string,
+            ) => {
+                try {
+                    logger.info("Overriding biometric association", {
+                        deviceId,
+                        newUserId,
+                    })
+                    set({ isLoading: true })
+
+                    await Keychain.resetGenericPassword({
+                        service: `biometric_user`,
+                    })
+                    await Keychain.setGenericPassword(
+                        `biometric_user`,
+                        newUserId,
+                        { service: "com.doc_wallet.auth.biometrics" },
+                    )
+
+                    logger.info("Biometric association overridden", {
+                        newUserId,
+                    })
+                    set({ isLoading: false })
+                    return true
+                } catch (error) {
+                    logger.error(
+                        "Failed to override biometric association",
+                        error,
+                    )
                     set({ isLoading: false })
                     return Promise.reject(error)
                 }

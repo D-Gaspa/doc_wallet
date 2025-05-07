@@ -1,4 +1,6 @@
-import React, { useState, useRef } from "react"
+//components/ui/screens/auth/LoginScreen.tsx
+
+import React, { useState, useRef, useEffect } from "react"
 import {
     View,
     TouchableOpacity,
@@ -18,9 +20,14 @@ import { DocWalletLogo } from "../../../common/DocWalletLogo" // Adjust path
 import EyeIcon from "../../assets/svg/Eye.svg" // Adjust path
 import EyeOffIcon from "../../assets/svg/EyeOff.svg" // Adjust path
 import { useDismissKeyboard } from "../../../../hooks/useDismissKeyboard"
+import { IUser } from "../../../../types/user.ts"
 
 type LoginScreenProps = {
-    onLogin: (email: string, password: string) => Promise<void>
+    onLogin: (
+        email: string | undefined,
+        password: string | undefined,
+        useBiometrics?: boolean,
+    ) => Promise<IUser | null | void>
     onGoToRegister: () => void
     onForgotPassword?: () => void
 }
@@ -41,6 +48,30 @@ export function LoginScreen({
     // const passwordInputRef = useRef<typeof TextField>(null); // ---> Cannot use ref if TextField doesn't support forwardRef
     const buttonScale = useRef(new Animated.Value(1)).current
     const shakeAnimation = useRef(new Animated.Value(0)).current
+    const [showEmailPasswordForm, setShowEmailPasswordForm] = useState(false) // New state to control form visibility
+
+    useEffect(() => {
+        const attemptBiometricLogin = async () => {
+            try {
+                setIsLoggingIn(true)
+                const biometricUser = await onLogin(undefined, undefined, true) // Attempt biometric login
+                if (biometricUser) {
+                    // Biometric login successful, no need to show form
+                } else {
+                    // Biometric login failed or not available, show email/password form
+                    setShowEmailPasswordForm(true)
+                }
+            } catch (error) {
+                console.error("Biometric login attempt failed:", error)
+                setShowEmailPasswordForm(true)
+                // Show email/password form
+            } finally {
+                setIsLoggingIn(false)
+            }
+        }
+
+        attemptBiometricLogin()
+    }, [])
 
     // --- Correctly get dismiss keyboard props ---
     const dismissKeyboardProps = useDismissKeyboard()
@@ -160,133 +191,163 @@ export function LoginScreen({
                         <Spacer size={10} />
 
                         {/* Login Form */}
-                        <Animated.View
-                            style={{
-                                transform: [{ translateX: shakeAnimation }],
-                            }}
-                        >
-                            <Stack spacing={12}>
-                                {/* Email Input */}
-                                <View>
-                                    <Text
-                                        variant="sm"
-                                        weight="medium"
-                                        style={[
-                                            styles.inputLabel,
-                                            { color: colors.text },
-                                        ]}
+                        {showEmailPasswordForm && (
+                            <>
+                                <>
+                                    <Animated.View
+                                        style={{
+                                            transform: [
+                                                { translateX: shakeAnimation },
+                                            ],
+                                        }}
                                     >
-                                        Correo electrónico
-                                    </Text>
-                                    <TextField
-                                        placeholder="Ingresa tu correo"
-                                        // removed placeholderTextColor
-                                        value={email}
-                                        onChangeText={setEmail}
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        returnKeyType="next"
-                                        testID="login-email-input"
-                                    />
-                                    {/* Note: To enable focusing next field, TextField needs to support forwardRef */}
-                                </View>
+                                        <Stack spacing={12}>
+                                            {/* Email Input */}
+                                            <View>
+                                                <Text
+                                                    variant="sm"
+                                                    weight="medium"
+                                                    style={[
+                                                        styles.inputLabel,
+                                                        { color: colors.text },
+                                                    ]}
+                                                >
+                                                    Correo electrónico
+                                                </Text>
+                                                <TextField
+                                                    placeholder="Ingresa tu correo"
+                                                    // removed placeholderTextColor
+                                                    value={email}
+                                                    onChangeText={setEmail}
+                                                    keyboardType="email-address"
+                                                    autoCapitalize="none"
+                                                    returnKeyType="next"
+                                                    testID="login-email-input"
+                                                />
+                                                {/* Note: To enable focusing next field, TextField needs to support forwardRef */}
+                                            </View>
 
-                                {/* Password Input */}
-                                <View>
-                                    <Text
-                                        variant="sm"
-                                        weight="medium"
-                                        style={[
-                                            styles.inputLabel,
-                                            { color: colors.text },
-                                        ]}
-                                    >
-                                        Contraseña
-                                    </Text>
-                                    <View style={styles.passwordContainer}>
-                                        <TextField
-                                            // removed ref={passwordInputRef as any}
-                                            placeholder="Ingresa tu contraseña"
-                                            // removed placeholderTextColor
-                                            value={password}
-                                            onChangeText={setPassword}
-                                            secureTextEntry={!isPasswordVisible}
-                                            returnKeyType="go"
-                                            onSubmitEditing={handleLogin} // Submit form on "go"
-                                            testID="login-password-input"
-                                        />
-                                        <TouchableOpacity
-                                            onPress={() =>
-                                                setPasswordVisible(
-                                                    !isPasswordVisible,
-                                                )
-                                            }
-                                            style={styles.eyeIconContainer}
-                                            hitSlop={{
-                                                top: 10,
-                                                bottom: 10,
-                                                left: 10,
-                                                right: 10,
-                                            }}
-                                        >
-                                            {isPasswordVisible ? (
-                                                <EyeIcon
-                                                    width={20}
-                                                    height={20}
-                                                    color={colors.secondaryText}
-                                                />
-                                            ) : (
-                                                <EyeOffIcon
-                                                    width={20}
-                                                    height={20}
-                                                    color={colors.secondaryText}
-                                                />
+                                            {/* Password Input */}
+                                            <View>
+                                                <Text
+                                                    variant="sm"
+                                                    weight="medium"
+                                                    style={[
+                                                        styles.inputLabel,
+                                                        { color: colors.text },
+                                                    ]}
+                                                >
+                                                    Contraseña
+                                                </Text>
+                                                <View
+                                                    style={
+                                                        styles.passwordContainer
+                                                    }
+                                                >
+                                                    <TextField
+                                                        // removed ref={passwordInputRef as any}
+                                                        placeholder="Ingresa tu contraseña"
+                                                        // removed placeholderTextColor
+                                                        value={password}
+                                                        onChangeText={
+                                                            setPassword
+                                                        }
+                                                        secureTextEntry={
+                                                            !isPasswordVisible
+                                                        }
+                                                        returnKeyType="go"
+                                                        onSubmitEditing={
+                                                            handleLogin
+                                                        } // Submit form on "go"
+                                                        testID="login-password-input"
+                                                    />
+                                                    <TouchableOpacity
+                                                        onPress={() =>
+                                                            setPasswordVisible(
+                                                                !isPasswordVisible,
+                                                            )
+                                                        }
+                                                        style={
+                                                            styles.eyeIconContainer
+                                                        }
+                                                        hitSlop={{
+                                                            top: 10,
+                                                            bottom: 10,
+                                                            left: 10,
+                                                            right: 10,
+                                                        }}
+                                                    >
+                                                        {isPasswordVisible ? (
+                                                            <EyeIcon
+                                                                width={20}
+                                                                height={20}
+                                                                color={
+                                                                    colors.secondaryText
+                                                                }
+                                                            />
+                                                        ) : (
+                                                            <EyeOffIcon
+                                                                width={20}
+                                                                height={20}
+                                                                color={
+                                                                    colors.secondaryText
+                                                                }
+                                                            />
+                                                        )}
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+
+                                            {/* Error Message */}
+                                            {error && (
+                                                <Text
+                                                    variant="sm"
+                                                    style={[
+                                                        styles.errorText,
+                                                        { color: colors.error },
+                                                    ]}
+                                                >
+                                                    {error}
+                                                </Text>
                                             )}
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
 
-                                {/* Error Message */}
-                                {error && (
-                                    <Text
-                                        variant="sm"
-                                        style={[
-                                            styles.errorText,
-                                            { color: colors.error },
-                                        ]}
-                                    >
-                                        {error}
-                                    </Text>
-                                )}
+                                            {/* Forgot Password */}
+                                            {onForgotPassword && (
+                                                <View
+                                                    style={
+                                                        styles.forgotPasswordContainer
+                                                    }
+                                                >
+                                                    <TouchableOpacity
+                                                        onPress={
+                                                            onForgotPassword
+                                                        }
+                                                        hitSlop={{
+                                                            top: 10,
+                                                            bottom: 10,
+                                                            left: 10,
+                                                            right: 10,
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            variant="sm"
+                                                            weight="medium"
+                                                            style={{
+                                                                color: colors.primary,
+                                                            }}
+                                                        >
+                                                            ¿Olvidaste tu
+                                                            contraseña?
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            )}
+                                        </Stack>
+                                    </Animated.View>
+                                </>
+                            </>
+                        )}
 
-                                {/* Forgot Password */}
-                                {onForgotPassword && (
-                                    <View
-                                        style={styles.forgotPasswordContainer}
-                                    >
-                                        <TouchableOpacity
-                                            onPress={onForgotPassword}
-                                            hitSlop={{
-                                                top: 10,
-                                                bottom: 10,
-                                                left: 10,
-                                                right: 10,
-                                            }}
-                                        >
-                                            <Text
-                                                variant="sm"
-                                                weight="medium"
-                                                style={{
-                                                    color: colors.primary,
-                                                }}
-                                            >
-                                                ¿Olvidaste tu contraseña?
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                            </Stack>
-                        </Animated.View>
                         <Spacer size={10} />
 
                         {/* Login Button */}
