@@ -17,7 +17,6 @@ import { BatchTagManager } from "../../tag_functionality/BatchTagManager"
 import { FolderHeader, FolderSortOption } from "./FolderHeader"
 import { ItemsList } from "./ItemsList"
 import { ItemSelectionControls } from "./ItemSelectionControls"
-import { TagManagerSection } from "../../tag_functionality/TagManagerSection"
 import { useItemOperations } from "./useItemOperations.ts"
 import { useSelectionMode } from "./useSelectionMode"
 import { RouteProp, useIsFocused, useRoute } from "@react-navigation/native"
@@ -217,7 +216,7 @@ const FolderMainViewContent = forwardRef<FolderMainViewRef, unknown>(
                                   }
                                 : folder,
                         )
-                        useFolderStore.getState().setFolders(updatedFolders) // Update store
+                        useFolderStore.getState().setFolders(updatedFolders)
                         logger.info(
                             `Carpeta ${targetFolderId} actualizada con documento.`,
                         )
@@ -309,7 +308,7 @@ const FolderMainViewContent = forwardRef<FolderMainViewRef, unknown>(
                         type: "error",
                     })
                     setMoveFolderModalVisible(false)
-                    toggleSelectionMode()
+                    if (selectionMode) toggleSelectionMode()
                     return
                 }
                 handleMoveItems(selectedItems, targetFolderId)
@@ -366,7 +365,6 @@ const FolderMainViewContent = forwardRef<FolderMainViewRef, unknown>(
                                         FileSystem.cacheDirectory || "",
                                     )
                                 ) {
-                                    // Only delete if it's a cache file
                                     await documentStorage.deletePreviewFile(
                                         previewResult.sourceUri,
                                     )
@@ -476,18 +474,6 @@ const FolderMainViewContent = forwardRef<FolderMainViewRef, unknown>(
                     folderType,
                     customIconId,
                     customIconColor,
-                )
-            }
-        }
-
-        const handleTagFilterPress = (tagId: string | null) => {
-            if (tagId === null) {
-                setSelectedTagFilters([])
-            } else {
-                setSelectedTagFilters((prev) =>
-                    prev.includes(tagId)
-                        ? prev.filter((id) => id !== tagId)
-                        : [...prev, tagId],
                 )
             }
         }
@@ -602,31 +588,96 @@ const FolderMainViewContent = forwardRef<FolderMainViewRef, unknown>(
         }))
 
         const displayItems = useMemo(() => {
-            const currentLevelFolders = folders.filter(
-                (f) => f.parentId === currentFolderId,
-            )
-            const currentFolderData = folders.find(
-                (f) => f.id === currentFolderId,
-            )
-            const currentLevelDocumentIds = currentFolderData?.documentIds || []
-            const currentLevelDocuments = documents.filter((doc) =>
-                currentLevelDocumentIds.includes(doc.id),
-            )
+            let itemsToConsider: ListItem[]
 
-            const allPotentialItems: ListItem[] = [
-                ...currentLevelFolders.map(
-                    (folder): ListItem => ({ type: "folder", data: folder }),
-                ),
-                ...currentLevelDocuments.map(
-                    (doc): ListItem => ({ type: "document", data: doc }),
-                ),
-            ]
+            if (searchQuery.trim() !== "") {
+                // (Search query active): shows all items in the current folder and subfolders
+                const recursivelyCollectedItems: ListItem[] = []
+                const visitedFolderIds = new Set<string | null>()
 
-            const filteredItems = allPotentialItems.filter((item) => {
+                const collect = (folderId: string | null) => {
+                    if (folderId !== null) {
+                        if (visitedFolderIds.has(folderId)) {
+                            return
+                        }
+                        visitedFolderIds.add(folderId)
+                    }
+
+                    const childFolders = folders.filter(
+                        (f) => f.parentId === folderId,
+                    )
+
+                    let documentsInCurrentFolder: IDocument[] = []
+                    if (folderId !== null) {
+                        const folderData = folders.find(
+                            (f) => f.id === folderId,
+                        )
+                        const docIds = folderData?.documentIds || []
+                        documentsInCurrentFolder = documents.filter((d) =>
+                            docIds.includes(d.id),
+                        )
+                    }
+
+                    documentsInCurrentFolder.forEach((doc) => {
+                        recursivelyCollectedItems.push({
+                            type: "document",
+                            data: doc,
+                        })
+                    })
+
+                    childFolders.forEach((f) => {
+                        recursivelyCollectedItems.push({
+                            type: "folder",
+                            data: f,
+                        })
+                        collect(f.id)
+                    })
+                }
+
+                collect(currentFolderId)
+
+                const uniqueItemsMap = new Map<string, ListItem>()
+                recursivelyCollectedItems.forEach((item) => {
+                    const key = `${item.type}-${item.data.id}`
+                    if (!uniqueItemsMap.has(key)) {
+                        uniqueItemsMap.set(key, item)
+                    }
+                })
+                itemsToConsider = Array.from(uniqueItemsMap.values())
+            } else {
+                // (No search query active): shows only current level
+                const currentLevelFolders = folders.filter(
+                    (f) => f.parentId === currentFolderId,
+                )
+                const currentFolderData = folders.find(
+                    (f) => f.id === currentFolderId,
+                )
+                const currentLevelDocumentIds =
+                    currentFolderData?.documentIds || []
+                const currentLevelDocuments = documents.filter((doc) =>
+                    currentLevelDocumentIds.includes(doc.id),
+                )
+                itemsToConsider = [
+                    ...currentLevelFolders.map(
+                        (folder): ListItem => ({
+                            type: "folder",
+                            data: folder,
+                        }),
+                    ),
+                    ...currentLevelDocuments.map(
+                        (doc): ListItem => ({ type: "document", data: doc }),
+                    ),
+                ]
+            }
+
+            const filteredItems = itemsToConsider.filter((item) => {
                 const title = item.data.title || ""
                 const matchesSearch =
-                    !searchQuery ||
-                    title.toLowerCase().includes(searchQuery.toLowerCase())
+                    !searchQuery.trim() ||
+                    title
+                        .toLowerCase()
+                        .includes(searchQuery.trim().toLowerCase())
+
                 let matchesTags = true
                 if (selectedTagFilters.length > 0) {
                     const itemTags = tagContext.getTagsForItem(
@@ -641,23 +692,19 @@ const FolderMainViewContent = forwardRef<FolderMainViewRef, unknown>(
                 return matchesSearch && matchesTags
             })
 
+            // Sort the filtered items
             const folderItems = filteredItems.filter(
-                (
-                    item,
-                ): item is ListItem & {
-                    type: "folder"
-                    data: Folder
-                } => item.type === "folder",
+                (item): item is ListItem & { type: "folder"; data: Folder } =>
+                    item.type === "folder",
             )
             const documentItems = filteredItems.filter(
                 (
                     item,
-                ): item is ListItem & {
-                    type: "document"
-                    data: IDocument
-                } => item.type === "document",
+                ): item is ListItem & { type: "document"; data: IDocument } =>
+                    item.type === "document",
             )
 
+            // Sort folders
             folderItems.sort((a, b) => {
                 if (sortOption === "name")
                     return (a.data.title || "").localeCompare(
@@ -674,9 +721,34 @@ const FolderMainViewContent = forwardRef<FolderMainViewRef, unknown>(
                     )
                 return 0
             })
-            documentItems.sort((a, b) =>
-                (a.data.title || "").localeCompare(b.data.title || ""),
-            )
+
+            // Sort documents
+            documentItems.sort((a, b) => {
+                if (sortOption === "name")
+                    return (a.data.title || "").localeCompare(
+                        b.data.title || "",
+                    )
+                if (
+                    sortOption === "date" &&
+                    a.data.metadata?.updatedAt &&
+                    b.data.metadata?.updatedAt
+                ) {
+                    return (
+                        new Date(b.data.metadata.updatedAt).getTime() -
+                        new Date(a.data.metadata.updatedAt).getTime()
+                    )
+                }
+                if (
+                    sortOption === "type" &&
+                    a.data.metadata?.type &&
+                    b.data.metadata?.type
+                ) {
+                    return a.data.metadata.type
+                        .toString()
+                        .localeCompare(b.data.metadata.type.toString())
+                }
+                return (a.data.title || "").localeCompare(b.data.title || "")
+            })
 
             return [...folderItems, ...documentItems]
         }, [
@@ -686,8 +758,7 @@ const FolderMainViewContent = forwardRef<FolderMainViewRef, unknown>(
             searchQuery,
             selectedTagFilters,
             sortOption,
-            tagContext.associations,
-            tagContext.tags,
+            tagContext,
         ])
 
         const emptyListMessage = useMemo(() => {
@@ -779,15 +850,6 @@ const FolderMainViewContent = forwardRef<FolderMainViewRef, unknown>(
                         <ExpandingFab
                             onAddFolder={handleCreateFolderPress}
                             onAddDocument={handleAddDocumentPress}
-                        />
-                    )}
-
-                    {currentFolderId && !selectionMode && (
-                        <TagManagerSection
-                            folderId={currentFolderId}
-                            folderName={getCurrentFolderName()}
-                            handleTagFilterPress={handleTagFilterPress}
-                            selectedTagFilters={selectedTagFilters}
                         />
                     )}
 
