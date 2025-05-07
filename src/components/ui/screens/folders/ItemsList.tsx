@@ -28,6 +28,7 @@ interface ItemsListProps {
     onSelectItem?: (id: string, type: "folder" | "document") => void
     onFolderLongPress?: (folderId: string) => void
     onDocumentLongPress?: (documentId: string) => void
+    folderCardItemManagerShowAddTagButton?: boolean
 
     testID?: string
 }
@@ -52,6 +53,7 @@ export function ItemsList({
     onSelectItem,
     onFolderLongPress,
     onDocumentLongPress,
+    folderCardItemManagerShowAddTagButton,
     testID,
 }: ItemsListProps) {
     const { colors } = useTheme()
@@ -103,6 +105,7 @@ export function ItemsList({
                         title={folder.title}
                         type={folder.type}
                         customIconId={folder.customIconId}
+                        customIconColor={folder.customIconColor}
                         isFavorite={folder.favorite}
                         selected={isSelected}
                         onPress={handlePress}
@@ -118,6 +121,9 @@ export function ItemsList({
                             !selectionMode
                                 ? () => onFolderOptionsPress(folder)
                                 : undefined
+                        }
+                        itemManagerShowAddTagButton={
+                            folderCardItemManagerShowAddTagButton ?? true
                         }
                         testID={`folder-${folder.id}`}
                     />
@@ -190,6 +196,7 @@ export function ItemsList({
             onFolderToggleFavorite,
             onFolderLongPress,
             onDocumentLongPress,
+            folderCardItemManagerShowAddTagButton,
             colors,
             tagContext,
         ],
@@ -218,7 +225,13 @@ export function ItemsList({
                 styles.content,
                 items.length === 0 && styles.emptyContent,
             ]}
-            extraData={{ selectionMode, selectedItems, selectedItemId }}
+            extraData={{
+                selectionMode,
+                selectedItems,
+                selectedItemId,
+                folderCardItemManagerShowAddTagButton:
+                    folderCardItemManagerShowAddTagButton ?? true,
+            }}
             testID={testID ?? "items-list"}
         />
     )

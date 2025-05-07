@@ -25,7 +25,6 @@ export function Tag({
 }: TagProps) {
     const { colors } = useTheme()
 
-    // Handle the long press event
     const handleLongPress = () => {
         if (onLongPress) {
             onLongPress()
@@ -36,22 +35,22 @@ export function Tag({
         styles.container,
         { backgroundColor: color + "20", borderColor: color },
         selected && styles.selected,
-        size === "small" && styles.containerSmall, // Apply small style
+        size === "small" && styles.containerSmall,
     ]
     const dotStyle = [
         styles.dot,
         { backgroundColor: color },
-        size === "small" && styles.dotSmall, // Apply small style
+        size === "small" && styles.dotSmall,
     ]
     const textStyle = [
         styles.text,
         { color: colors.text },
-        size === "small" && styles.textSmall, // Apply small style
+        size === "small" && styles.textSmall,
     ]
 
     return (
         <TouchableOpacity
-            style={containerStyle} // Use combined style
+            style={containerStyle}
             onPress={onPress}
             onLongPress={handleLongPress}
             delayLongPress={500}
@@ -70,41 +69,37 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         borderRadius: 16,
-        paddingHorizontal: 8, // Default padding
-        paddingVertical: 6, // Default padding
+        paddingHorizontal: 8,
+        paddingVertical: 6,
         margin: 4,
         borderWidth: 1,
     },
     containerSmall: {
-        // Styles for small tags
         paddingHorizontal: 6,
         paddingVertical: 3,
         borderRadius: 12,
         margin: 2,
     },
     selected: {
-        borderWidth: 1.5, // Make border slightly thicker when selected
-        // You might want a different background/border for selected small tags too
+        borderWidth: 1.5,
     },
     dot: {
-        width: 8, // Default size
-        height: 8, // Default size
-        borderRadius: 4, // Default size
-        marginRight: 6, // Default margin
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 6,
     },
     dotSmall: {
-        // Styles for small dot
         width: 6,
         height: 6,
         borderRadius: 3,
         marginRight: 4,
     },
     text: {
-        fontSize: 14, // Default font size
+        fontSize: 14,
         fontWeight: "500",
     },
     textSmall: {
-        // Style for small text
         fontSize: 11,
     },
 })

@@ -244,8 +244,6 @@ export const AddDocumentDetailsSheet = ({
                         onNavigate={handleNavigate}
                     />
 
-                    {/* REMOVED: "Select Root Folder" and "Select Current Folder" buttons */}
-                    {/* <Row style={styles.selectionButtonRow}> ... </Row> */}
                     <Spacer size={8} />
 
                     {/* Folder List */}
@@ -271,6 +269,7 @@ export const AddDocumentDetailsSheet = ({
                                 selectedItems={[]}
                                 emptyListMessage="No subfolders here"
                                 testID="add-doc-folder-select-list"
+                                folderCardItemManagerShowAddTagButton={false}
                             />
                         )}
                     </View>

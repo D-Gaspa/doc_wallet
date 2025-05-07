@@ -35,6 +35,7 @@ export interface FolderCardProps {
     onTagPress?: (tagId: string) => void
     selectedTagIds?: string[]
     testID?: string
+    itemManagerShowAddTagButton?: boolean
 }
 
 export function FolderCard({
@@ -55,6 +56,7 @@ export function FolderCard({
     onTagPress,
     selectedTagIds = [],
     testID,
+    itemManagerShowAddTagButton = false,
 }: FolderCardProps) {
     const { colors } = useTheme()
     const tagContext = useTagContext()
@@ -152,7 +154,7 @@ export function FolderCard({
                     onTagPress={onTagPress}
                     selectedTagIds={selectedTagIds}
                     horizontal={true}
-                    showAddTagButton={true}
+                    showAddTagButton={itemManagerShowAddTagButton ?? true}
                     size="small"
                     initiallyExpanded={false}
                 />
@@ -164,6 +166,7 @@ export function FolderCard({
             tagContext.tags,
             onTagPress,
             selectedTagIds,
+            itemManagerShowAddTagButton,
         ],
     )
 
