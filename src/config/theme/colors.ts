@@ -9,7 +9,7 @@ export const lightThemeColors = {
     border: "#323232",
     error: "#FF0000",
     success: "#28A745",
-    warning: "#FED000",
+    warning: "#d5b001",
     secondaryText: "#898989",
     tabbarIcon_active: "#FFFFFF",
     tabbarIcon_inactive: "#000000",
