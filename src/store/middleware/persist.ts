@@ -3,13 +3,35 @@ import { createJSONStorage } from "zustand/middleware"
 
 export const asyncStorageMiddleware = createJSONStorage(() => ({
     getItem: async (name) => {
-        const value = await AsyncStorage.getItem(name)
-        return value ?? null
+        try {
+            const value = await AsyncStorage.getItem(name)
+            return value ?? null
+        } catch (error) {
+            console.error(
+                `AsyncStorage getItem failed for key "${name}":`,
+                error,
+            )
+            return null
+        }
     },
     setItem: async (name, value) => {
-        await AsyncStorage.setItem(name, value)
+        try {
+            await AsyncStorage.setItem(name, value)
+        } catch (error) {
+            console.error(
+                `AsyncStorage setItem failed for key "${name}":`,
+                error,
+            )
+        }
     },
     removeItem: async (name) => {
-        await AsyncStorage.removeItem(name)
+        try {
+            await AsyncStorage.removeItem(name)
+        } catch (error) {
+            console.error(
+                `AsyncStorage removeItem failed for key "${name}":`,
+                error,
+            )
+        }
     },
 }))

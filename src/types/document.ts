@@ -58,6 +58,7 @@ export interface IDocState {
     clearError: () => void
     getDocumentPreview: (id: string) => Promise<IDocument | null>
     cleanupTempFiles: () => Promise<void>
+    reset: () => void
 }
 
 export interface ImportOptions {
