@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
     Animated,
-    Dimensions,
     FlatList,
     KeyboardAvoidingView,
     Platform,
@@ -18,8 +17,13 @@ import { Text } from "../../typography"
 import { TextField } from "../../form"
 import { FolderCard } from "../../cards"
 import { Button } from "../../button"
-import { useDismissGesture } from "../../gestures/useDismissGesture.ts"
-import { CustomIconSelector } from "./CustomIconSelector"
+import {
+    BASE_ICON_OPTIONS_CONFIG,
+    CustomIconSelector,
+    resolveColorRef,
+    ThemeColors as CustomIconSelectorThemeColors,
+} from "./CustomIconSelector"
+import { FA6IconName } from "../../../../types/icons"
 
 export type FolderType = "travel" | "medical" | "car" | "education" | "custom"
 
@@ -29,7 +33,8 @@ interface UnifiedFolderModalProps {
     onSave: (
         name: string,
         type: FolderType,
-        customIconId?: string,
+        customIconId?: FA6IconName,
+        customIconColor?: string,
         folderId?: string,
     ) => void
     mode?: "create" | "edit"
@@ -37,12 +42,13 @@ interface UnifiedFolderModalProps {
         id?: string
         name?: string
         type?: FolderType
-        customIconId?: string
+        customIconId?: FA6IconName
+        customIconColor?: string
         favorite?: boolean
     }
 }
 
-export function UnifiedFolderModal({
+export function FolderModal({
     isVisible,
     onClose,
     onSave,
@@ -51,57 +57,77 @@ export function UnifiedFolderModal({
 }: UnifiedFolderModalProps) {
     const { colors } = useTheme()
     const isMounted = useRef(false)
-    const { height: windowHeight, width: windowWidth } =
-        Dimensions.get("window")
 
     const [folderName, setFolderName] = useState(initialData.name ?? "")
     const [selectedType, setSelectedType] = useState<FolderType>(
         initialData.type ?? "custom",
     )
-    const [customIconId, setCustomIconId] = useState(
-        initialData.customIconId ?? "file",
-    )
-    const [showCustomSelector, setShowCustomSelector] = useState(
+    const defaultInitialIconName =
+        initialData.customIconId ??
+        (BASE_ICON_OPTIONS_CONFIG.find((opt) => opt.id === "folder")?.faName ||
+            "folder")
+    const defaultInitialIconColor =
+        initialData.customIconColor ??
+        resolveColorRef(
+            BASE_ICON_OPTIONS_CONFIG.find(
+                (opt) => opt.faName === defaultInitialIconName,
+            )?.colorRef || "primary",
+            colors as unknown as CustomIconSelectorThemeColors,
+        )
+    const [selectedCustomIconName, setSelectedCustomIconName] =
+        useState<FA6IconName | null>(defaultInitialIconName)
+    const [selectedCustomIconColor, setSelectedCustomIconColor] = useState<
+        string | null
+    >(defaultInitialIconColor)
+    const [showCustomSelectorUI, setShowCustomSelectorUI] = useState(
         (initialData.type ?? "custom") === "custom",
     )
-    const [iconSelectorHeight, setIconSelectorHeight] = useState(190)
-
+    const [iconSelectorHeight, setIconSelectorHeight] = useState(220)
     const fadeAnim = useRef(
-        new Animated.Value(showCustomSelector ? 1 : 0),
+        new Animated.Value(showCustomSelectorUI ? 1 : 0),
     ).current
+
     const animateIconSelector = (visible: boolean) => {
         return new Promise<void>((resolve) => {
             Animated.timing(fadeAnim, {
                 toValue: visible ? 1 : 0,
-                duration: 180,
-                useNativeDriver: true,
+                duration: 200,
+                useNativeDriver: false,
             }).start(() => resolve())
         })
     }
 
-    const { translateX, panHandlers, resetPosition } = useDismissGesture({
-        onDismiss: () => handleCancel(),
-        direction: "horizontal",
-    })
-
     const folderTypes = useMemo(
         () => [
-            { type: "travel" as const, label: "Viaje", defaultIcon: "travel" },
+            {
+                type: "travel" as const,
+                label: "Viaje",
+                defaultIcon: "plane-departure" as FA6IconName,
+                defaultColorRef: "#E74C3C",
+            },
             {
                 type: "medical" as const,
                 label: "Médico",
-                defaultIcon: "medical",
+                defaultIcon: "briefcase-medical" as FA6IconName,
+                defaultColorRef: "#3498DB",
             },
-            { type: "car" as const, label: "Vehículo", defaultIcon: "car" },
+            {
+                type: "car" as const,
+                label: "Vehículo",
+                defaultIcon: "car" as FA6IconName,
+                defaultColorRef: "#9B59B6",
+            },
             {
                 type: "education" as const,
                 label: "Educación",
-                defaultIcon: "education",
+                defaultIcon: "graduation-cap" as FA6IconName,
+                defaultColorRef: "#2ECC71",
             },
             {
                 type: "custom" as const,
-                label: "Propio",
-                defaultIcon: "file",
+                label: "Personalizado",
+                defaultIcon: "folder" as FA6IconName,
+                defaultColorRef: "primary",
             },
         ],
         [],
@@ -116,19 +142,44 @@ export function UnifiedFolderModal({
             (!prevIsVisible.current ||
                 initialData.id !== prevInitialDataId.current)
         ) {
-            setFolderName(initialData.name ?? "")
-            const initialType = initialData.type ?? "custom"
-            setSelectedType(initialType)
-            const initialCustomIcon =
-                initialData.customIconId ??
-                folderTypes.find((f) => f.type === initialType)?.defaultIcon ??
-                "file"
-            setCustomIconId(initialCustomIcon)
+            const currentType = initialData.type ?? "custom"
+            let iconForInit: FA6IconName = "folder"
+            let colorForInit: string | null = null
 
-            const isCustom = initialType === "custom"
-            setShowCustomSelector(isCustom)
-            fadeAnim.setValue(isCustom ? 1 : 0)
-            resetPosition?.()
+            if (currentType === "custom") {
+                iconForInit =
+                    initialData.customIconId ||
+                    BASE_ICON_OPTIONS_CONFIG.find((opt) => opt.id === "folder")
+                        ?.faName ||
+                    "folder"
+                colorForInit =
+                    initialData.customIconColor ||
+                    resolveColorRef(
+                        BASE_ICON_OPTIONS_CONFIG.find(
+                            (opt) => opt.faName === iconForInit,
+                        )?.colorRef || "primary",
+                        colors as unknown as CustomIconSelectorThemeColors,
+                    )
+            } else {
+                const predefinedType = folderTypes.find(
+                    (ft) => ft.type === currentType,
+                )
+                if (predefinedType) {
+                    iconForInit = predefinedType.defaultIcon
+                    colorForInit = resolveColorRef(
+                        predefinedType.defaultColorRef,
+                        colors as unknown as CustomIconSelectorThemeColors,
+                    )
+                }
+            }
+            const isCustomUIToShow = currentType === "custom"
+
+            setSelectedType(currentType)
+            setSelectedCustomIconName(iconForInit)
+            setSelectedCustomIconColor(colorForInit)
+            setShowCustomSelectorUI(isCustomUIToShow)
+            fadeAnim.setValue(isCustomUIToShow ? 1 : 0)
+
             const mountTimer = setTimeout(() => {
                 isMounted.current = true
             }, 10)
@@ -138,10 +189,19 @@ export function UnifiedFolderModal({
         } else if (!isVisible && prevIsVisible.current) {
             isMounted.current = false
             if (mode === "create") {
+                const defaultFolderType = folderTypes.find(
+                    (ft) => ft.type === "custom",
+                )!
                 setFolderName("")
                 setSelectedType("custom")
-                setCustomIconId("file")
-                setShowCustomSelector(true)
+                setSelectedCustomIconName(defaultFolderType.defaultIcon)
+                setSelectedCustomIconColor(
+                    resolveColorRef(
+                        defaultFolderType.defaultColorRef,
+                        colors as unknown as CustomIconSelectorThemeColors,
+                    ),
+                )
+                setShowCustomSelectorUI(true)
                 fadeAnim.setValue(1)
             }
             prevIsVisible.current = isVisible
@@ -154,59 +214,51 @@ export function UnifiedFolderModal({
                 prevIsVisible.current = isVisible
             }
         }
-    }, [
-        isVisible,
-        initialData.id,
-        initialData.name,
-        initialData.type,
-        initialData.customIconId,
-        mode,
-        resetPosition,
-        fadeAnim,
-        folderTypes,
-    ])
+    }, [isVisible, initialData, mode, fadeAnim, folderTypes, colors])
 
     const handleTypeSelect = async (type: FolderType) => {
-        if (type === selectedType && mode !== "create") {
-            if (type !== "custom") {
-                const predefinedType = folderTypes.find(
-                    (ft) => ft.type === type,
-                )
-                if (predefinedType && folderName !== predefinedType.label) {
-                    setFolderName(predefinedType.label)
-                }
-            }
-            return
-        }
-
-        const isCustom = type === "custom"
+        const isNowCustom = type === "custom"
         setSelectedType(type)
 
-        if (isCustom) {
-            if (
-                folderTypes.some(
-                    (ft) => ft.label === folderName && ft.type !== "custom",
+        if (isNowCustom) {
+            if (!selectedCustomIconName) {
+                const defaultCustomIconConfig = BASE_ICON_OPTIONS_CONFIG.find(
+                    (opt) => opt.id === "folder",
                 )
-            ) {
-                setFolderName("")
+                setSelectedCustomIconName(
+                    defaultCustomIconConfig?.faName || "folder",
+                )
+                setSelectedCustomIconColor(
+                    resolveColorRef(
+                        defaultCustomIconConfig?.colorRef || "primary",
+                        colors as unknown as CustomIconSelectorThemeColors,
+                    ),
+                )
             }
-
-            if (!showCustomSelector) {
-                setShowCustomSelector(true)
-                await animateIconSelector(true)
-            }
-            if (!customIconId || customIconId === "file") {
-                setCustomIconId("file")
-            }
+            await animateIconSelector(true)
+            setShowCustomSelectorUI(true)
         } else {
-            if (showCustomSelector) {
-                await animateIconSelector(false)
-                setShowCustomSelector(false)
-            }
             const predefinedType = folderTypes.find((ft) => ft.type === type)
             if (predefinedType) {
                 setFolderName(predefinedType.label)
             }
+            await animateIconSelector(false)
+            setShowCustomSelectorUI(false)
+        }
+    }
+
+    const handleCustomIconSelectionChange = (selection: {
+        iconName: FA6IconName
+        iconColor: string
+    }) => {
+        setSelectedCustomIconName(selection.iconName)
+        setSelectedCustomIconColor(selection.iconColor)
+        if (selectedType !== "custom") {
+            setSelectedType("custom")
+        }
+        if (!showCustomSelectorUI) {
+            setShowCustomSelectorUI(true)
+            animateIconSelector(true).then((r) => r)
         }
     }
 
@@ -214,23 +266,42 @@ export function UnifiedFolderModal({
         if (folderName.trim() === "") {
             return
         }
-        const finalIconId = selectedType === "custom" ? customIconId : undefined
-        onSave(folderName.trim(), selectedType, finalIconId, initialData.id)
+
+        if (selectedType === "custom") {
+            const customIconToSave =
+                selectedCustomIconName ||
+                BASE_ICON_OPTIONS_CONFIG.find((opt) => opt.id === "folder")
+                    ?.faName ||
+                "folder"
+            const customColorToSave =
+                selectedCustomIconColor ||
+                resolveColorRef(
+                    BASE_ICON_OPTIONS_CONFIG.find(
+                        (opt) => opt.faName === customIconToSave,
+                    )?.colorRef || "primary",
+                    colors as unknown as CustomIconSelectorThemeColors,
+                )
+            onSave(
+                folderName.trim(),
+                selectedType,
+                customIconToSave,
+                customColorToSave,
+                initialData.id,
+            )
+        } else {
+            onSave(
+                folderName.trim(),
+                selectedType,
+                undefined,
+                undefined,
+                initialData.id,
+            )
+        }
         onClose()
     }
-
     const handleCancel = () => {
         onClose()
     }
-
-    const buttonStyle: ViewStyle =
-        folderName.trim() === "" ? styles.disabledButton : {}
-
-    const modalTitle =
-        mode === "create" ? "Crear nueva carpeta" : "Editar carpeta"
-
-    const actionButtonText =
-        mode === "create" ? "Crear carpeta" : "Actualizar carpeta"
 
     const listHeader = (
         <Stack spacing={20} style={styles.headerContent}>
@@ -244,6 +315,7 @@ export function UnifiedFolderModal({
                     onChangeText={setFolderName}
                     testID="folder-name-input"
                     returnKeyType="done"
+                    onSubmitEditing={handleSave}
                 />
             </Stack>
             <Text weight="medium" style={{ color: colors.text }}>
@@ -251,229 +323,199 @@ export function UnifiedFolderModal({
             </Text>
         </Stack>
     )
-
-    const MeasureCustomIconSelector = () => {
-        return (
-            <View
-                onLayout={(event) => {
-                    const { height } = event.nativeEvent.layout
-                    if (height > 0 && height !== iconSelectorHeight) {
-                        setIconSelectorHeight(height)
-                    }
-                }}
-            >
-                <CustomIconSelector
-                    selectedIconId={customIconId}
-                    onSelectIcon={setCustomIconId}
-                />
-            </View>
-        )
-    }
-
     const listFooter = (
         <>
-            <View
-                /* eslint-disable-next-line react-native/no-inline-styles */
-                style={{
-                    position: "relative",
-                    height: iconSelectorHeight,
-                    width: "100%",
-                }}
-            >
-                {showCustomSelector && (
-                    <Animated.View
-                        style={[
-                            styles.iconSelectorContainer,
-                            // eslint-disable-next-line react-native/no-inline-styles
-                            {
-                                opacity: fadeAnim,
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                            },
-                        ]}
-                    >
-                        <MeasureCustomIconSelector />
-                    </Animated.View>
-                )}
-            </View>
+            {showCustomSelectorUI && (
+                <Animated.View
+                    style={[
+                        styles.iconSelectorContainer,
+                        {
+                            opacity: fadeAnim,
+                        },
+                    ]}
+                    onLayout={(event) => {
+                        const { height } = event.nativeEvent.layout
+                        if (
+                            height > 0 &&
+                            Math.abs(height - iconSelectorHeight) > 1
+                        ) {
+                            setIconSelectorHeight(height)
+                        }
+                    }}
+                >
+                    <CustomIconSelector
+                        currentIconName={selectedCustomIconName}
+                        currentIconColor={selectedCustomIconColor}
+                        onSelectionChange={handleCustomIconSelectionChange}
+                    />
+                </Animated.View>
+            )}
             <View style={styles.emptyFooter} />
         </>
     )
 
-    const wideModal: ViewStyle = {
-        width: "100%",
-        padding: 0,
-        maxWidth: undefined,
-        height: "100%",
-        borderRadius: 0,
-    }
+    const buttonStyle: ViewStyle =
+        folderName.trim() === "" ? styles.disabledButton : {}
+    const modalTitle =
+        mode === "create" ? "Crear Nueva Carpeta" : "Editar Carpeta"
+    const actionButtonText =
+        mode === "create" ? "Crear Carpeta" : "Actualizar Carpeta"
 
     return (
         <BaseModal
             isVisible={isVisible}
             onClose={handleCancel}
             dismissOnBackdropPress={false}
-            containerStyle={wideModal}
+            containerStyle={{
+                ...styles.wideModal,
+            }}
         >
-            <SafeAreaView style={styles.safeArea}>
-                <Animated.View
+            <SafeAreaView
+                style={[
+                    styles.safeArea,
+                    { backgroundColor: colors.background },
+                ]}
+            >
+                {/* Header (Positioned at the top) */}
+                <View
                     style={[
-                        styles.modalContent,
-                        {
-                            backgroundColor: colors.background,
-                            transform: [{ translateX }],
-                            maxHeight: windowHeight,
-                            maxWidth: windowWidth,
-                        },
+                        styles.headerBar,
+                        { borderBottomColor: colors.border },
                     ]}
-                    {...panHandlers}
                 >
                     <View
                         style={[
-                            styles.headerBar,
-                            { borderBottomColor: colors.border },
+                            styles.closeIndicator,
+                            { backgroundColor: colors.border },
                         ]}
+                    />
+                    <Text
+                        variant="md"
+                        weight="bold"
+                        style={[styles.title, { color: colors.text }]}
                     >
-                        <View
-                            style={[
-                                styles.closeIndicator,
-                                { backgroundColor: colors.border },
-                            ]}
-                        />
-                        <Text
-                            variant="md"
-                            weight="bold"
-                            style={[styles.title, { color: colors.text }]}
-                        >
-                            {modalTitle}
-                        </Text>
-                    </View>
+                        {modalTitle}
+                    </Text>
+                </View>
 
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === "ios" ? "padding" : undefined}
-                        style={styles.flex}
-                        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
-                    >
-                        <FlatList
-                            data={folderTypes}
-                            keyExtractor={(item) => item.type}
-                            numColumns={2}
-                            ListHeaderComponent={listHeader}
-                            ListFooterComponent={listFooter}
-                            columnWrapperStyle={styles.columnWrapper}
-                            contentContainerStyle={styles.listContentContainer}
-                            showsVerticalScrollIndicator={false}
-                            scrollEnabled={true}
-                            initialNumToRender={10}
-                            windowSize={5}
-                            maxToRenderPerBatch={10}
-                            style={styles.flatList}
-                            renderItem={({ item }) => {
-                                const isCustomTypeCard = item.type === "custom"
-                                return (
-                                    <Pressable
-                                        accessibilityRole="button"
-                                        accessibilityLabel={item.label}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.kavWrapper}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
+                >
+                    <FlatList
+                        data={folderTypes}
+                        keyExtractor={(item) => item.type}
+                        numColumns={2}
+                        ListHeaderComponent={listHeader}
+                        ListFooterComponent={listFooter}
+                        columnWrapperStyle={styles.columnWrapper}
+                        showsVerticalScrollIndicator={false}
+                        scrollEnabled={true}
+                        initialNumToRender={folderTypes.length}
+                        windowSize={5}
+                        style={styles.flatList}
+                        contentContainerStyle={styles.listContentContainer}
+                        renderItem={({ item }) => {
+                            const isSelectedType = selectedType === item.type
+                            let iconToDisplay = item.defaultIcon
+                            let colorForDisplayIcon = resolveColorRef(
+                                item.defaultColorRef,
+                                colors as unknown as CustomIconSelectorThemeColors,
+                            )
+                            if (item.type === "custom") {
+                                iconToDisplay =
+                                    selectedCustomIconName || item.defaultIcon
+                                colorForDisplayIcon =
+                                    selectedCustomIconColor ||
+                                    colorForDisplayIcon
+                            }
+                            return (
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel={item.label}
+                                    onPress={() => handleTypeSelect(item.type)}
+                                    style={[
+                                        styles.folderCardWrapper,
+                                        // eslint-disable-next-line react-native/no-color-literals,react-native/no-inline-styles
+                                        {
+                                            borderColor: isSelectedType
+                                                ? colors.primary
+                                                : colors.border + "50",
+                                            backgroundColor: isSelectedType
+                                                ? item.type === "custom"
+                                                    ? (selectedCustomIconColor ||
+                                                          colors.primary) + "10"
+                                                    : colors.primary + "10"
+                                                : "transparent",
+                                        },
+                                    ]}
+                                >
+                                    <FolderCard
+                                        folderId={`type-card-${item.type}`}
+                                        title={item.label}
+                                        type={item.type}
+                                        customIconId={
+                                            item.type === "custom"
+                                                ? iconToDisplay
+                                                : undefined
+                                        }
+                                        customIconColor={
+                                            item.type === "custom"
+                                                ? colorForDisplayIcon
+                                                : undefined
+                                        }
+                                        selected={isSelectedType}
                                         onPress={() =>
                                             handleTypeSelect(item.type)
                                         }
-                                        style={[
-                                            styles.folderCardWrapper,
-                                            // eslint-disable-next-line react-native/no-color-literals,react-native/no-inline-styles
-                                            {
-                                                borderColor:
-                                                    selectedType === item.type
-                                                        ? colors.primary
-                                                        : colors.border + "50",
-                                                backgroundColor:
-                                                    isCustomTypeCard &&
-                                                    selectedType === item.type
-                                                        ? colors.primary + "10"
-                                                        : "transparent",
-                                            },
-                                        ]}
-                                    >
-                                        <FolderCard
-                                            folderId={item.type}
-                                            title={item.label}
-                                            type={item.type}
-                                            subtitle={
-                                                isCustomTypeCard
-                                                    ? "Personalizable"
-                                                    : undefined
-                                            }
-                                            selected={
-                                                selectedType === item.type
-                                            }
-                                            onPress={() =>
-                                                handleTypeSelect(item.type)
-                                            }
-                                            showTags={false}
-                                            displayIconId={
-                                                isCustomTypeCard
-                                                    ? customIconId
-                                                    : undefined
-                                            }
-                                            testID={`folder-type-${item.type}`}
-                                        />
-                                    </Pressable>
-                                )
-                            }}
-                        />
-                    </KeyboardAvoidingView>
+                                        showTags={false}
+                                    />
+                                </Pressable>
+                            )
+                        }}
+                    />
+                </KeyboardAvoidingView>
 
-                    <View
-                        style={[
-                            styles.footer,
-                            { borderTopColor: colors.border },
-                        ]}
-                    >
-                        <Button
-                            title="Cancelar"
-                            onPress={handleCancel}
-                            variant="outline"
-                            style={styles.fullWidthBtn}
-                            testID="cancel-button"
-                        />
-                        <Button
-                            title={actionButtonText}
-                            onPress={handleSave}
-                            style={[styles.fullWidthBtn, buttonStyle]}
-                            disabled={folderName.trim() === ""}
-                            testID={
-                                mode === "create"
-                                    ? "create-button"
-                                    : "update-button"
-                            }
-                        />
-                    </View>
-                </Animated.View>
+                {/* Footer (Positioned at the bottom) */}
+                <View
+                    style={[styles.footer, { borderTopColor: colors.border }]}
+                >
+                    <Button
+                        title="Cancelar"
+                        onPress={handleCancel}
+                        variant="outline"
+                        style={styles.fullWidthBtn}
+                        testID="cancel-button"
+                    />
+                    <Button
+                        title={actionButtonText}
+                        onPress={handleSave}
+                        style={[styles.fullWidthBtn, buttonStyle]}
+                        disabled={folderName.trim() === ""}
+                        testID={
+                            mode === "create"
+                                ? "create-button"
+                                : "update-button"
+                        }
+                    />
+                </View>
             </SafeAreaView>
         </BaseModal>
     )
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
+    wideModal: {
         width: "100%",
         height: "100%",
+        padding: 0,
+        margin: 0,
+        borderRadius: 0,
+        justifyContent: "flex-end",
     },
-    flex: {
+    safeArea: {
         flex: 1,
-    },
-    flatList: {
-        flex: 1,
-    },
-    modalContent: {
-        flex: 1,
-        width: "100%",
-        borderTopLeftRadius: 0,
-        borderTopRightRadius: 0,
-        overflow: "hidden",
-
         display: "flex",
         flexDirection: "column",
     },
@@ -483,6 +525,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         alignItems: "center",
         borderBottomWidth: StyleSheet.hairlineWidth,
+        flexShrink: 0,
     },
     closeIndicator: {
         width: 40,
@@ -495,10 +538,15 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontSize: 18,
     },
+    kavWrapper: {
+        flex: 1,
+    },
+    flatList: {
+        flex: 1,
+    },
     listContentContainer: {
-        paddingHorizontal: 20,
-        paddingBottom: 80,
-        flexGrow: 1,
+        paddingHorizontal: 0,
+        paddingBottom: 20,
     },
     headerContent: {
         paddingHorizontal: 20,
@@ -508,6 +556,7 @@ const styles = StyleSheet.create({
     columnWrapper: {
         justifyContent: "space-between",
         marginBottom: 12,
+        paddingHorizontal: 20,
     },
     folderCardWrapper: {
         borderWidth: 2,
@@ -516,9 +565,11 @@ const styles = StyleSheet.create({
         overflow: "hidden",
     },
     footer: {
-        padding: 20,
+        paddingHorizontal: 20,
+        paddingTop: 20,
         borderTopWidth: StyleSheet.hairlineWidth,
         paddingBottom: Platform.OS === "ios" ? 30 : 20,
+        flexShrink: 0,
     },
     fullWidthBtn: {
         alignSelf: "stretch",
@@ -528,11 +579,11 @@ const styles = StyleSheet.create({
         opacity: 0.5,
     },
     emptyFooter: {
-        height: 50,
+        height: 30,
     },
     iconSelectorContainer: {
         paddingHorizontal: 20,
-        marginTop: 0,
+        marginTop: 10,
         width: "100%",
     },
 })
