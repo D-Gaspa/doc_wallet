@@ -91,10 +91,12 @@ export function ListItemCard({
 }
 
 const styles = StyleSheet.create({
+    // eslint-disable-next-line react-native/no-color-literals
     container: {
         flexDirection: "row",
         alignItems: "center",
         borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: "grey",
         position: "relative",
         paddingHorizontal: 8,
         paddingVertical: 12,

@@ -818,6 +818,7 @@ const FolderMainViewContent = forwardRef<FolderMainViewRef, unknown>(
                     <AddDocumentDetailsSheet
                         visible={showAddDocSheet}
                         document={pendingDocument}
+                        initialFolderId={currentFolderId}
                         onClose={() => {
                             setShowAddDocSheet(false)
                             setPendingDocument(null)
