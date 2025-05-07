@@ -198,11 +198,11 @@ export default function App() {
         email: string,
         password: string,
     ): Promise<void> => {
+        // eslint-disable-next-line no-useless-catch
         try {
             await loginWithEmailPassword(email, password)
         } catch (error) {
-            console.error("Login failed:", error)
-            // Handle login error feedback to the user if needed
+            throw error
         }
     }
 
@@ -212,13 +212,12 @@ export default function App() {
             password: data.password,
             name: `${data.firstName} ${data.lastName}`,
         }
+        // eslint-disable-next-line no-useless-catch
         try {
             await registerUser(userData)
-            // Automatically log in after successful registration
             await loginWithEmailPassword(data.email, data.password)
         } catch (error) {
-            console.error("Registration or auto-login failed:", error)
-            // Handle registration error feedback
+            throw error
         }
     }
 

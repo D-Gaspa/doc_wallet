@@ -1,34 +1,36 @@
-import React, { useState, useRef } from "react"
+import React, { useRef, useState } from "react"
 import {
-    View,
-    TouchableOpacity,
+    ActivityIndicator,
+    Animated,
     KeyboardAvoidingView,
     Platform,
-    StyleSheet,
     ScrollView,
-    Animated,
-    ActivityIndicator,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native"
-import { useTheme } from "../../../../hooks/useTheme" // Adjust path
-import { Button } from "../../button" // Adjust path
-import { Stack, Spacer, Row } from "../../layout" // ---> Import Row <---
-import { Text } from "../../typography" // Adjust path
-import { TextField } from "../../form" // Import TextField
-import { DocWalletLogo } from "../../../common/DocWalletLogo" // Adjust path
-import EyeIcon from "../../assets/svg/Eye.svg" // Adjust path
-import EyeOffIcon from "../../assets/svg/EyeOff.svg" // Adjust path
+import FontAwesome6 from "@react-native-vector-icons/fontawesome6"
+import { useTheme } from "../../../../hooks/useTheme"
+import { Button } from "../../button"
+import { Row, Spacer, Stack } from "../../layout"
+import { Text } from "../../typography"
+import { TextField } from "../../form"
+import { DocWalletLogo } from "../../../common/DocWalletLogo"
 import { useDismissKeyboard } from "../../../../hooks/useDismissKeyboard"
 
 type LoginScreenProps = {
     onLogin: (email: string, password: string) => Promise<void>
     onGoToRegister: () => void
     onForgotPassword?: () => void
+    testID?: string
 }
 
 export function LoginScreen({
     onLogin,
     onGoToRegister,
     onForgotPassword,
+    testID,
 }: LoginScreenProps) {
     const { colors } = useTheme()
     const [email, setEmail] = useState("")
@@ -37,27 +39,52 @@ export function LoginScreen({
     const [isLoggingIn, setIsLoggingIn] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    // Refs and Animations
-    // const passwordInputRef = useRef<typeof TextField>(null); // ---> Cannot use ref if TextField doesn't support forwardRef
+    const passwordInputRef = useRef<TextInput>(null)
     const buttonScale = useRef(new Animated.Value(1)).current
     const shakeAnimation = useRef(new Animated.Value(0)).current
-
-    // --- Correctly get dismiss keyboard props ---
     const dismissKeyboardProps = useDismissKeyboard()
 
-    // Validation
-    const isEmailValid = (email: string) =>
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    const isEmailValid = (emailToTest: string) =>
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToTest)
 
-    // Animations
     const animateButtonPress = () => {
         Animated.sequence([
-            /* ... */
+            Animated.timing(buttonScale, {
+                toValue: 0.96,
+                duration: 100,
+                useNativeDriver: true,
+            }),
+            Animated.timing(buttonScale, {
+                toValue: 1,
+                duration: 100,
+                useNativeDriver: true,
+            }),
         ]).start()
     }
+
     const shakeError = () => {
+        shakeAnimation.setValue(0)
         Animated.sequence([
-            /* ... */
+            Animated.timing(shakeAnimation, {
+                toValue: 10,
+                duration: 50,
+                useNativeDriver: true,
+            }),
+            Animated.timing(shakeAnimation, {
+                toValue: -10,
+                duration: 50,
+                useNativeDriver: true,
+            }),
+            Animated.timing(shakeAnimation, {
+                toValue: 10,
+                duration: 50,
+                useNativeDriver: true,
+            }),
+            Animated.timing(shakeAnimation, {
+                toValue: 0,
+                duration: 50,
+                useNativeDriver: true,
+            }),
         ]).start()
     }
 
@@ -87,36 +114,31 @@ export function LoginScreen({
             const message =
                 err instanceof Error
                     ? err.message
-                    : "Ingreso fallido. Verifique sus credenciales e intente de nuevo."
-            if (
-                message === "Ingreso fallido, intente de nuevo." &&
-                err instanceof Error &&
-                err.message
-            ) {
-                setError(err.message)
-            } else {
-                setError(message)
-            }
+                    : "Error desconocido al iniciar sesión."
+            setError(message)
             shakeError()
         } finally {
             setIsLoggingIn(false)
         }
     }
 
+    const togglePasswordVisibility = () => {
+        setPasswordVisible(!isPasswordVisible)
+    }
+
     return (
         <KeyboardAvoidingView
             style={[styles.container, { backgroundColor: colors.background }]}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
+            testID={testID ?? "login-screen"}
         >
             <ScrollView
                 contentContainerStyle={styles.scrollContainer}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
-                {/* Apply dismiss keyboard props to the main inner view */}
                 <View style={styles.inner} {...dismissKeyboardProps}>
                     <Stack spacing={16}>
-                        {/* Logo */}
                         <View style={styles.logoContainer}>
                             <View
                                 style={[
@@ -137,7 +159,6 @@ export function LoginScreen({
                         </View>
                         <Spacer size={10} />
 
-                        {/* Greeting */}
                         <View style={styles.greetingContainer}>
                             <Text
                                 variant="md"
@@ -159,14 +180,12 @@ export function LoginScreen({
                         </View>
                         <Spacer size={10} />
 
-                        {/* Login Form */}
                         <Animated.View
                             style={{
                                 transform: [{ translateX: shakeAnimation }],
                             }}
                         >
                             <Stack spacing={12}>
-                                {/* Email Input */}
                                 <View>
                                     <Text
                                         variant="sm"
@@ -180,18 +199,25 @@ export function LoginScreen({
                                     </Text>
                                     <TextField
                                         placeholder="Ingresa tu correo"
-                                        // removed placeholderTextColor
                                         value={email}
                                         onChangeText={setEmail}
                                         keyboardType="email-address"
                                         autoCapitalize="none"
                                         returnKeyType="next"
+                                        onSubmitEditing={() =>
+                                            passwordInputRef.current?.focus()
+                                        }
                                         testID="login-email-input"
+                                        hasError={
+                                            !!(
+                                                error &&
+                                                (error.includes("correo") ||
+                                                    error.includes("email"))
+                                            )
+                                        }
                                     />
-                                    {/* Note: To enable focusing next field, TextField needs to support forwardRef */}
                                 </View>
 
-                                {/* Password Input */}
                                 <View>
                                     <Text
                                         variant="sm"
@@ -205,22 +231,23 @@ export function LoginScreen({
                                     </Text>
                                     <View style={styles.passwordContainer}>
                                         <TextField
-                                            // removed ref={passwordInputRef as any}
+                                            ref={passwordInputRef}
                                             placeholder="Ingresa tu contraseña"
-                                            // removed placeholderTextColor
                                             value={password}
                                             onChangeText={setPassword}
                                             secureTextEntry={!isPasswordVisible}
                                             returnKeyType="go"
-                                            onSubmitEditing={handleLogin} // Submit form on "go"
+                                            onSubmitEditing={handleLogin}
                                             testID="login-password-input"
-                                        />
-                                        <TouchableOpacity
-                                            onPress={() =>
-                                                setPasswordVisible(
-                                                    !isPasswordVisible,
+                                            hasError={
+                                                !!(
+                                                    error &&
+                                                    error.includes("contraseña")
                                                 )
                                             }
+                                        />
+                                        <TouchableOpacity
+                                            onPress={togglePasswordVisibility}
                                             style={styles.eyeIconContainer}
                                             hitSlop={{
                                                 top: 10,
@@ -228,25 +255,26 @@ export function LoginScreen({
                                                 left: 10,
                                                 right: 10,
                                             }}
+                                            accessibilityLabel={
+                                                isPasswordVisible
+                                                    ? "Ocultar contraseña"
+                                                    : "Mostrar contraseña"
+                                            }
                                         >
-                                            {isPasswordVisible ? (
-                                                <EyeIcon
-                                                    width={20}
-                                                    height={20}
-                                                    color={colors.secondaryText}
-                                                />
-                                            ) : (
-                                                <EyeOffIcon
-                                                    width={20}
-                                                    height={20}
-                                                    color={colors.secondaryText}
-                                                />
-                                            )}
+                                            <FontAwesome6
+                                                name={
+                                                    isPasswordVisible
+                                                        ? "eye"
+                                                        : "eye-slash"
+                                                }
+                                                size={20}
+                                                color={colors.secondaryText}
+                                                iconStyle="solid"
+                                            />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
 
-                                {/* Error Message */}
                                 {error && (
                                     <Text
                                         variant="sm"
@@ -259,7 +287,6 @@ export function LoginScreen({
                                     </Text>
                                 )}
 
-                                {/* Forgot Password */}
                                 {onForgotPassword && (
                                     <View
                                         style={styles.forgotPasswordContainer}
@@ -289,7 +316,6 @@ export function LoginScreen({
                         </Animated.View>
                         <Spacer size={10} />
 
-                        {/* Login Button */}
                         <Animated.View
                             style={{ transform: [{ scale: buttonScale }] }}
                         >
@@ -319,8 +345,6 @@ export function LoginScreen({
                         </Animated.View>
                         <Spacer size={20} />
 
-                        {/* Register Link */}
-                        {/* ---> Use imported Row <--- */}
                         <Row
                             style={styles.registerContainer}
                             justify="center"
@@ -330,7 +354,7 @@ export function LoginScreen({
                                 variant="sm"
                                 style={{ color: colors.secondaryText }}
                             >
-                                ¿Todavía no tienes una cuenta?{/* Spanish */}{" "}
+                                ¿Todavía no tienes una cuenta?{" "}
                             </Text>
                             <TouchableOpacity
                                 onPress={onGoToRegister}
@@ -347,7 +371,7 @@ export function LoginScreen({
                                     weight="bold"
                                     style={{ color: colors.primary }}
                                 >
-                                    Regístrate {/* Spanish */}
+                                    Regístrate
                                 </Text>
                             </TouchableOpacity>
                         </Row>
@@ -368,7 +392,7 @@ const styles = StyleSheet.create({
     },
     inner: {
         paddingHorizontal: 24,
-        paddingVertical: 30,
+        paddingVertical: 30, // Adjust padding as needed
     },
     logoContainer: {
         alignItems: "center",
@@ -403,9 +427,11 @@ const styles = StyleSheet.create({
     },
     eyeIconContainer: {
         position: "absolute",
-        right: 16,
+        right: 0,
+        paddingHorizontal: 16,
         height: "100%",
         justifyContent: "center",
+        alignItems: "center",
     },
     forgotPasswordContainer: {
         alignItems: "flex-end",
@@ -420,7 +446,6 @@ const styles = StyleSheet.create({
         height: 52,
     },
     registerContainer: {
-        // Now using Row component
         marginTop: 20,
         flexWrap: "wrap",
     },
