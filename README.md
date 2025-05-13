@@ -60,12 +60,13 @@ DocWallet offers a range of features to simplify document management:
     ```
 
 3.  **For iOS:**
-    > [!TIP]
-    > If you are on a macOS machine and want to run the iOS version:
-    >
-    > 1.  Navigate to the `ios` directory: `cd ios`
-    > 2.  Install Pods: `pod install`
-    > 3.  Navigate back to the root directory: `cd ..`
+
+  > [!TIP]
+  > If you are on a macOS machine and want to run the iOS version:
+  >
+  > 1.  Navigate to the `ios` directory: `cd ios`
+  > 2.  Install Pods: `pod install`
+  > 3.  Navigate back to the root directory: `cd ..`
 
 4.  **Run the application:**
     * **For Android:**
@@ -98,15 +99,15 @@ DocWallet provides an intuitive interface for managing your documents. Here’s 
   <table>
     <tr>
       <td align="center" valign="top">
-        <img src="screenshots/screenshot1.png" alt="DocWallet Main Folder View" width="250"/> <br/>
+        <img src="screenshots/screenshot1.png" alt="DocWallet Main Folder View" width="200"/> <br/>
         <em>Main folder view with options to add items.</em>
       </td>
       <td align="center" valign="top">
-        <img src="screenshots/screenshot3.png" alt="Create New Folder Modal" width="250"/> <br/>
+        <img src="screenshots/screenshot3.png" alt="Create New Folder Modal" width="200"/> <br/>
         <em>Creating a new custom folder for "Mascotas" (Pets).</em>
       </td>
       <td align="center" valign="top">
-        <img src="screenshots/screenshot2.png" alt="Search and Document Selection" width="250"/> <br/>
+        <img src="screenshots/screenshot2.png" alt="Search and Document Selection" width="200"/> <br/>
         <em>Searching for "factura" (invoice) and selecting a document.</em>
       </td>
     </tr>
