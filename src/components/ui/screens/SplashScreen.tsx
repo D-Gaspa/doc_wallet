@@ -18,9 +18,7 @@ export function SplashScreen({ onFinish, duration = 2500 }: SplashScreenProps) {
     const containerOpacity = useRef(new Animated.Value(1)).current
 
     useEffect(() => {
-        // Animation sequence
         Animated.sequence([
-            // Logo animation
             Animated.parallel([
                 Animated.timing(logoOpacity, {
                     toValue: 1,
@@ -34,28 +32,23 @@ export function SplashScreen({ onFinish, duration = 2500 }: SplashScreenProps) {
                     useNativeDriver: true,
                 }),
             ]),
-            // Fade in title
             Animated.timing(titleOpacity, {
                 toValue: 1,
                 duration: 600,
                 useNativeDriver: true,
             }),
-            // Fade in tagline
             Animated.timing(taglineOpacity, {
                 toValue: 1,
                 duration: 600,
                 useNativeDriver: true,
             }),
-            // Wait a bit
             Animated.delay(duration - 2000),
-            // Fade out entire screen
             Animated.timing(containerOpacity, {
                 toValue: 0,
                 duration: 600,
                 useNativeDriver: true,
             }),
         ]).start(() => {
-            // Use setTimeout to schedule the callback outside the animation context
             if (onFinish) {
                 setTimeout(onFinish, 0)
             }
@@ -84,7 +77,7 @@ export function SplashScreen({ onFinish, duration = 2500 }: SplashScreenProps) {
 
             <Animated.View
                 style={[
-                    styles.logoContainer,
+                    styles.contentContainer,
                     {
                         opacity: logoOpacity,
                         transform: [{ scale: logoScale }],
@@ -97,31 +90,31 @@ export function SplashScreen({ onFinish, duration = 2500 }: SplashScreenProps) {
                     secondaryColor={colors.secondary}
                     backgroundColor={colors.tabbarIcon_active}
                 />
+
+                <Animated.Text
+                    style={[
+                        styles.title,
+                        {
+                            color: colors.tabbarIcon_active,
+                            opacity: titleOpacity,
+                        },
+                    ]}
+                >
+                    DocWallet
+                </Animated.Text>
+
+                <Animated.Text
+                    style={[
+                        styles.tagline,
+                        {
+                            color: colors.tabbarIcon_active,
+                            opacity: taglineOpacity,
+                        },
+                    ]}
+                >
+                    Tus documentos, siempre contigo.
+                </Animated.Text>
             </Animated.View>
-
-            <Animated.Text
-                style={[
-                    styles.title,
-                    {
-                        color: colors.tabbarIcon_active,
-                        opacity: titleOpacity,
-                    },
-                ]}
-            >
-                DocWallet
-            </Animated.Text>
-
-            <Animated.Text
-                style={[
-                    styles.tagline,
-                    {
-                        color: colors.tabbarIcon_active,
-                        opacity: taglineOpacity,
-                    },
-                ]}
-            >
-                Tus documentos, siempre contigo.
-            </Animated.Text>
         </Animated.View>
     )
 }
@@ -134,21 +127,22 @@ const styles = StyleSheet.create({
         width,
         height,
     },
-    logoContainer: {
+    contentContainer: {
         alignItems: "center",
         justifyContent: "center",
-        marginBottom: 50,
     },
     title: {
         fontSize: 42,
         fontWeight: "bold",
-        marginBottom: 16,
+        marginTop: 10,
         fontFamily: "Inter-Bold",
+        textAlign: "center",
     },
     tagline: {
         fontSize: 18,
         fontFamily: "Inter-Medium",
         textAlign: "center",
+        marginTop: 8,
         paddingHorizontal: 40,
     },
 })

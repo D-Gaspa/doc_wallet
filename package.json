@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "android:dev": "cross-env NODE_ENV=development ENVFILE=.env.development react-native run-android --verbose",
-    "ios:dev": "cross-env NODE_ENV=development ENVFILE=.env.development react-native run-ios",
-    "start:dev": "cross-env NODE_ENV=development ENVFILE=.env.development react-native start",
+    "android:dev": "react-native run-android --verbose",
+    "ios:dev": "react-native run-ios",
+    "start:dev": "react-native start",
     "start": "react-native start",
     "lint": "eslint .",
     "test": "jest",

@@ -1,129 +1,178 @@
-# DocWallet
+# DocWallet - Tus documentos, siempre contigo.
 
 [![CI](https://github.com/D-Gaspa/doc_wallet/actions/workflows/ci.yml/badge.svg)](https://github.com/D-Gaspa/doc_wallet/actions/workflows/ci.yml)
 
-> [!NOTE]
-> DocWallet is a secure document management application designed to help users store, organize, and manage their personal documents with automated reminders and government platform integration.
+<p align="center">
+  <img src="screenshots/header.png" alt="DocWallet Header" width="500" />
+</p>
 
-## **Description**
-
-Development of an application that allows users to securely store, organize, and manage their personal documents. The app will send automatic reminders about expiration dates, provide updated information on procedures and requirements, and sync with government platforms to streamline renewals. Additionally, it will feature personalized categorization, biometric authentication, and data encryption to ensure information security.
-
-## **Objectives**
-
-1. **Centralized document management:** Provide a secure platform for users to store digital copies of essential documents.
-2. **Automated expiration alerts:** Notify users in advance when documents are nearing expiration to prevent delays and extra costs.
-3. **Seamless synchronization:** Integrate with government websites to provide up-to-date information on document renewals and procedural changes.
-
-## Problem to Solve
+## Project Overview
 
 > [!IMPORTANT]
-> Many people struggle with managing personal documents due to missed expiration dates, unclear requirements, and complex bureaucratic processes. This often leads to extra costs, wasted time, and stress.
+> Managing personal and governmental documents in Mexico presents significant challenges due to complex procedures, scattered information, and the risk of missing critical expiration dates. DocWallet is a cross-platform mobile application designed to address these issues by providing a secure, centralized platform for digital document management.
 
-Recent studies reveal the magnitude of this challenge, with 46% of professionals regularly struggling to find necessary information and approximately 83% recreating existing documents because they can't locate originals \[1]. The problem extends beyond simple organization - users face document retrieval complexity, high processing cycle times, and significant security concerns \[5].
+Built using React Native and TypeScript, DocWallet enables users to store document copies securely, receive automated expiration alerts, and organize files efficiently using folders and tags. The project followed a hybrid development methodology, combining structured milestones with agile practices like feature branching, continuous integration, and code reviews.
 
-Information on procedures is scattered across multiple platforms, making access difficult. There is no integrated solution for storing documents, receiving renewal alerts, and accessing clear procedural guidelines. The impact of poor document management is substantial, with organizations losing up to 20% productivity due to inefficient systems \[3].
+The primary goal is to empower users with better control over their documentation, ensuring timely renewals and easier access to necessary information.
 
-Our app solves this by offering a centralized platform where users can store digital documents, get expiration reminders, and access automated information on requirements and procedures. This addresses key challenges identified in the industry, including limited accessibility, metadata management difficulties, and escalating storage costs \[5].
+## Features
 
-## **Functional Requirements**
+DocWallet offers a range of features to simplify document management:
 
-> [!TIP]
-> These core features ensure secure document management and easy access for users.
+* **Secure User Authentication:** Log in using biometric data (fingerprint/face recognition) or a secure PIN.
+* **Digital Document Storage & Handling:** Import and store digital copies of your important documents locally and securely.
+* **Document Organization:**
+    * **Folders:** Create a hierarchical folder structure to organize documents logically.
+    * **Tags:** Apply personalized tags (e.g., 'personal', 'work', 'vehicle') for quick filtering and retrieval.
+* **Expiration Alerts:** Receive automated notifications for upcoming document expiration dates.
+* **Document Scanning:** Easily scan physical documents directly into the app.
+* **Multi-Profile Management (Planned)::** Manage document sets for multiple individuals (e.g., family members) within a single account.
+* **User-Friendly Interface:** An intuitive and clean UI for easy navigation and management.
+* **Light & Dark Mode:** Choose your preferred theme for comfortable viewing.
 
-1. **Secure Document Storage** – Users can upload and store digital copies of important documents (INE, passport, driver's license, CURP, RFC, etc.).
-2. **Share documents** — The application will allow users to share stored documents securely with other individuals or platforms.
-3. **Show the PDF in the app** — The app will include an integrated PDF viewer, enabling users to open and view stored documents without needing external applications.
-4. **Expiration Notifications** – The system sends automated alerts when a document is nearing expiration.
-5. **Custom Organization** – Users can categorize documents using personalized tags (e.g., personal, work, legal, vehicle-related).
-6. **Biometric Authentication** – Access to the app is secured using fingerprint or facial recognition.
-7. **2FA Support** - Enable token validation with passwords manager
-8. **Profile Management** – Allow users to organize documents
-
-## Optional Requirements
-
-> [!NOTE]
-> These features enhance the user experience but are not critical for the initial release.
-
-1. **Synchronization with Government Websites** – The app retrieves official data to notify users about renewals and procedural updates.
-2. **Smart Procedure Assistant** – A step-by-step guide provides users with the necessary requirements and documents for completing specific procedures.
-3. **Backup and Recovery** – Allows users to recover documents in case of device loss or change.
-
-## **Non-Functional Requirements**
-
-> [!IMPORTANT]
-> These requirements ensure the application's security, usability, and performance standards.
-
-1. **Compliance with Legal Standards** – The app must adhere to the **LFPDPPP** and any other relevant privacy regulations.
-2. **Data Security and Encryption** – All stored documents and personal data must be encrypted to ensure confidentiality.
-3. **User-Friendly Interface** – The application must have an intuitive design, making document management easy and accessible.
-4. **Performance Efficiency** – The app should process document scans, information retrieval and analysis, and notifications efficiently.
-5. **Cross-Platform Compatibility** – The application should work seamlessly on both Android and iOS devices.
-
-## State-of-the-Art Analysis
-
-This section examines existing approaches to document management and how DocWallet innovates beyond current solutions.
-
-### Current Market Solutions
-
-The document management system market is projected to grow from $7.16 billion in 2024 to $24.91 billion by 2032, demonstrating significant industry expansion \[2]. Current solutions fall into several categories:
-
-Traditional Paper Systems continue to dominate many organizations, with 50% of business waste coming from paper and average costs of $20 per document to manage \[3]. This approach suffers from accessibility limitations and high risk of document loss.
-
-Cloud Storage Solutions have achieved widespread adoption (89%) but face significant challenges - 80% of organizations report wasteful spending and security breaches in their cloud implementations \[1]. While offering basic file storage, these solutions typically lack specialized document management features.
-
-Enterprise Document Management Systems, despite their sophistication, have limited penetration with only 25% of enterprises currently utilizing them \[2]. These systems often involve complex integration requirements and substantial implementation costs.
-
-### DocWallet's Innovative Approach
-
-DocWallet differentiates itself by addressing key limitations of existing solutions \[1]:
-
-1. Security and Accessibility Balance - While 74% of workers need mobile document access, our solution provides secure mobile-first access with biometric authentication and 2FA support.
-
-2. Integration Capabilities - Unlike current systems where only 26% integrate with core applications DocWallet offers seamless synchronization with government platforms and essential services.
-
-3. User-Centric Design - Addressing the challenge where 83% of users lose time to document versioning issues, our platform provides intuitive organization and automated expiration tracking.
-
-## Word Package Description
+## Requirements for Execution
 
 > [!NOTE]
-> Project timeline and deliverables overview
+> To run this project locally, you will need:
+>
+> * **Node.js:** Version 18 or higher (`>=18`).
+> * **npm** (Node Package Manager) or **Yarn**.
+> * **React Native CLI**.
+> * **Development Environment:**
+>     * **Android Studio** (for Android development) with an emulator or physical device.
+>         * Java Development Kit (JDK) version 17 (as per CI workflow).
+>     * **Xcode** (for iOS development, macOS only) with an iOS simulator or physical device.
+>     * You can also use IDEs like **WebStorm** for development.
 
-| Deliverable                | Description                                       | Due Date   |
-|----------------------------|---------------------------------------------------|------------|
-| Requirements Specification | Define functional and non-functional requirements | 11/02/2025 |
-| UI/UX Design               | Create wireframes, prototypes, UI components      | 13/02/2025 |
-| Backend Development        | API development, database setup                   | 21/03/2025 |
-| Frontend Development       | Mobile app UI and features implementation         | 21/03/2025 |
-| Testing & QA               | Unit, integration, and user testing               | 28/03/2025 |
-| Deployment                 | Submission to Google Play / App Store             | TBD        |
-| Post-Launch Support        | Bug fixes, updates, monitoring                    | TBD        |
+## Installation Instructions
 
-### Risk Mitigation Plan Example
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/D-Gaspa/doc_wallet.git](https://github.com/D-Gaspa/doc_wallet.git)
+    cd doc_wallet
+    ```
 
-> [!WARNING]
-> Key risks and their mitigation strategies must be carefully considered for project success.
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    # OR
+    # yarn install
+    ```
 
-| Risk                 | Impact                                                                                                       | Mitigation Strategy                                                                                                                                                               |
-|----------------------|--------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Data security issues | Users don't trust our app to upload their documents.                                                         | - Implement strategic partnerships to encourage its use.<br>- Ensure that biometric Authentication and 2FA Support.<br>- Ensure compliance with security policies.                |
-| Storage              | Users are unable to upload their documents or they're unable to access it.                                   | - Support with cloud providers to ensure capacity and access.                                                                                                                     |
-| Model performance    | The information being retrieved from the uploaded documents is inaccurate, affecting the settings of alarms. | - Refining the existing ML model or exploring alternative models.                                                                                                                 |
-| Compatibility Issues | The app may not work properly on all devices or OS versions.                                                 | - Perform cross-platform testing with React Native testing tools (Appium, Detox) and optimize for both iOS and Android.<br>- Ensure backward compatibility for older OS versions. |
-| App store rejections | The app could be rejected due to policy violations or security concerns.                                     | - Review the problematic sections of the app, make corrections and re-try the submission.                                                                                         |
+3.  **For iOS:**
+    > [!TIP]
+    > If you are on a macOS machine and want to run the iOS version:
+    >
+    > 1.  Navigate to the `ios` directory: `cd ios`
+    > 2.  Install Pods: `pod install`
+    > 3.  Navigate back to the root directory: `cd ..`
 
-### Presentation
+4.  **Run the application:**
+    * **For Android:**
+        ```bash
+        npm run android:dev
+        # OR
+        # yarn android:dev
+        ```
+    * **For iOS:**
+        ```bash
+        npm run ios:dev
+        # OR
+        # yarn ios:dev
+        ```
 
-https://www.canva.com/design/DAGdmn20U_w/91MxIGI3pKgqPLqchkpK4g/edit?utm_content=DAGdmn20U_w&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+## Usage Examples
 
-## References
+DocWallet provides an intuitive interface for managing your documents. Here’s a quick look at a possible user flow:
 
-- \[1] D. Kostya, “100 Document Management Statistics to Make You Rethink Your Processes in 2025,” FileCenter Blog, Nov. 11, 2024. https://www.filecenter.com/blog/document-management-statistics/ (accessed Feb. 20, 2025).
+1.  **Navigate and Organize:**
+    Upon launching the app and authenticating, you'll see your main folder view. You can browse existing folders and documents. The floating action button (FAB) allows you to quickly add new folders or documents.
 
-- \[2] Fortune Business Insights, “Document Management System Market Size, Share, Trends 2032,” Fortunebusinessinsights.com, 2024. https://www.fortunebusinessinsights.com/document-management-system-market-106615 (accessed Feb. 20, 2025).
+2.  **Create a New Folder:**
+    Tapping the "Add Folder" option from the FAB opens a modal where you can define the new folder's name, type, and customize its icon and color for easy identification.
 
-- \[3] Ripcord Team, “The True Cost of Poor Document Management,” Ripcord.com, Dec. 17, 2020. https://blog.ripcord.com/resources/the-true-cost-of-poor-document-management (accessed Feb. 20, 2025).
+3.  **Search and Manage Documents:**
+    Use the search bar to quickly find documents or folders. Once you locate an item, you can select it to perform various actions like viewing, editing, tagging, or deleting. The selection mode provides batch operations.
 
-- \[4] ITA, “Mexico - Digital Economy,” International Trade Administration, Sep. 20, 2024. https://www.trade.gov/country-commercial-guides/mexico-digital-economy (accessed Feb. 20, 2025).
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" valign="top">
+        <img src="screenshots/screenshot1.png" alt="DocWallet Main Folder View" width="250"/> <br/>
+        <em>Main folder view with options to add items.</em>
+      </td>
+      <td align="center" valign="top">
+        <img src="screenshots/screenshot3.png" alt="Create New Folder Modal" width="250"/> <br/>
+        <em>Creating a new custom folder for "Mascotas" (Pets).</em>
+      </td>
+      <td align="center" valign="top">
+        <img src="screenshots/screenshot2.png" alt="Search and Document Selection" width="250"/> <br/>
+        <em>Searching for "factura" (invoice) and selecting a document.</em>
+      </td>
+    </tr>
+  </table>
+</div>
 
-- \[5] H. A. Malak, “11 Critical Document Management Challenges in 2025,” Information Management Simplified, Nov. 25, 2021. https://theecmconsultant.com/document-management-challenges/ (accessed Feb. 20, 2025).
+## General Component Information
+
+> [!NOTE]
+> The project is structured with a clear separation of concerns, primarily within the `src` directory:
+
+* **`src/components`:** Contains reusable UI components, categorized into:
+    * `common`: Basic shared components like modals, logos, error boundaries, and loading indicators.
+    * `ui`: More specific UI elements like buttons, cards, forms, layout primitives (Container, Row, Stack, Spacer), notification displays, profile headers, and various screen-specific UI components.
+    * `ExpandingFab.tsx`: The floating action button for adding documents and folders.
+* **`src/config`:** Houses theme configurations (colors, typography, design tokens) and environment variables.
+* **`src/context`:** Includes context providers, such as `ThemeContext.tsx` for managing light/dark modes.
+* **`src/hooks`:** Custom React hooks for shared logic, like authentication (`useAuth.ts`), form validation (`useFormValidation.ts`), search functionality (`useSearchHistory.ts`, `useSearchSuggestions.ts`), and theme access (`useTheme.ts`).
+* **`src/navigation`:** Defines the app's navigation structure using React Navigation, including stack and tab navigators for different sections like Auth, Documents, Profile, and Settings.
+* **`src/services`:** Contains business logic and integrations:
+    * `auth`: Services for authentication methods like Biometric, Google, PIN, and token management.
+    * `document`: Services for document import, preview, and storage.
+    * `monitoring`: Services for crash reporting, error tracking, logging, performance monitoring, and security testing.
+    * `security`: Includes document encryption services.
+    * `settings`: For managing theme settings.
+* **`src/store`:** Global state management using Zustand, with stores for authentication, documents, favorite documents, folders, notifications, and tags.
+* **`src/types`:** TypeScript type definitions for various entities and structures within the app (auth, config, document, icons, monitoring, navigation, user).
+* **`src/utils`:** Utility functions, such as ID generation and ensuring unique titles.
+* **`App.tsx`:** The main entry point of the application, setting up providers and root navigation.
+
+## Tech Stack
+
+* **Core Framework:** React Native
+* **Programming Language:** TypeScript
+* **Navigation:** React Navigation (`@react-navigation/native`, `@react-navigation/bottom-tabs`, `@react-navigation/native-stack`)
+* **State Management:** Zustand
+* **UI Components:** Custom components, `react-native-svg`, `react-native-vector-icons/fontawesome6`
+* **Styling:** React Native StyleSheet, Custom Theme System
+* **Local Storage:** `@react-native-async-storage/async-storage`, `react-native-keychain`
+* **Document Handling:** `@react-native-documents/picker`, `@react-native-documents/viewer`, `react-native-document-scanner-plugin`
+* **Authentication:** `expo-local-authentication`, `react-native-app-auth`, `jwt-decode`
+* **Encryption:** `crypto-js`, `react-native-quick-crypto`
+* **Development Tooling:** Node.js, npm, ESLint, Prettier, Jest, Husky, `react-native-config`
+* **CI/CD:** GitHub Actions
+
+## Project Structure
+```
+doc_wallet
+├── .github/workflows/ci.yml      # Continuous Integration workflow
+├── src
+│   ├── components                # UI and common components
+│   ├── config                    # Theme and environment configuration
+│   ├── context                   # React context providers (e.g., ThemeContext)
+│   ├── hooks                     # Custom React hooks
+│   ├── navigation                # Navigation setup and route definitions
+│   ├── services                  # Business logic, API integrations, etc.
+│   ├── store                     # Global state management (Zustand)
+│   ├── types                     # TypeScript type definitions
+│   ├── utils                     # Utility functions
+│   ├── App.tsx                   # Main application component
+│   └── declarations.d.ts         # TypeScript declaration files
+├── .lintstagedrc.yaml            # Lint-staged configuration
+├── .prettierrc.yaml              # Prettier configuration
+├── app.json                      # Application configuration
+├── index.js                      # Entry point for React Native
+├── metro.config.js               # Metro bundler configuration
+├── package.json                  # Project dependencies and scripts
+└── tsconfig.json                 # TypeScript configuration
+```
